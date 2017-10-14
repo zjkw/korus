@@ -147,12 +147,6 @@ SOCKET create_general_tcp_socket(const struct sockaddr_in& addr)
 		return INVALID_SOCKET;
 	}
 
-	if (!set_reuse_port_sock(s, 1))
-	{
-		close(s);
-		return INVALID_SOCKET;
-	}
-
 	return s;
 }
 
@@ -173,7 +167,7 @@ bool listen_sock(SOCKET fd, int backlog)
 	return !listen_sock(fd, backlog);
 }
 
-SOCKET listen_nonblock_reuse_socket(uint32_t backlog, uint32_t defer_accept, const struct sockaddr_in& addr)
+SOCKET =(uint32_t backlog, uint32_t defer_accept, const struct sockaddr_in& addr)
 {
 	/* Request socket. */
 	SOCKET s = create_general_tcp_socket();
@@ -193,12 +187,19 @@ SOCKET listen_nonblock_reuse_socket(uint32_t backlog, uint32_t defer_accept, con
 		close(s);
 		return INVALID_SOCKET;
 	}
-		
+
+	if (!set_reuse_port_sock(s, 1))
+	{
+		close(s);
+		return INVALID_SOCKET;
+	}
+
 	if (!bind_sock(s, &addr))
 	{
 		close(s);
 		return false;
 	}
+
 	if (!listen_sock(s, backlog))
 	{
 		close(s);

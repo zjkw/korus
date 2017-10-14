@@ -28,7 +28,7 @@ int32_t epoll_imp::poll(int32_t mill_sec)
 	{
 		for (int32_t i = 0; i < ret; ++i)
 		{
-			sockio_channel* channel = (channel)_epoll_event[i].data.ptr;
+			sockio_channel* channel = (channel*)_epoll_event[i].data.ptr;
 			assert(channel);
 
 			if (_epoll_event[i].events & (EPOLLERR | EPOLLHUP))
