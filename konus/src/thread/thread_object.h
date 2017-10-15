@@ -6,8 +6,8 @@
 #include <memory>
 #include <mutex>
 
-#include "thread_safe_objbase.h"
-#include "task_queue.h"
+#include "..\util\thread_safe_objbase.h"
+#include "..\util\task_queue.h"
 
 //支持常驻任务队列(不提供显式撤销接口)
 //支持一次性任务队列

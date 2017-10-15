@@ -3,10 +3,10 @@
 #include <memory>
 #include <atomic>
 #include <chrono>
-#include "thread_safe_objbase.h"
+#include "..\thread\thread_safe_objbase.h"
 #include "tcp_channel_base.h"
-#include "timer_helper.h"
-#include "reactor_loop.h"
+#include "..\reactor\timer_helper.h"
+#include "..\reactor\reactor_loop.h"
 
 //connect不要把错误(EINTR/EINPROGRESS/EAGAIN)当成Fatal.
 

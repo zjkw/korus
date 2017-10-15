@@ -1,10 +1,10 @@
 #pragma once
 
-#include "tcp_util.h"
-#include "thread_object.h"
+#include "..\util\tcp_util.h"
+#include "..\util\task_queue.h"
+#include "..\thread\thread_object.h"
 #include "backend_poller.h"
 #include "timer_sheduler.h"
-#include "task_queue.h"
 #include "idle_distributor.h"
 
 class reactor_loop : public std::enable_shared_from_this<reactor_loop>, public thread_safe_objbase
