@@ -119,16 +119,16 @@ void	tcp_client_channel::connect()
 	{
 		set_fd(_conn_fd);
 		_conn_fd = INVALID_SOCKET;
-		_reactor->start_sockio(this, SIT_READWRITE);
 		_conn_state = CNS_CONNECTED;
+		_reactor->start_sockio(this, SIT_READWRITE);
 		_cb->on_connect(shared_from_this());
 	}
 	else
 	{
 		if (errno == EINPROGRESS)
 		{
+			_conn_state = CNS_CONNECTING;	//start_sockio将会获取fd
 			_reactor->start_sockio(this, SIT_WRITE);
-			_conn_state = CNS_CONNECTING;
 
 			if (_connect_timeout.count())
 			{
@@ -195,8 +195,8 @@ void	tcp_client_channel::on_sockio_write()
 			{
 				set_fd(_conn_fd);
 				_conn_fd = INVALID_SOCKET;
-				_reactor->start_sockio(this, SIT_READWRITE);
 				_conn_state = CNS_CONNECTED;
+				_reactor->start_sockio(this, SIT_READWRITE);
 				_cb->on_connect(shared_from_this());
 			}
 		}
@@ -258,7 +258,7 @@ int32_t	tcp_client_channel::on_recv_buff(const void* buf, const size_t len, bool
 	}
 	left_partial_pkg = false;
 	int32_t size = 0;
-	while (true)
+	while (len > size)
 	{
 		int32_t ret = _cb->on_recv_split((uint8_t*)buf + size, len - size, shared_from_this());
 		if (ret == 0)
@@ -268,10 +268,10 @@ int32_t	tcp_client_channel::on_recv_buff(const void* buf, const size_t len, bool
 		}
 		else if (ret < 0)
 		{
-			_cb->on_error(CEC_READ_FAILED, shared_from_this());
-			return (int32_t)CEC_READ_FAILED;
+			_cb->on_error((CHANNEL_ERROR_CODE)ret, shared_from_this());
+			return ret;
 		}
-		else if (ret + size >= len)
+		else if (ret + size > len)
 		{
 			_cb->on_error(CEC_RECVBUF_SHORT, shared_from_this());
 			return (int32_t)CEC_RECVBUF_SHORT;

@@ -7,7 +7,6 @@ tcp_server_channel::tcp_server_channel(SOCKET fd, std::shared_ptr<reactor_loop> 
 {
 	assert(INVALID_SOCKET != fd);
 	_reactor->start_sockio(this, SIT_READWRITE);
-	_cb->on_accept(shared_from_this());
 }
 
 //析构需要发生在产生线程
@@ -119,7 +118,7 @@ int32_t	tcp_server_channel::on_recv_buff(const void* buf, const size_t len, bool
 	}
 	left_partial_pkg = false;
 	int32_t size = 0;
-	while (true)
+	while (len > size)
 	{
 		int32_t ret = _cb->on_recv_split((uint8_t*)buf + size, len - size, shared_from_this());
 		if (ret == 0)
@@ -129,10 +128,10 @@ int32_t	tcp_server_channel::on_recv_buff(const void* buf, const size_t len, bool
 		}
 		else if (ret < 0)
 		{
-			_cb->on_error(CEC_READ_FAILED, shared_from_this());
-			return (int32_t)CEC_READ_FAILED;
+			_cb->on_error((CHANNEL_ERROR_CODE)ret, shared_from_this());
+			return ret;
 		}
-		else if (ret + size >= len)
+		else if (ret + size > len)
 		{
 			_cb->on_error(CEC_RECVBUF_SHORT, shared_from_this());
 			return (int32_t)CEC_RECVBUF_SHORT;

@@ -92,7 +92,7 @@ void epoll_imp::del_sock(sockio_channel* channel)
 	memset(&ev, 0, sizeof(ev));
 	ev.events = 0;
 	ev.data.ptr = channel;
-	int32_t ret = epoll_ctl(_fd, EPOLL_CTL_MOD, channel->get_fd(), &ev);
+	int32_t ret = epoll_ctl(_fd, EPOLL_CTL_DEL, channel->get_fd(), &ev);
 }
 
 void epoll_imp::clear()

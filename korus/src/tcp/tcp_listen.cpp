@@ -89,6 +89,8 @@ void	tcp_listen::on_sockio_accept(listen_meta* meta)
 				std::shared_ptr<tcp_server_channel>	channel = std::make_shared<tcp_server_channel>(newfd, _reactor, meta->cb,
 					meta->self_read_size, meta->self_write_size, meta->sock_read_size, meta->sock_write_size);
 				_channel_list[newfd] = channel;
+				
+				meta->cb->on_accept(channel);
 			}
 		}
 		else

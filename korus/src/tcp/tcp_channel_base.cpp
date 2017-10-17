@@ -6,7 +6,7 @@
 #include "tcp_channel_base.h"
 
 tcp_channel_base::tcp_channel_base(SOCKET fd, const uint32_t self_read_size, const uint32_t self_write_size, const uint32_t sock_read_size, const uint32_t sock_write_size)
-	: _fd(fd), _recving(false),
+	: _fd(INVALID_SOCKET), _recving(false),
 	_self_read_size(self_read_size), _self_write_size(self_write_size), _self_read_pos(0), _self_write_pos(0), _sock_read_size(sock_read_size), _sock_write_size(sock_write_size),
 	_self_read_buff(new uint8_t[sock_read_size]),
 	_self_write_buff(new uint8_t[sock_write_size])
@@ -23,27 +23,30 @@ tcp_channel_base::~tcp_channel_base()
 
 void	tcp_channel_base::set_fd(SOCKET fd)
 {
-	if (INVALID_SOCKET != fd)
+	if (fd != _fd)
 	{
-		assert(INVALID_SOCKET == _fd);
-		if (_sock_write_size)
+		if (INVALID_SOCKET != fd)
 		{
-			set_socket_sendbuflen(fd, _sock_write_size);
+			assert(INVALID_SOCKET == _fd);
+			if (_sock_write_size)
+			{
+				set_socket_sendbuflen(fd, _sock_write_size);
+			}
+			if (_sock_read_size)
+			{
+				set_socket_recvbuflen(fd, _sock_read_size);
+			}
 		}
-		if (_sock_read_size)
-		{
-			set_socket_recvbuflen(fd, _sock_read_size);
-		}
+		std::unique_lock <std::mutex> lck(_mutex_write);
+		_fd = fd;
 	}
-	std::unique_lock <std::mutex> lck(_mutex_write);
-	_fd = fd;
 }
 
 // 保证原子，考虑多线程环境下，buf最好是一个或若干完整包；可能触发错误/异常 on_error
 int32_t		tcp_channel_base::send(const void* buf, const size_t len)
 {
 	std::unique_lock <std::mutex> lck(_mutex_write);
-	if (INVALID_SOCKET != _fd)
+	if (INVALID_SOCKET == _fd)
 	{
 		return (int32_t)CEC_INVALID_SOCKET;
 	}
@@ -131,7 +134,7 @@ int32_t		tcp_channel_base::do_send_inlock(const char* buf, uint32_t	len)
 
 int32_t	tcp_channel_base::send_alone()
 {
-	if (INVALID_SOCKET != _fd)
+	if (INVALID_SOCKET == _fd)
 	{
 		return (int32_t)CEC_INVALID_SOCKET;
 	}
@@ -158,7 +161,7 @@ void tcp_channel_base::shutdown(int32_t howto)
 
 int32_t	tcp_channel_base::do_recv()
 {
-	if (INVALID_SOCKET != _fd)
+	if (INVALID_SOCKET == _fd)
 	{
 		return (int32_t)CEC_INVALID_SOCKET;
 	}
@@ -203,7 +206,7 @@ int32_t	tcp_channel_base::do_recv_nolock()
 					break;
 				}
 				assert(errno != EFAULT);
-				return (int32_t)CEC_READ_FAILED;
+				return (int32_t)CEC_READ_FAILED;		//maybe Connection reset by peer / bad file desc
 			}
 			else if (ret == 0)
 			{

@@ -54,8 +54,8 @@ void thread_object::thread_routine()
 		//是否退出
 		{
 			//1, 是否退出或等待
-			std::unique_lock <std::mutex> lck(_mutex_taskempty);
 			_is_taskempty = _resident_task_queue.is_empty() && _disposible_task_queue.is_empty();
+			std::unique_lock <std::mutex> lck(_mutex_taskempty);
 			while (!_is_quit && _is_taskempty)
 			{
 				_cond_taskempty.wait(lck);

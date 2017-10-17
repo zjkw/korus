@@ -52,7 +52,7 @@ private:
 
 	virtual void on_sockio_read();
 	virtual void on_sockio_write();
-	virtual SOCKET	get_fd() { return _fd; }
+	virtual SOCKET	get_fd() { return CNS_CONNECTING == _conn_state ? _conn_fd : _fd; }
 
 	virtual	int32_t		on_recv_buff(const void* buf, const size_t len, bool& left_partial_pkg);
 };
