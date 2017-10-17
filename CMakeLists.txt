@@ -24,5 +24,6 @@ SET(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/example/bin)
 SET(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/konus/lib)
 
 ADD_SUBDIRECTORY(konus)
+ADD_SUBDIRECTORY(example/tcp/multithread_tcp_server)
 
 

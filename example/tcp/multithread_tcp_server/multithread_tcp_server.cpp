@@ -1,9 +1,10 @@
-#include "konus.h"
+#include "konus/inc/konus.h"
 
 class tcp_server_handler : public tcp_server_callback
 {
-	tcp_server_handler();
-	virtual ~tcp_server_handler();
+public:
+	tcp_server_handler(){}
+	virtual ~tcp_server_handler(){}
 
 	//override------------------
 	virtual void	on_accept(std::shared_ptr<tcp_server_channel> channel)	//连接已经建立
@@ -50,8 +51,9 @@ int main(int argc, char* argv[])
 	addr = std::string("0.0.0.0:") + argv[1];
 	thread_num = (uint16_t)atoi(argv[2]);
 		
-	std::shared_ptr<tcp_server_handler> handler = make_shared<tcp_server_handler>();
-	tcp_server server(thread_num, addr, std::dynamic_pointer_cast<td::shared_ptr<tcp_server_callback>>(handler));
+	std::shared_ptr<tcp_server_handler> handler = std::make_shared<tcp_server_handler>();
+	std::shared_ptr<tcp_server_callback> cb = std::dynamic_pointer_cast<tcp_server_callback>(handler);
+	tcp_server<uint16_t> server(thread_num, addr, cb);
 	for (;;)
 	{
 
