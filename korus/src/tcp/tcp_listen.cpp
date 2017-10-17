@@ -32,8 +32,7 @@ bool	tcp_listen::add_listen(const void* key, const std::string& listen_addr, std
 {
 	// 0¼ì²é
 	struct sockaddr_in	si;
-	bool ret = sockaddr_from_string(listen_addr, si);
-	if (!ret)
+	if (!sockaddr_from_string(listen_addr, si))
 	{
 		return false;
 	}
@@ -57,7 +56,7 @@ void	tcp_listen::del_listen(const void* key, const std::string& listen_addr)
 {
 	// 0¼ì²é
 	struct sockaddr_in	si;
-	if (sockaddr_from_string(listen_addr, si))
+	if (!sockaddr_from_string(listen_addr, si))
 	{
 		return;
 	}

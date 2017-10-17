@@ -18,7 +18,7 @@ tcp_server_channel::~tcp_server_channel()
 // 保证原子，考虑多线程环境下，buf最好是一个或若干完整包；可能触发错误/异常 on_error
 int32_t	tcp_server_channel::send(const void* buf, const size_t len)
 {
-	if (is_valid())
+	if (!is_valid())
 	{
 		return 0;
 	}
@@ -41,7 +41,7 @@ int32_t	tcp_server_channel::send(const void* buf, const size_t len)
 
 void	tcp_server_channel::close()
 {	
-	if (is_valid())
+	if (!is_valid())
 	{
 		return;
 	}
@@ -59,7 +59,7 @@ void	tcp_server_channel::close()
 // 参数参考全局函数 ::shutdown
 void	tcp_server_channel::shutdown(int32_t howto)
 {
-	if (is_valid())
+	if (!is_valid())
 	{
 		return;
 	}
@@ -75,7 +75,7 @@ void	tcp_server_channel::shutdown(int32_t howto)
 //////////////////////////////////
 void	tcp_server_channel::on_sockio_write()
 {
-	if (is_valid())
+	if (!is_valid())
 	{
 		return;
 	}
@@ -88,7 +88,7 @@ void	tcp_server_channel::on_sockio_write()
 
 void	tcp_server_channel::on_sockio_read()
 {
-	if (is_valid())
+	if (!is_valid())
 	{
 		return;
 	}
@@ -101,7 +101,7 @@ void	tcp_server_channel::on_sockio_read()
 
 void	tcp_server_channel::invalid()
 {
-	if (is_valid())
+	if (!is_valid())
 	{
 		return;
 	}
@@ -113,7 +113,7 @@ void	tcp_server_channel::invalid()
 
 int32_t	tcp_server_channel::on_recv_buff(const void* buf, const size_t len, bool& left_partial_pkg)
 {
-	if (is_valid())
+	if (!is_valid())
 	{
 		return 0;
 	}

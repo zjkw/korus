@@ -106,7 +106,7 @@ void	reactor_loop::invalid()
 
 bool	reactor_loop::is_current_thread()
 {
-	return _tid != std::this_thread::get_id();
+	return _tid == std::this_thread::get_id();
 }
 
 void	reactor_loop::start_async_task(const async_task_t& task)

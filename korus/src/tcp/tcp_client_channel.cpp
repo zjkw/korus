@@ -19,7 +19,7 @@ tcp_client_channel::~tcp_client_channel()
 // 保证原子，考虑多线程环境下，buf最好是一个或若干完整包；可能触发错误/异常 on_error
 int32_t	tcp_client_channel::send(const void* buf, const size_t len)
 {
-	if (is_valid())
+	if (!is_valid())
 	{
 		return (int32_t)CEC_INVALID_SOCKET;
 	}
@@ -33,7 +33,7 @@ int32_t	tcp_client_channel::send(const void* buf, const size_t len)
 
 void	tcp_client_channel::close()
 {
-	if (is_valid())
+	if (!is_valid())
 	{
 		return;
 	}
@@ -63,7 +63,7 @@ void	tcp_client_channel::close()
 // 参数参考全局函数 ::shutdown
 void	tcp_client_channel::shutdown(int32_t howto)
 {
-	if (is_valid())
+	if (!is_valid())
 	{
 		return;
 	}
@@ -83,7 +83,7 @@ void	tcp_client_channel::shutdown(int32_t howto)
 
 void	tcp_client_channel::connect()
 {
-	if (is_valid())
+	if (!is_valid())
 	{
 		return;
 	}
@@ -101,7 +101,7 @@ void	tcp_client_channel::connect()
 	_timer_connect_retry_wait.stop();
 
 	struct sockaddr_in	si;
-	if (sockaddr_from_string(_server_addr, si))
+	if (!sockaddr_from_string(_server_addr, si))
 	{
 		return;
 	}
@@ -172,7 +172,7 @@ void	tcp_client_channel::on_timer_connect_retry_wait(timer_helper* timer_id)
 //可能是连接成功后触发，也可能是一般写触发
 void	tcp_client_channel::on_sockio_write()
 {
-	if (is_valid())
+	if (!is_valid())
 	{
 		return;
 	}
@@ -218,7 +218,7 @@ void	tcp_client_channel::on_sockio_write()
 
 void	tcp_client_channel::on_sockio_read()
 {
-	if (is_valid())
+	if (!is_valid())
 	{
 		return;
 	}
@@ -235,7 +235,7 @@ void	tcp_client_channel::on_sockio_read()
 
 void	tcp_client_channel::invalid()
 {
-	if (is_valid())
+	if (!is_valid())
 	{
 		return;
 	}
@@ -248,7 +248,7 @@ void	tcp_client_channel::invalid()
 
 int32_t	tcp_client_channel::on_recv_buff(const void* buf, const size_t len, bool& left_partial_pkg)
 {
-	if (is_valid())
+	if (!is_valid())
 	{
 		return 0;
 	}
