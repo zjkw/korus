@@ -4,7 +4,7 @@
 #include <string>
 #include <map>
 #include "tcp_server_channel.h"
-#include "konus/src/reactor/idle_helper.h"
+#include "korus/src/reactor/idle_helper.h"
 
 //线程安全，不会在非所属线程运行
 class tcp_listen

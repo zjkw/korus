@@ -1,7 +1,7 @@
 #include <string.h>
 #include <functional>
 
-#include "konus/src/util/tcp_util.h"
+#include "korus/src/util/tcp_util.h"
 #include "tcp_listen.h"
 
 #define SCAN_STEP_ONCE	(1)

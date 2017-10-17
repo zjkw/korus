@@ -4,9 +4,9 @@
 #include <memory>
 #include <atomic>
 #include <chrono>
-#include "konus/src/util/thread_safe_objbase.h"
-#include "konus/src/reactor/timer_helper.h"
-#include "konus/src/reactor/reactor_loop.h"
+#include "korus/src/util/thread_safe_objbase.h"
+#include "korus/src/reactor/timer_helper.h"
+#include "korus/src/reactor/reactor_loop.h"
 #include "tcp_channel_base.h"
 
 //connect不要把错误(EINTR/EINPROGRESS/EAGAIN)当成Fatal.
