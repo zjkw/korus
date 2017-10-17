@@ -18,17 +18,8 @@ public:
 	bool	exist_idle(idle_helper* idle_id);
 
 private:
-	struct idle_data
-	{
-		uint64_t				seq;
-		idle_data(uint64_t seq_)
-		{
-			seq = seq_;
-		}
-	};
-
 	uint64_t							_idle_seq;
-	std::map<idle_helper*, idle_data>	_idle_list;
+	std::map<idle_helper*, uint64_t>	_idle_list;
 	std::recursive_mutex				_mutex_idle;
 };
 

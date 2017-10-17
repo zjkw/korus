@@ -102,17 +102,10 @@ std::chrono::milliseconds	timer_sheduler::min_interval()
 
 void	timer_sheduler::start_timer_inlock(timer_helper* timer_id, const std::chrono::system_clock::time_point& begin, const std::chrono::milliseconds& interval)
 {
-	//1, 是否存在
-	std::map<timer_helper*, timer_key>::iterator it = _object_list.find(timer_id);
-	if (it != _object_list.end())
-	{
-		//2, 删除老
-		assert(_object_list.find(it->second) != _object_list.end());
-		_timer_list.erase(it->second);
-		_object_list.erase(it);
-	}
+	// 1, 是否存在
+	stop_timer_inlock(timer_id);
 
-	// 3, 重建新
+	// 2, 重建新
 	timer_key	key(begin, ++_unique_seq, timer_id);
 	timer_item	item(interval);
 	_object_list[timer_id] = key;
@@ -124,7 +117,7 @@ void	timer_sheduler::stop_timer_inlock(timer_helper* timer_id)
 	std::map<timer_helper*, timer_key>::iterator it = _object_list.find(timer_id);
 	if (it != _object_list.end())
 	{
-		assert(_object_list.find(it->second) != _object_list.end());
+		assert(_timer_list.find(it->second) != _timer_list.end());
 		_timer_list.erase(it->second);
 		_object_list.erase(it);
 	}

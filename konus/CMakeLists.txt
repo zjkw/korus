@@ -1,14 +1,11 @@
-cmake_minimum_required(VERSION 2.8)
-
-project(konus)
-
-SET(CMAKE_BUILE_TYPE DEBUG)
-SET(CMAKE_CXX_FLAGS_DEBUG "-g -Wall")
-
-file(GLOB_RECURSE SRC_LIST FOLLOW_SYMLINKS src/*.c)
-file(GLOB_RECURSE SRC_LIST FOLLOW_SYMLINKS src/*.cxx)
-file(GLOB_RECURSE SRC_LIST FOLLOW_SYMLINKS src/*.cpp)
-
-add_library(konus STATIC ${SRC_LIST})
+aux_source_directory(./src/util/ SRC_LIST_UTIL)
+aux_source_directory(./src/thread/ SRC_LIST_THREAD)
+aux_source_directory(./src/reactor/ SRC_LIST_REACTOR)
+aux_source_directory(./src/tcp/ SRC_LIST_TCP)
+add_library(konus STATIC ${SRC_LIST_UTIL}  ${SRC_LIST_THREAD}  ${SRC_LIST_REACTOR}  ${SRC_LIST_TCP})
 
 install (TARGETS konus DESTINATION lib)
+
+
+
+

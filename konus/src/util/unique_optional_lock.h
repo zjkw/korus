@@ -11,7 +11,7 @@ public:
 	{
 		if (_nolock)
 		{
-			_Pmtx = &_Mtx
+			_Pmtx = &Mtx;
 			_Pmtx->lock();
 		}
 	}

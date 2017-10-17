@@ -1,6 +1,6 @@
 #pragma once
 
-#include "..\util\tcp_util.h"
+#include "konus/src/util/tcp_util.h"
 
 class sockio_channel
 {

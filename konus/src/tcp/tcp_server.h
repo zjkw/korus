@@ -1,7 +1,7 @@
 #pragma once
 
+#include <unistd.h>
 #include <sys/sysinfo.h> 
-#include <sched.h>
 #include "tcp_listen.h"
 
 #define DEFAULT_LISTEN_BACKLOG	20

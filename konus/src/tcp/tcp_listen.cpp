@@ -1,14 +1,15 @@
+#include <string.h>
 #include <functional>
 
+#include "konus/src/util/tcp_util.h"
 #include "tcp_listen.h"
-#include "tcp_util.h"
 
 #define SCAN_STEP_ONCE	(1)
 
 tcp_listen::tcp_listen(std::shared_ptr<reactor_loop> reactor)
-	: _reactor(reactor), _last_recover_scan_fd(0), _idle_helper(reactor)
+	: _reactor(reactor), _last_recover_scan_fd(0), _idle_helper(reactor.get())
 {
-	_idle_helper.bind(std::bind(tcp_listen::on_idle_recover, this, std::placeholders::_1));
+	_idle_helper.bind(std::bind(&tcp_listen::on_idle_recover, this, std::placeholders::_1));
 }
 
 tcp_listen::~tcp_listen()

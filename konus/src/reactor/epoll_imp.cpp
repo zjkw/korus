@@ -1,4 +1,7 @@
 #include <sys/epoll.h>
+#include <assert.h>
+#include <string.h>
+#include <unistd.h>
 #include "epoll_imp.h"
 
 #define DEFAULT_EPOLL_SIZE	(2000)
@@ -28,7 +31,7 @@ int32_t epoll_imp::poll(int32_t mill_sec)
 	{
 		for (int32_t i = 0; i < ret; ++i)
 		{
-			sockio_channel* channel = (channel*)_epoll_event[i].data.ptr;
+			sockio_channel* channel = (sockio_channel*)_epoll_event[i].data.ptr;
 			assert(channel);
 
 			if (_epoll_event[i].events & (EPOLLERR | EPOLLHUP))
@@ -43,11 +46,11 @@ int32_t epoll_imp::poll(int32_t mill_sec)
 			}
 #endif
 			// 对比nginx，我们处理[i]的时候需要考虑是否影响[i]后面的对象是否存在，而一个线程中的对象是否回收由listen的idle/server_client的生命期决定
-			if (_epoll_event[i].events & (POLLERR | EPOLLIN)) 
+			if (_epoll_event[i].events & (EPOLLERR | EPOLLIN)) 
 			{	
 				channel->on_sockio_read();
 			}
-			if (events & EPOLLOUT)
+			if (_epoll_event[i].events & EPOLLOUT)
 			{
 				channel->on_sockio_write();
 			}			
@@ -69,7 +72,7 @@ void epoll_imp::add_sock(sockio_channel* channel, SOCKIO_TYPE type)
 	memset(&ev, 0, sizeof(ev));
 	ev.events = convert_event_flag(type);
 	ev.data.ptr = channel;
-	int32_t ret = epoll_ctl(channel->get_fd(), EPOLL_CTL_ADD, fd, &ev);
+	int32_t ret = epoll_ctl(_fd, EPOLL_CTL_ADD, channel->get_fd(), &ev);
 }
 
 // 存在更新
@@ -79,7 +82,7 @@ void epoll_imp::upt_type(sockio_channel* channel, SOCKIO_TYPE type)
 	memset(&ev, 0, sizeof(ev));
 	ev.events = convert_event_flag(type);
 	ev.data.ptr = channel;
-	int32_t ret = epoll_ctl(channel->get_fd(), EPOLL_CTL_MOD, fd, &ev);
+	int32_t ret = epoll_ctl(_fd, EPOLL_CTL_MOD, channel->get_fd(), &ev);
 }
 
 // 删除
@@ -89,7 +92,7 @@ void epoll_imp::del_sock(sockio_channel* channel)
 	memset(&ev, 0, sizeof(ev));
 	ev.events = 0;
 	ev.data.ptr = channel;
-	int32_t ret = epoll_ctl(channel->get_fd(), EPOLL_CTL_MOD, fd, &ev);
+	int32_t ret = epoll_ctl(_fd, EPOLL_CTL_MOD, channel->get_fd(), &ev);
 }
 
 void epoll_imp::clear()

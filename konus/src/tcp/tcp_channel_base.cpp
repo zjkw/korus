@@ -1,4 +1,7 @@
 #include <assert.h>
+#include <errno.h>
+#include <string.h>
+#include <unistd.h>
 #include <mutex>
 #include "tcp_channel_base.h"
 
@@ -64,7 +67,7 @@ int32_t		tcp_channel_base::send(const void* buf, const size_t len)
 			real_write += ret;
 		}
 	}
-	errno_t errno_old = errno;	//不清楚memcpy是否影响errno
+	int32_t errno_old = errno;	
 	memcpy(_self_write_buff + _self_write_pos, (uint8_t*)buf + real_write, len - real_write);
 	_self_write_pos += len - real_write;
 	
@@ -75,7 +78,7 @@ int32_t		tcp_channel_base::send(const void* buf, const size_t len)
 #else
 		if (errno_old == EAGAIN || errno_old == EWOULDBLOCK)
 #endif
-		{0
+		{
 		}
 		else
 		{

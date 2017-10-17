@@ -1,4 +1,4 @@
-0#include "thread_object.h"
+#include "thread_object.h"
 
 thread_object::thread_object(uint16_t index)
 	: _thread_index(index), _is_start(false), _is_taskempty(true), _is_quit(false), _resident_task_queue(true, false), _disposible_task_queue(false, false), _init_task_queue(false, false), _exit_task_queue(false, false)
@@ -102,5 +102,5 @@ void	thread_object::invalid()
 			}
 		}
 		_thread_ptr = nullptr;
-	}0
+	}
 }

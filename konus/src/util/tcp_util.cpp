@@ -1,3 +1,5 @@
+#include <fcntl.h>
+#include <unistd.h>
 #include "tcp_util.h"
 
 bool split_hostport(const std::string& address, std::string& host, int32_t& port)
@@ -154,7 +156,7 @@ bool set_defer_accept_sock(SOCKET fd, int32_t defer)
 {
 	int val = defer != 0 ? 1 : 0;
 	int len = sizeof(val);
-	return 0 == setsockopt(fd, /*SOL_TCP*/IPPROTO_TCP, TCP_DEFER_ACCEPT, (const char*)&val, len);
+	return 0 == setsockopt(fd, /*SOL_TCP*/IPPROTO_TCP, defer, (const char*)&val, len);
 }
 
 bool bind_sock(SOCKET fd, const struct sockaddr_in& addr)
@@ -167,10 +169,10 @@ bool listen_sock(SOCKET fd, int backlog)
 	return !listen_sock(fd, backlog);
 }
 
-SOCKET =(uint32_t backlog, uint32_t defer_accept, const struct sockaddr_in& addr)
+SOCKET listen_nonblock_reuse_socket(uint32_t backlog, uint32_t defer_accept, const struct sockaddr_in& addr)
 {
 	/* Request socket. */
-	SOCKET s = create_general_tcp_socket();
+	SOCKET s = create_general_tcp_socket(addr);
 	if (s == INVALID_SOCKET)
 	{
 		return INVALID_SOCKET;
@@ -194,7 +196,7 @@ SOCKET =(uint32_t backlog, uint32_t defer_accept, const struct sockaddr_in& addr
 		return INVALID_SOCKET;
 	}
 
-	if (!bind_sock(s, &addr))
+	if (!bind_sock(s, addr))
 	{
 		close(s);
 		return false;

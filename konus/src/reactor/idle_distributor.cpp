@@ -19,12 +19,12 @@ void	idle_distributor::idle()
 
 	while (true)
 	{
-		std::map<idle_helper*, idle_data>::iterator it = _idle_list.upper_bound(id);//上界，避免递归导致的后续pair被删除而找不到后续
+		std::map<idle_helper*, uint64_t>::iterator it = _idle_list.upper_bound(id);//上界，避免递归导致的后续pair被删除而找不到后续
 		if (it == _idle_list.end())
 		{
 			break;
 		}
-		if (it->second.seq >= old_seq)
+		if (it->second >= old_seq)
 		{
 			break;
 		}
@@ -42,9 +42,8 @@ void	idle_distributor::clear()
 
 void	idle_distributor::start_idle(idle_helper* idle_id)
 {
-	idle_data data(++_idle_seq);	
 	std::unique_lock <std::recursive_mutex> lck(_mutex_idle);
-	_idle_list[idle_id] = data;
+	_idle_list[idle_id] = ++_idle_seq;
 }
 
 void	idle_distributor::stop_idle(idle_helper* idle_id)

@@ -1,9 +1,12 @@
 #pragma once
 
-class reactor_loop;
+#include <functional>
+#include <chrono>
+
 class timer_helper;
 using reactor_timer_callback_t = std::function<void(timer_helper*)>;
 
+class reactor_loop;
 class timer_helper
 {
 public:

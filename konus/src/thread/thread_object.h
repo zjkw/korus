@@ -1,13 +1,15 @@
 #ifndef _THREADOBJ_H
 #define _THREADOBJ_H
 
+#include <assert.h>
 #include <condition_variable>
 #include <thread>
 #include <memory>
 #include <mutex>
 
-#include "..\util\thread_safe_objbase.h"
-#include "..\util\task_queue.h"
+#include "konus/src/util/thread_safe_objbase.h"
+//#include "src/util/thread_safe_objbase.h"
+#include "konus/src/util/task_queue.h"
 
 //支持常驻任务队列(不提供显式撤销接口)
 //支持一次性任务队列

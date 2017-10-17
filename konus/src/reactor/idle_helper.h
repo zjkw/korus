@@ -1,11 +1,11 @@
 #pragma once
 
-#include "reactor_loop.h"
+#include <functional>
 
-class reactor_loop;
 class idle_helper;
 using reactor_idle_callback_t = std::function<void(idle_helper*)>;
 
+class reactor_loop;
 //¾¡Á¿ÇáµÄ¸ºÔØ
 class idle_helper
 {

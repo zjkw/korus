@@ -18,9 +18,11 @@ reactor_loop::reactor_loop(std::shared_ptr<thread_object> thread_obj/* = nullptr
 		assert(_thread_obj->is_current_thread());
 	}
 
-#ifdef OS_LINUX
+#if defined(__linux__) || defined(__linux)  
 	_backend_poller = new epoll_imp;
-#elif defined(OS_MACOSX)
+#elif defined(__APPLE__) && defined(__GNUC__)  
+	//	_backend_poller = new kqueue_imp;
+#elif defined(__MACOSX__)  
 //	_backend_poller = new kqueue_imp;
 #else
 	_backend_poller = nullptr;

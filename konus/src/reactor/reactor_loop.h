@@ -1,8 +1,8 @@
 #pragma once
 
-#include "..\util\tcp_util.h"
-#include "..\util\task_queue.h"
-#include "..\thread\thread_object.h"
+#include "konus/src/util/tcp_util.h"
+#include "konus/src/util/task_queue.h"
+#include "konus/src/thread/thread_object.h"
 #include "backend_poller.h"
 #include "timer_sheduler.h"
 #include "idle_distributor.h"

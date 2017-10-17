@@ -1,8 +1,8 @@
 #pragma once
 
 #include "tcp_channel_base.h"
-#include "..\reactor\reactor_loop.h"
-#include "..\reactor\backend_poller.h"
+#include "konus/src/reactor/reactor_loop.h"
+#include "konus/src/reactor/backend_poller.h"
 
 class tcp_server_callback;
 //这个类用户可以操作，而且是可能多线程环境下操作，对外是shared_ptr，需要保证线程安全

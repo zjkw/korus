@@ -158,7 +158,7 @@ void	tcp_client_channel::on_timer_connect_timeout(timer_helper* timer_id)
 	_conn_fd = INVALID_SOCKET;
 	_conn_state = CNS_CLOSED;
 
-	_timer_connect_retry_wait.start();
+	_timer_connect_retry_wait.start(_connect_retry_wait, _connect_retry_wait);
 }
 
 //触发时机：已经明确connect失败/超时情况下启动；在connect时候关掉定时器；触发动作：自动执行connect

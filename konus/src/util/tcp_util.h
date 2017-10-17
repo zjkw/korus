@@ -4,10 +4,17 @@
 #include <string>
 
 #include <sys/types.h>
+#include <arpa/inet.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
 
 #ifdef WIN32
 #include <winsock2.h>
+#else
+typedef int SOCKET;
 #endif
+
+#define INVALID_SOCKET (-1)
 
 #define DEFAULT_READ_BUFSIZE	(100 * 1025)
 #define DEFAULT_WRITE_BUFSIZE	(100 * 1025)

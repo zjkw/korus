@@ -49,6 +49,10 @@ private:
 	struct timer_item
 	{
 		std::chrono::milliseconds				interval;
+		timer_item()
+		{
+
+		}
 		timer_item(const std::chrono::milliseconds& interval_)
 		{
 			interval = interval_;
