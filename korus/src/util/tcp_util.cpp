@@ -2,7 +2,7 @@
 #include <unistd.h>
 #include "tcp_util.h"
 
-bool split_hostport(const std::string& address, std::string& host, int32_t& port)
+bool split_hostport(const std::string& address, std::string& host, uint16_t& port)
 {
 	std::string a = address;
 
@@ -18,8 +18,8 @@ bool split_hostport(const std::string& address, std::string& host, int32_t& port
 		return false;
 	}
 
-	port = std::atoi(&a[index + 1]);
-	host = std::string(address, index);
+	port = (uint16_t)std::atoi(&a[index + 1]);
+	host = address.substr(0, index);
 	if (host[0] == '[') 
 	{
 		if (*host.rbegin() != ']') 
@@ -45,7 +45,7 @@ bool split_hostport(const std::string& address, std::string& host, int32_t& port
 bool sockaddr_from_string(const std::string& address, struct sockaddr_in& si)
 {
 	std::string host;
-	int32_t port = 0;
+	uint16_t port = 0;
 	if (!split_hostport(address, host, port)) 
 	{
 		return false;
@@ -98,11 +98,11 @@ bool set_nonblock_sock(SOCKET fd, unsigned int nonblock)
 	}
 	if (nonblock > 0)
 	{
-		return fcntl(fd, F_SETFL, flags | O_NONBLOCK);
+		return !fcntl(fd, F_SETFL, flags | O_NONBLOCK);
 	}
 	else
 	{
-		return fcntl(fd, F_SETFL, flags & (~O_NONBLOCK));
+		return !fcntl(fd, F_SETFL, flags & (~O_NONBLOCK));
 	}
 }
 
@@ -166,7 +166,7 @@ bool bind_sock(SOCKET fd, const struct sockaddr_in& addr)
 
 bool listen_sock(SOCKET fd, int backlog)
 {
-	return !listen_sock(fd, backlog);
+	return !::listen(fd, backlog);
 }
 
 SOCKET listen_nonblock_reuse_socket(uint32_t backlog, uint32_t defer_accept, const struct sockaddr_in& addr)

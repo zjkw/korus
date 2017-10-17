@@ -18,12 +18,12 @@ thread_safe_objbase::~thread_safe_objbase()
 {
 }
 
-inline void	thread_safe_objbase::invalid()
+void	thread_safe_objbase::invalid()
 {
 	_invalid = false;
 }
 
-inline bool	thread_safe_objbase::is_valid()
+bool	thread_safe_objbase::is_valid()
 {
 	return _invalid;
 }

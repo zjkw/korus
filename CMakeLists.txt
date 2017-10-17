@@ -2,8 +2,22 @@ cmake_minimum_required(VERSION 2.8)
 
 project(korus)
 
-SET(CMAKE_BUILE_TYPE DEBUG)
-SET(CMAKE_CXX_FLAGS_DEBUG "-g -Wall")
+set(CMAKE_VERBOSE_MAKEFILE ON)
+
+if(NOT CMAKE_BUILD_TYPE)
+	set(CMAKE_BUILD_TYPE "Debug")
+#	set(CMAKE_CXX_FLAGS_DEBUG "-gstabs+ -O0 -DCHECK_PTHREAD_RETURN_VALUE -D_FILE_OFFSET_BITS=64 -Wall -Wextra -Wconversion -Wno-unused-parameter -Woverloaded-virtual -Wpointer-arith -Wshadow -Wwrite-strings -march=native -rdynamic")
+endif()
+
+message("CMAKE_BUILD_TYPE = ${CMAKE_BUILD_TYPE}")
+
+IF(CMAKE_BUILD_TYPE MATCHES Debug)
+  message("Debug build.")
+ELSEIF(CMAKE_BUILD_TYPE MATCHES Release)
+  message("Release build.")
+ELSE()
+  message("Some other build type.")
+ENDIF()
 
 INCLUDE_DIRECTORIES(
   ${PROJECT_SOURCE_DIR}/korus/inc

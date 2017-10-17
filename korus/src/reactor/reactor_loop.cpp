@@ -6,8 +6,7 @@
 #include "timer_helper.h"
 #include "idle_helper.h"
 
-#define DEFAULT_POLL_WAIT_MILLSEC	(10000)
-#define DEFAULT_POLL_WAIT_COUNTER	(30000000 / DEFAULT_POLL_WAIT_MILLSEC)
+#define DEFAULT_POLL_WAIT_MILLSEC	(100)
 
 reactor_loop::reactor_loop(std::shared_ptr<thread_object> thread_obj/* = nullptr*/)
 	: _thread_obj(thread_obj), _task_queue(false, true)

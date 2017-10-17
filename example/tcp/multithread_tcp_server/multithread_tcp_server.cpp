@@ -54,6 +54,7 @@ int main(int argc, char* argv[])
 	std::shared_ptr<tcp_server_handler> handler = std::make_shared<tcp_server_handler>();
 	std::shared_ptr<tcp_server_callback> cb = std::dynamic_pointer_cast<tcp_server_callback>(handler);
 	tcp_server<uint16_t> server(thread_num, addr, cb);
+	server.start();
 	for (;;)
 	{
 

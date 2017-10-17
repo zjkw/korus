@@ -14,7 +14,7 @@
 typedef int SOCKET;
 #endif
 
-#define INVALID_SOCKET (-1)
+#define INVALID_SOCKET			(-1)
 
 #define DEFAULT_READ_BUFSIZE	(100 * 1025)
 #define DEFAULT_WRITE_BUFSIZE	(100 * 1025)
