@@ -24,12 +24,13 @@ enum CHANNEL_ERROR_CODE
 {
 	CEC_NONE = 0,
 	CEC_CLOSE_BY_PEER = -1,	//对端关闭
-	CEC_RECVBUF_SHORT = -2,	//接收缓存区满了
-	CEC_SENDBUF_SHORT = -3,	//发送缓存区满了
-	CEC_SPLIT_FAILED = -4,	//接收缓存区解析包失败
-	CEC_WRITE_FAILED = -5,	//写异常
-	CEC_READ_FAILED = -6,	//读异常
-	CEC_INVALID_SOCKET = -7,//无效socket
+	CEC_RECVBUF_SHORT = -2,	//接收缓存区不够
+	CEC_SENDBUF_FULL = -3,	//发送缓存区满了
+	CEC_RECVBUF_FULL = -4,	//接收缓存区满了
+	CEC_SPLIT_FAILED = -5,	//接收缓存区解析包失败
+	CEC_WRITE_FAILED = -6,	//写异常
+	CEC_READ_FAILED = -7,	//读异常
+	CEC_INVALID_SOCKET = -8,//无效socket
 };
 
 bool set_reuse_port_sock(SOCKET fd, int reuse);

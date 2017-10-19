@@ -79,7 +79,6 @@ public:
 				thread_obj->add_init_task(std::bind(&tcp_client::thread_init, this, thread_obj, _cb));
 				thread_obj->start();
 			}
-			_cb = nullptr;
 		}
 	}
 

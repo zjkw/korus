@@ -16,9 +16,11 @@ void	timer_sheduler::tick()
 {
 	// 此刻最大的id
 	timer_key	now_id(std::chrono::system_clock::now(), (uint64_t)-1);
-	uint64_t	old_seq = _unique_seq;//为了避免回调插入导致的循环：tick -> cb -> map::insert
 	timer_key	cursor_id;//默认为zero
 	std::unique_lock <std::recursive_mutex> lck(_mutex_timer);
+
+	uint64_t	old_seq = _unique_seq;//为了避免回调插入导致的循环：tick -> cb -> map::insert
+
 	// 取出满足条件最小的
 	while (true)
 	{

@@ -50,17 +50,23 @@ int32_t		tcp_channel_base::send(const void* buf, const size_t len)
 	{
 		return (int32_t)CEC_INVALID_SOCKET;
 	}
-
+	// 不希望有人调用缓存区数据发送，这个应该调用send_alone
+	if (_self_write_buff <= (uint8_t*)buf && _self_write_buff + _self_write_size > (uint8_t*)buf)
+	{
+		assert(false);
+		return (int32_t)CEC_WRITE_FAILED;
+	}
+	
 	//考虑到::send失败，而导致的粘包，我们要求剩余空间必须够
 	if (len + _self_write_pos >= _self_write_size)
 	{
-		return (int32_t)CEC_SENDBUF_SHORT;
+		return (int32_t)CEC_SENDBUF_FULL;
 	}
 	//作为一个优化，先在条件允许的情况下避免 “入本地缓存再执行send本地数据”	
 	int32_t real_write = 0;
 	if (!_self_write_pos)
 	{
-		int32_t ret = do_send_inlock((const char*)buf, len);
+		int32_t ret = do_send_inlock(buf, len);
 		if (ret < 0)
 		{
 			return ret;
@@ -85,7 +91,7 @@ int32_t		tcp_channel_base::send(const void* buf, const size_t len)
 		}
 		else
 		{
-			int32_t ret = do_send_inlock((const char*)_self_write_buff, _self_write_pos);
+			int32_t ret = do_send_inlock((const void*)_self_write_buff, _self_write_pos);
 			if (ret >= 0)
 			{
 				_self_write_pos -= ret;
@@ -101,7 +107,7 @@ int32_t		tcp_channel_base::send(const void* buf, const size_t len)
 	return len;
 }
 
-int32_t		tcp_channel_base::do_send_inlock(const char* buf, uint32_t	len)
+int32_t		tcp_channel_base::do_send_inlock(const void* buf, uint32_t	len)
 {
 	int32_t real_write = 0;
 	while (real_write != len)
@@ -134,15 +140,23 @@ int32_t		tcp_channel_base::do_send_inlock(const char* buf, uint32_t	len)
 
 int32_t	tcp_channel_base::send_alone()
 {
+	std::unique_lock <std::mutex> lck(_mutex_write);
 	if (INVALID_SOCKET == _fd)
 	{
 		return (int32_t)CEC_INVALID_SOCKET;
 	}
-	return do_send_inlock((const char*)_self_write_buff, _self_write_pos);
+	int32_t ret = do_send_inlock(_self_write_buff, _self_write_pos);
+	if (ret > 0)
+	{
+		_self_write_pos -= ret;
+		memmove(_self_write_buff, _self_write_buff + ret, _self_write_pos);
+	}
+	return ret;
 }
 
 void tcp_channel_base::close()
 {
+	send_alone();
 	std::unique_lock <std::mutex> lck(_mutex_write);
 	if (INVALID_SOCKET != _fd)
 	{
@@ -184,6 +198,7 @@ int32_t	tcp_channel_base::do_recv_nolock()
 	int32_t total_read = 0;
 	
 	bool not_again = true;
+	bool peer_close = false;
 	while (not_again)
 	{
 		int32_t real_read = 0;
@@ -210,7 +225,9 @@ int32_t	tcp_channel_base::do_recv_nolock()
 			}
 			else if (ret == 0)
 			{
-				return CEC_CLOSE_BY_PEER;
+				peer_close = true;
+				not_again = false;
+				break;
 			}
 			else
 			{
@@ -235,6 +252,15 @@ int32_t	tcp_channel_base::do_recv_nolock()
 				break;
 			}
 		}
+	}
+
+	if (peer_close)
+	{
+		return CEC_CLOSE_BY_PEER;
+	}
+	if (_self_read_pos + 1 == _self_read_size)
+	{
+		return CEC_RECVBUF_FULL;
 	}
 
 	return total_read;

@@ -124,8 +124,12 @@ bool set_reuse_addr_sock(SOCKET fd, int reuse)
 
 bool set_reuse_port_sock(SOCKET fd, int reuse)
 {
+#ifdef REUSEPORT_TRADITION
 	int val = reuse > 0 ? 1 : 0;
 	return !setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, (const char *)(&val), sizeof(val));
+#else
+	return true;
+#endif
 }
 
 SOCKET create_general_tcp_socket(const struct sockaddr_in& addr)

@@ -28,6 +28,7 @@ int32_t	tcp_server_channel::send(const void* buf, const size_t len)
 		//报告错误
 		if (!_reactor->is_current_thread())
 		{
+			// tcp_server_channel生命期一般比reactor短，所以加上引用计数
 			_reactor->start_async_task(std::bind(&tcp_server_callback::on_error, _cb, (CHANNEL_ERROR_CODE)ret, shared_from_this()));		
 		}
 		else
@@ -48,7 +49,8 @@ void	tcp_server_channel::close()
 	//线程调度，对于服务端的链接而言，close即意味着死亡，不存在重新连接的可能性
 	if (!_reactor->is_current_thread())
 	{
-		_reactor->start_async_task(std::bind(&tcp_server_channel::invalid, this));
+		// tcp_server_channel生命期一般比reactor短，所以加上引用计数
+		_reactor->start_async_task(std::bind(&tcp_server_channel::invalid, shared_from_this()));
 		return;
 	}	
 
@@ -65,7 +67,8 @@ void	tcp_server_channel::shutdown(int32_t howto)
 
 	if (!_reactor->is_current_thread())
 	{
-		_reactor->start_async_task(std::bind(&tcp_server_channel::shutdown, this, howto));
+		// tcp_server_channel生命期一般比reactor短，所以加上引用计数
+		_reactor->start_async_task(std::bind(&tcp_server_channel::shutdown, shared_from_this(), howto));
 		return;
 	}
 	tcp_channel_base::shutdown(howto);

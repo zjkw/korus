@@ -6,91 +6,73 @@
 
 #define SCAN_STEP_ONCE	(1)
 
-tcp_listen::tcp_listen(std::shared_ptr<reactor_loop> reactor)
-	: _reactor(reactor), _last_recover_scan_fd(0), _idle_helper(reactor.get())
+tcp_listen::tcp_listen(std::shared_ptr<reactor_loop> reactor, const std::string& listen_addr, uint32_t backlog, uint32_t defer_accept)
+	: _reactor(reactor), _fd(INVALID_SOCKET), _listen_addr(listen_addr), _backlog(backlog), _defer_accept(defer_accept), _last_pos(0)
 {
-	_idle_helper.bind(std::bind(&tcp_listen::on_idle_recover, this, std::placeholders::_1));
+
 }
 
 tcp_listen::~tcp_listen()
 {
-	_idle_helper.stop();
-	for (std::map<SOCKET, listen_meta*>::iterator it = _listen_list.begin(); it != _listen_list.end(); it++)
+	_reactor->stop_sockio(this);
+	if (INVALID_SOCKET != _fd)
 	{
-		delete it->second;
-	}
-	_listen_list.clear();	
-	for (std::map<SOCKET, std::shared_ptr<tcp_server_channel>>::iterator it = _channel_list.begin(); it != _channel_list.end(); it++)
-	{
-		it->second->invalid();
-	}
-	_channel_list.clear();
+		::close(_fd);
+	}	
 }
 
-bool	tcp_listen::add_listen(const void* key, const std::string& listen_addr, std::shared_ptr<tcp_server_callback> cb, uint32_t backlog, uint32_t defer_accept,
-	const uint32_t self_read_size, const uint32_t self_write_size, const uint32_t sock_read_size, const uint32_t sock_write_size)
+bool	tcp_listen::start()
 {
-	// 0检查
+	// 1检查
 	struct sockaddr_in	si;
-	if (!sockaddr_from_string(listen_addr, si))
+	if (!sockaddr_from_string(_listen_addr, si))
 	{
 		return false;
 	}
 	
-	// 1构造listen socket
-	SOCKET s = listen_nonblock_reuse_socket(backlog, defer_accept, si);
+	// 2构造listen socket
+	SOCKET s = listen_nonblock_reuse_socket(_backlog, _defer_accept, si);
 	if (INVALID_SOCKET == s)
 	{
 		return false;
 	}
 
-	// 2注册
-	
-	// 3本地缓存
-	_listen_list[s] = new listen_meta(key, si, this, _reactor, cb, s, self_read_size, self_write_size, sock_read_size, sock_write_size);
+	// 3开启
+	_fd = s;
+	_reactor->start_sockio(this, SIT_READ);
 	
 	return true;
 }
 
-void	tcp_listen::del_listen(const void* key, const std::string& listen_addr)
+void	tcp_listen::add_accept_handler(const newfd_handle_t handler)
 {
-	// 0检查
-	struct sockaddr_in	si;
-	if (!sockaddr_from_string(listen_addr, si))
+	if (!_reactor->is_current_thread())
 	{
+		_reactor->start_async_task(std::bind(&tcp_listen::add_accept_handler, this, handler));
 		return;
 	}
 
-	for (std::map<SOCKET, listen_meta*>::iterator it = _listen_list.begin(); it != _listen_list.end(); it++)
-	{
-		if (key == it->second->void_ptr && !memcmp(&it->second->listen_addr, &si, sizeof(si)))
-		{
-			delete it->second;
-			_listen_list.erase(it);
-			break;
-		}
-	}
+	_hanler_list.emplace_back(handler);
 }
 
-void	tcp_listen::on_sockio_accept(listen_meta* meta)
+void tcp_listen::on_sockio_read()
 {
 	while (true)
 	{
 		struct sockaddr_in client_addr;
-		SOCKET newfd = accept_sock(meta->fd, &client_addr);
+		SOCKET newfd = accept_sock(_fd, &client_addr);
 		if (newfd >= 0)
 		{
-			if (!set_nonblock_sock(newfd, 1))
+			if (!_hanler_list.size())
 			{
+				//log
 				::close(newfd);
 			}
 			else
 			{
-				std::shared_ptr<tcp_server_channel>	channel = std::make_shared<tcp_server_channel>(newfd, _reactor, meta->cb,
-					meta->self_read_size, meta->self_write_size, meta->sock_read_size, meta->sock_write_size);
-				_channel_list[newfd] = channel;
-				
-				meta->cb->on_accept(channel);
+				_last_pos %= _hanler_list.size();
+				_hanler_list[_last_pos](newfd, client_addr);
+				_last_pos++;
 			}
 		}
 		else
@@ -113,35 +95,12 @@ void	tcp_listen::on_sockio_accept(listen_meta* meta)
 				break;
 			}
 		}
-	} 
-
-	if (_channel_list.size())
-	{
-		_idle_helper.start();
-	}	
+	}
 }
 
-void tcp_listen::on_idle_recover(idle_helper* idle_id)
+SOCKET	tcp_listen::get_fd()
 {
-	if (!_channel_list.size())
-	{
-		_idle_helper.stop();
-		return;
-	}
-
-	//找到上次位置
-	std::map<SOCKET, std::shared_ptr<tcp_server_channel>>::iterator it = _channel_list.upper_bound(_last_recover_scan_fd);
-	for (size_t i = 0; i < SCAN_STEP_ONCE && it != _channel_list.end();)
-	{
-		//就这里引用他
-		if (!it->second->is_valid() && it->second.unique())
-		{
-			_channel_list.erase(it++);
-		}
-		else
-		{
-			i++;
-		}
-	}
-	_last_recover_scan_fd = (it == _channel_list.end()) ? 0 : it->first;
+	return _fd;
 }
+
+

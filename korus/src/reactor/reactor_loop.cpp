@@ -9,7 +9,7 @@
 #define DEFAULT_POLL_WAIT_MILLSEC	(100)
 
 reactor_loop::reactor_loop(std::shared_ptr<thread_object> thread_obj/* = nullptr*/)
-	: _thread_obj(thread_obj), _task_queue(false, true)
+	: _thread_obj(thread_obj), _task_queue(false, true), _idle_helper(this), _idle_helper2(this)
 {
 	_tid = std::this_thread::get_id();
 	if (_thread_obj)
@@ -29,6 +29,21 @@ reactor_loop::reactor_loop(std::shared_ptr<thread_object> thread_obj/* = nullptr
 #endif
 	_timer_sheduler = new timer_sheduler;
 	_idle_distributor = new idle_distributor;
+
+	_idle_helper.bind(std::bind(&reactor_loop::on_idle_recover, this, std::placeholders::_1));
+	_idle_helper.start();
+	_idle_helper2.bind(std::bind(&reactor_loop::on_idle_recover2, this, std::placeholders::_1));
+	_idle_helper2.start();
+}
+
+void reactor_loop::on_idle_recover(idle_helper* idle_id)
+{
+	int k = 0;
+}
+
+void reactor_loop::on_idle_recover2(idle_helper* idle_id)
+{
+	int k = 0;
 }
 
 reactor_loop::~reactor_loop()

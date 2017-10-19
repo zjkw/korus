@@ -54,4 +54,9 @@ private:
 	void stop_sockio(sockio_channel* channel);
 
 	void run_once_inner();
+
+	idle_helper	_idle_helper;
+	void on_idle_recover(idle_helper* idle_id);
+	idle_helper	_idle_helper2;
+	void on_idle_recover2(idle_helper* idle_id);
 };

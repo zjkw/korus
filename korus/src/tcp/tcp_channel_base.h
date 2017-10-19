@@ -37,7 +37,7 @@ private:
 	uint32_t			_sock_read_size;
 	uint32_t			_sock_write_size;
 
-	int32_t				do_send_inlock(const char* buf, uint32_t len);
+	int32_t				do_send_inlock(const void* buf, uint32_t len);
 	int32_t				do_recv_nolock();
 	
 };

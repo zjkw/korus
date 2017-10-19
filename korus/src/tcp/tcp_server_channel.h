@@ -28,7 +28,7 @@ private:
 	std::shared_ptr<reactor_loop>	_reactor;
 	std::shared_ptr<tcp_server_callback>	_cb;
 
-	friend class tcp_listen;
+	friend class tcp_server_channel_creator;
 	void		invalid();
 
 	virtual void on_sockio_read();
@@ -39,6 +39,7 @@ private:
 };
 
 // 可能处于多线程环境下
+// on_error不能纯虚 tbd，加上close默认处理
 class tcp_server_callback : public std::enable_shared_from_this<tcp_server_callback>, public thread_safe_objbase
 {
 public:

@@ -44,7 +44,8 @@ void	tcp_client_channel::close()
 	//线程调度
 	if (!_reactor->is_current_thread())
 	{
-		_reactor->start_async_task(std::bind(&tcp_client_channel::close, this));
+		// tcp_client_channel生命期一般比reactor短，所以加上引用计数
+		_reactor->start_async_task(std::bind(&tcp_client_channel::close, shared_from_this()));
 		return;
 	}
 
@@ -74,7 +75,8 @@ void	tcp_client_channel::shutdown(int32_t howto)
 	//线程调度
 	if (!_reactor->is_current_thread())
 	{
-		_reactor->start_async_task(std::bind(&tcp_client_channel::shutdown, this, howto));
+		// tcp_client_channel生命期一般比reactor短，所以加上引用计数
+		_reactor->start_async_task(std::bind(&tcp_client_channel::shutdown, shared_from_this(), howto));
 		return;
 	}
 
@@ -94,7 +96,8 @@ void	tcp_client_channel::connect()
 	//线程调度
 	if (!_reactor->is_current_thread())
 	{
-		_reactor->start_async_task(std::bind(&tcp_client_channel::connect, this));
+		// tcp_client_channel生命期一般比reactor短，所以加上引用计数
+		_reactor->start_async_task(std::bind(&tcp_client_channel::connect, shared_from_this()));
 		return;
 	}
 

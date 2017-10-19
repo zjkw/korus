@@ -58,6 +58,7 @@ private:
 };
 
 // 可能处于多线程环境下
+// on_error不能纯虚 tbd，加上close默认处理
 class tcp_client_callback : public std::enable_shared_from_this<tcp_client_callback>, public thread_safe_objbase
 {
 public:
