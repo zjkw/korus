@@ -1,2 +1,2 @@
 # korus
-only demo， not debug yet
+only demo， without strength test yet
