@@ -33,7 +33,7 @@ private:
 	task_queue						_task_queue;
 	std::thread::id					_tid;
 
-	//为了避免外部程序直接调用下面的timer/idle系列函数，改成private，这要求外部只能用timer_helper/idle_helper
+	//为了避免外部程序直接调用下面的timer/idle系列函数导致的对象内部数据状态与管理器不一致，改成private，这要求外部只能用timer_helper/idle_helper
 	friend timer_helper;
 	// begin表示起始时间，为0表示无，interval表示后续每步，为0表示无
 	void	start_timer(timer_helper* timer_id, const std::chrono::system_clock::time_point& begin, const std::chrono::milliseconds& interval);

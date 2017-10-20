@@ -125,6 +125,7 @@ public:
 	{
 		// 构造中执行::connect，无需外部手动调用
 		_channel = std::make_shared<tcp_client_channel>(reactor, server_addr, cb, connect_timeout, connect_retry_wait, self_read_size, self_write_size, sock_read_size, sock_write_size);
+		_channel->connect();
 	}
 
 	virtual ~tcp_client()
