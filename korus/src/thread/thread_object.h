@@ -4,18 +4,16 @@
 #include <assert.h>
 #include <condition_variable>
 #include <thread>
-#include <memory>
 #include <mutex>
 
 #include "korus/src/util/thread_safe_objbase.h"
-//#include "src/util/thread_safe_objbase.h"
 #include "korus/src/util/task_queue.h"
 
 //支持常驻任务队列(不提供显式撤销接口)
 //支持一次性任务队列
 //thread_object的创建和销毁必须在同一个线程
 
-class thread_object : public std::enable_shared_from_this<thread_object>, public thread_safe_objbase
+class thread_object : public noncopyable
 {
 public:
 	explicit thread_object(uint16_t index);
@@ -40,15 +38,7 @@ public:
 		add_task_helper(&_exit_task_queue, task, false);
 	}
 	void start();
-
-	bool is_current_thread()			//外部保证：线程启动后，才可能调用本函数
-	{ 
-		assert(_is_start);
-		return _tid == std::this_thread::get_id(); 
-	}
-
-	virtual void	invalid();
-
+	
 private:
 	uint16_t						_thread_index;
 
@@ -73,13 +63,10 @@ private:
 	std::thread::id					_tid;		
 
 	void	thread_routine();
+	void	clear();
 
 	void add_task_helper(task_queue* tq, const async_task_t& task, bool wakeup = true)
 	{
-		if (!is_valid())
-		{
-			return;
-		}
 		std::unique_lock <std::mutex> lck(_mutex_taskempty);
 		tq->add(task);
 

@@ -18,12 +18,18 @@ tcp_listen::~tcp_listen()
 	if (INVALID_SOCKET != _fd)
 	{
 		::close(_fd);
+		_fd = INVALID_SOCKET;
 	}	
 }
 
 bool	tcp_listen::start()
 {
 	// 1¼ì²é
+	if (INVALID_SOCKET != _fd)
+	{
+		return true;
+	}
+
 	struct sockaddr_in	si;
 	if (!sockaddr_from_string(_listen_addr, si))
 	{
@@ -52,7 +58,7 @@ void	tcp_listen::add_accept_handler(const newfd_handle_t handler)
 		return;
 	}
 
-	_hanler_list.emplace_back(handler);
+	_handler_list.emplace_back(handler);
 }
 
 void tcp_listen::on_sockio_read()
@@ -63,15 +69,15 @@ void tcp_listen::on_sockio_read()
 		SOCKET newfd = accept_sock(_fd, &client_addr);
 		if (newfd >= 0)
 		{
-			if (!_hanler_list.size())
+			if (!_handler_list.size())
 			{
 				//log
 				::close(newfd);
 			}
 			else
 			{
-				_last_pos %= _hanler_list.size();
-				_hanler_list[_last_pos](newfd, client_addr);
+				_last_pos %= _handler_list.size();
+				_handler_list[_last_pos](newfd, client_addr);
 				_last_pos++;
 			}
 		}

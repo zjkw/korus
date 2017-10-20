@@ -1,8 +1,9 @@
+#include <assert.h>
 #include "timer_helper.h"
 #include "reactor_loop.h"
 
 timer_helper::timer_helper(reactor_loop* reatcor)
-	: _reactor(reatcor), _task(nullptr)
+	: _reactor(reatcor), _task(nullptr), _is_start(false)
 {
 }
 
@@ -31,7 +32,7 @@ void	timer_helper::start(const std::chrono::system_clock::time_point& begin, con
 		assert(false);
 		return;
 	}
-
+	_is_start = true;
 	_reactor->start_timer(this, begin, interval);
 }
 
@@ -42,18 +43,19 @@ void	timer_helper::start(const std::chrono::milliseconds& begin, const std::chro
 		assert(false);
 		return;
 	}
-
+	_is_start = true;
 	_reactor->start_timer(this, begin, interval);
 }
 
 void	timer_helper::stop()
 {
+	_is_start = false;
 	_reactor->stop_timer(this);	
 }
 
 bool	timer_helper::exist()
 {
-	return _reactor->exist_timer(this);
+	return _is_start;// _reactor->exist_timer(this);
 }
 
 void	timer_helper::action()

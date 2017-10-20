@@ -3,6 +3,7 @@
 #include <map>
 #include <memory>
 #include <thread>
+#include "korus/src/thread/thread_object.h"
 #include "korus/src/reactor/reactor_loop.h"
 #include "tcp_client_channel.h"
 
@@ -46,9 +47,9 @@ public:
 	virtual ~tcp_client()
 	{
 		//不加锁，因为避免和exit冲突 std::unique_lock <std::mutex> lck(_mutex_pool);
-		for (std::map<uint16_t, std::shared_ptr<thread_object>>::iterator it = _thread_pool.begin(); it != _thread_pool.end(); it++)
+		for (std::map<uint16_t, thread_object*>::iterator it = _thread_pool.begin(); it != _thread_pool.end(); it++)
 		{
-			it->second->invalid();
+			delete it->second;
 		}
 		_thread_pool.clear();
 	}
@@ -73,7 +74,7 @@ public:
 
 			for (uint16_t i = 0; i < _thread_num; i++)
 			{
-				std::shared_ptr<thread_object>	thread_obj = std::make_shared<thread_object>((i + offset) % cpu_num);
+				thread_object*	thread_obj = new thread_object(abs((i + offset) % cpu_num));
 				_thread_pool[i] = thread_obj;
 
 				thread_obj->add_init_task(std::bind(&tcp_client::thread_init, this, thread_obj, _cb));
@@ -85,7 +86,7 @@ public:
 private:
 	std::thread::id							_tid;
 	uint16_t								_thread_num;
-	std::map<uint16_t, std::shared_ptr<thread_object>>		_thread_pool;
+	std::map<uint16_t, thread_object*>		_thread_pool;
 	std::atomic_flag						_start = ATOMIC_FLAG_INIT;
 	std::shared_ptr<tcp_client_callback>	_cb;
 	std::string								_server_addr;
@@ -96,16 +97,16 @@ private:
 	uint32_t								_sock_read_size;
 	uint32_t								_sock_write_size;
 
-	void thread_init(std::shared_ptr<thread_object>	thread_obj, std::shared_ptr<tcp_client_callback> cb)
+	void thread_init(thread_object*	thread_obj, std::shared_ptr<tcp_client_callback> cb)
 	{
-		std::shared_ptr<reactor_loop>		reactor = std::make_shared<reactor_loop>(thread_obj);
+		std::shared_ptr<reactor_loop>		reactor = std::make_shared<reactor_loop>();
 		std::shared_ptr<tcp_client_channel>	channel = std::make_shared<tcp_client_channel>(reactor, _server_addr, cb, _connect_timeout, _connect_retry_wait, _self_read_size, _self_write_size, _sock_read_size, _sock_write_size);
 
 		thread_obj->add_exit_task(std::bind(&tcp_client::thread_exit, this, thread_obj, reactor, channel));
 		channel->connect();//tbd 返回值 log print
 		thread_obj->add_resident_task(std::bind(&reactor_loop::run_once, reactor));
 	}
-	void thread_exit(std::shared_ptr<thread_object>	thread_obj, std::shared_ptr<reactor_loop> reactor, std::shared_ptr<tcp_client_channel> channel)
+	void thread_exit(thread_object*	thread_obj, std::shared_ptr<reactor_loop> reactor, std::shared_ptr<tcp_client_channel> channel)
 	{
 		channel->close();	//可能上层还保持间接或直接引用，这里使其失效：“只管功能失效化，不管生命期释放”
 		reactor->invalid();	

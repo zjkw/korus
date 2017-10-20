@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <assert.h>
 #include "reactor_loop.h"
 #include "epoll_imp.h"
 #include "kqueue_imp.h"
@@ -8,14 +9,9 @@
 
 #define DEFAULT_POLL_WAIT_MILLSEC	(100)
 
-reactor_loop::reactor_loop(std::shared_ptr<thread_object> thread_obj/* = nullptr*/)
-	: _thread_obj(thread_obj), _task_queue(false, true), _idle_helper(this), _idle_helper2(this)
+reactor_loop::reactor_loop() : _task_queue(false, true)
 {
 	_tid = std::this_thread::get_id();
-	if (_thread_obj)
-	{
-		assert(_thread_obj->is_current_thread());
-	}
 
 #if defined(__linux__) || defined(__linux)  
 	_backend_poller = new epoll_imp;
@@ -29,21 +25,6 @@ reactor_loop::reactor_loop(std::shared_ptr<thread_object> thread_obj/* = nullptr
 #endif
 	_timer_sheduler = new timer_sheduler;
 	_idle_distributor = new idle_distributor;
-
-	_idle_helper.bind(std::bind(&reactor_loop::on_idle_recover, this, std::placeholders::_1));
-	_idle_helper.start();
-	_idle_helper2.bind(std::bind(&reactor_loop::on_idle_recover2, this, std::placeholders::_1));
-	_idle_helper2.start();
-}
-
-void reactor_loop::on_idle_recover(idle_helper* idle_id)
-{
-	int k = 0;
-}
-
-void reactor_loop::on_idle_recover2(idle_helper* idle_id)
-{
-	int k = 0;
 }
 
 reactor_loop::~reactor_loop()
@@ -84,7 +65,7 @@ void reactor_loop::run_once()
 	run_once_inner();
 }
 
-inline void reactor_loop::run_once_inner()
+void reactor_loop::run_once_inner()
 {
 	uint32_t	wait_millsec	= _timer_sheduler->min_interval().count();
 	if (!wait_millsec || wait_millsec > DEFAULT_POLL_WAIT_MILLSEC)

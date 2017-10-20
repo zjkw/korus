@@ -8,8 +8,8 @@
 tcp_channel_base::tcp_channel_base(SOCKET fd, const uint32_t self_read_size, const uint32_t self_write_size, const uint32_t sock_read_size, const uint32_t sock_write_size)
 	: _fd(INVALID_SOCKET), _recving(false),
 	_self_read_size(self_read_size), _self_write_size(self_write_size), _self_read_pos(0), _self_write_pos(0), _sock_read_size(sock_read_size), _sock_write_size(sock_write_size),
-	_self_read_buff(new uint8_t[sock_read_size]),
-	_self_write_buff(new uint8_t[sock_write_size])
+	_self_read_buff(new uint8_t[self_read_size]),
+	_self_write_buff(new uint8_t[self_write_size])
 {
 	set_fd(fd);
 }
@@ -239,7 +239,7 @@ int32_t	tcp_channel_base::do_recv_nolock()
 		{
 			break;
 		}
-		
+	
 		bool left_partial_pkg = false;
 		int32_t ret = on_recv_buff(_self_read_buff, _self_read_pos, left_partial_pkg);
 		if (ret > 0)
@@ -258,7 +258,7 @@ int32_t	tcp_channel_base::do_recv_nolock()
 	{
 		return CEC_CLOSE_BY_PEER;
 	}
-	if (_self_read_pos + 1 == _self_read_size)
+	if (_self_read_pos == _self_read_size)
 	{
 		return CEC_RECVBUF_FULL;
 	}

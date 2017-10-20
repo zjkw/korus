@@ -1,8 +1,9 @@
+#include <assert.h>
 #include "idle_helper.h"
 #include "reactor_loop.h"
 
 idle_helper::idle_helper(reactor_loop* reatcor)
-	: _reactor(reatcor), _task(nullptr)
+	: _reactor(reatcor), _task(nullptr), _is_start(false)
 {
 }
 
@@ -31,18 +32,19 @@ void	idle_helper::start()
 		assert(false);
 		return;
 	}
-
+	_is_start = true;
 	_reactor->start_idle(this);
 }
 
 void	idle_helper::stop()
 {
+	_is_start = false;
 	_reactor->stop_idle(this);
 }
 
 bool	idle_helper::exist()
 {
-	return _reactor->exist_idle(this);
+	return 	_is_start;// _reactor->exist_idle(this);
 }
 
 void	idle_helper::action()

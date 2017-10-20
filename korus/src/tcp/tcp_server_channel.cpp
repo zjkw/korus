@@ -1,3 +1,4 @@
+#include <assert.h>
 #include "tcp_server_channel.h"
 
 tcp_server_channel::tcp_server_channel(SOCKET fd, std::shared_ptr<reactor_loop> reactor, std::shared_ptr<tcp_server_callback> cb,
@@ -132,15 +133,15 @@ int32_t	tcp_server_channel::on_recv_buff(const void* buf, const size_t len, bool
 		else if (ret < 0)
 		{
 			_cb->on_error((CHANNEL_ERROR_CODE)ret, shared_from_this());
-			return ret;
+			break;
 		}
 		else if (ret + size > len)
 		{
 			_cb->on_error(CEC_RECVBUF_SHORT, shared_from_this());
-			return (int32_t)CEC_RECVBUF_SHORT;
+			break;
 		}
 
-		_cb->on_recv_pkg((uint8_t*)buf + size, len - size, shared_from_this());
+		_cb->on_recv_pkg((uint8_t*)buf + size, ret, shared_from_this());
 		size += ret;
 	}
 	

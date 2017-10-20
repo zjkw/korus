@@ -30,6 +30,6 @@ private:
 	uint32_t	_defer_accept;
 
 	uint16_t	_last_pos;
-	std::vector<newfd_handle_t>	_hanler_list;
+	std::vector<newfd_handle_t>	_handler_list;
 };
 

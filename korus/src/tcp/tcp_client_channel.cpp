@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <functional>
 #include "tcp_client_channel.h"
 
@@ -272,15 +273,15 @@ int32_t	tcp_client_channel::on_recv_buff(const void* buf, const size_t len, bool
 		else if (ret < 0)
 		{
 			_cb->on_error((CHANNEL_ERROR_CODE)ret, shared_from_this());
-			return ret;
+			break;
 		}
 		else if (ret + size > len)
 		{
 			_cb->on_error(CEC_RECVBUF_SHORT, shared_from_this());
-			return (int32_t)CEC_RECVBUF_SHORT;
+			break;
 		}
 
-		_cb->on_recv_pkg((uint8_t*)buf + size, len - size, shared_from_this());
+		_cb->on_recv_pkg((uint8_t*)buf + size, ret, shared_from_this());
 		size += ret;
 	}
 

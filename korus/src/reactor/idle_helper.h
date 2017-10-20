@@ -23,5 +23,6 @@ public:
 private:
 	reactor_loop*				_reactor;
 	reactor_idle_callback_t		_task;
+	bool						_is_start;
 };
 

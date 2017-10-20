@@ -8,7 +8,7 @@ thread_object::thread_object(uint16_t index)
 
 thread_object::~thread_object()
 {
-	invalid();
+	clear();
 }
 
 void thread_object::start()
@@ -77,16 +77,14 @@ void thread_object::thread_routine()
 	_exit_task_queue.execute();
 }
 
-void	thread_object::invalid()
+void	thread_object::clear()
 {
-	thread_safe_objbase::invalid();
-
 	std::unique_lock <std::mutex> lck(_mutex_taskempty);
 	_is_quit = true;
 	_resident_task_queue.clear();
 	_disposible_task_queue.clear();
-	_init_task_queue.clear();
-	_exit_task_queue.clear();
+	assert(_init_task_queue.is_empty());
+	assert(_exit_task_queue.is_empty());
 
 	if (_thread_ptr)
 	{

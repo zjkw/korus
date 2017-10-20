@@ -23,4 +23,5 @@ public:
 private:
 	reactor_loop*				_reactor;
 	reactor_timer_callback_t	_task;
+	bool						_is_start;
 };

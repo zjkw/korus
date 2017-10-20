@@ -46,7 +46,10 @@ void tcp_server_channel_creator::on_newfd(const SOCKET fd, const struct sockaddr
 
 		if (_channel_list.size())
 		{
-			_idle_helper.start();
+			if (!_idle_helper.exist())
+			{
+				_idle_helper.start();
+			}
 		}
 	}
 }
