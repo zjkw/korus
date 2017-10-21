@@ -36,6 +36,8 @@ private:
 	virtual SOCKET	get_fd() { return _fd; }
 
 	virtual	int32_t		on_recv_buff(const void* buf, const size_t len, bool& left_partial_pkg);
+
+	void handle_close_strategy(CLOSE_MODE_STRATEGY cms);
 };
 
 // 可能处于多线程环境下
@@ -50,7 +52,7 @@ public:
 	virtual void	on_accept(std::shared_ptr<tcp_server_channel> channel) = 0;	//连接已经建立
 	virtual void	on_closed(std::shared_ptr<tcp_server_channel> channel) = 0;
 	//参考TCP_ERROR_CODE定义
-	virtual void	on_error(CHANNEL_ERROR_CODE code, std::shared_ptr<tcp_server_channel> channel) = 0;
+	virtual CLOSE_MODE_STRATEGY	on_error(CHANNEL_ERROR_CODE code, std::shared_ptr<tcp_server_channel> channel) = 0;
 	//提取数据包：返回值 =0 表示包不完整； >0 完整的包(长)
 	virtual int32_t on_recv_split(const void* buf, const size_t len, std::shared_ptr<tcp_server_channel> channel) = 0;
 	//这是一个待处理的完整包

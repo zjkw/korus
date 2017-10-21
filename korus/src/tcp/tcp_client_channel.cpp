@@ -211,7 +211,8 @@ void	tcp_client_channel::on_sockio_write()
 			int32_t ret = tcp_channel_base::send_alone();
 			if (ret < 0)
 			{
-				_cb->on_error((CHANNEL_ERROR_CODE)ret, shared_from_this());
+				CLOSE_MODE_STRATEGY cms = _cb->on_error((CHANNEL_ERROR_CODE)ret, shared_from_this());
+				handle_close_strategy(cms);
 			}
 		}
 		break;
@@ -234,7 +235,8 @@ void	tcp_client_channel::on_sockio_read()
 	int32_t ret = tcp_channel_base::do_recv();
 	if (ret < 0)
 	{
-		_cb->on_error((CHANNEL_ERROR_CODE)ret, shared_from_this());
+		CLOSE_MODE_STRATEGY cms = _cb->on_error((CHANNEL_ERROR_CODE)ret, shared_from_this());
+		handle_close_strategy(cms);
 	}
 }
 
@@ -273,12 +275,14 @@ int32_t	tcp_client_channel::on_recv_buff(const void* buf, const size_t len, bool
 		}
 		else if (ret < 0)
 		{
-			_cb->on_error((CHANNEL_ERROR_CODE)ret, shared_from_this());
+			CLOSE_MODE_STRATEGY cms = _cb->on_error((CHANNEL_ERROR_CODE)ret, shared_from_this());
+			handle_close_strategy(cms);
 			break;
 		}
 		else if (ret + size > len)
 		{
-			_cb->on_error(CEC_RECVBUF_SHORT, shared_from_this());
+			CLOSE_MODE_STRATEGY cms = _cb->on_error(CEC_RECVBUF_SHORT, shared_from_this());
+			handle_close_strategy(cms);
 			break;
 		}
 
@@ -289,3 +293,10 @@ int32_t	tcp_client_channel::on_recv_buff(const void* buf, const size_t len, bool
 	return size;
 }
 
+void tcp_client_channel::handle_close_strategy(CLOSE_MODE_STRATEGY cms)
+{
+	if (CMS_INNER_AUTO_CLOSE == cms)
+	{
+		close();
+	}
+}

@@ -28,9 +28,10 @@ public:
 	}
 
 	//参考TCP_ERROR_CODE定义
-	virtual void	on_error(CHANNEL_ERROR_CODE code, std::shared_ptr<tcp_server_channel> channel)
+	virtual CLOSE_MODE_STRATEGY	on_error(CHANNEL_ERROR_CODE code, std::shared_ptr<tcp_server_channel> channel)
 	{
 		printf("\nError code: %d\n", (int32_t)code);
+		return CMS_INNER_AUTO_CLOSE;
 	}
 
 	//提取数据包：返回值 =0 表示包不完整； >0 完整的包(长)

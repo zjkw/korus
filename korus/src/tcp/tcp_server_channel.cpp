@@ -25,21 +25,6 @@ int32_t	tcp_server_channel::send(const void* buf, const size_t len)
 	}
 	
 	int32_t ret = tcp_channel_base::send(buf, len);
-	if (ret < 0)
-	{
-	/*
-		//报告错误
-		if (!_reactor->is_current_thread())
-		{
-			// tcp_server_channel生命期一般比reactor短，所以加上引用计数
-			_reactor->start_async_task(std::bind(&tcp_server_callback::on_error, _cb, (CHANNEL_ERROR_CODE)ret, this), this);		
-		}
-		else
-		{
-			_cb->on_error((CHANNEL_ERROR_CODE)ret, shared_from_this());
-		}
-	*/
-	}
 	return ret;
 }
 
@@ -88,7 +73,8 @@ void	tcp_server_channel::on_sockio_write()
 	int32_t ret = tcp_channel_base::send_alone();
 	if (ret < 0)
 	{
-		_cb->on_error((CHANNEL_ERROR_CODE)ret, shared_from_this());
+		CLOSE_MODE_STRATEGY cms = _cb->on_error((CHANNEL_ERROR_CODE)ret, shared_from_this());
+		handle_close_strategy(cms);
 	}
 }
 
@@ -101,7 +87,8 @@ void	tcp_server_channel::on_sockio_read()
 	int32_t ret = tcp_channel_base::do_recv();
 	if (ret < 0)
 	{
-		_cb->on_error((CHANNEL_ERROR_CODE)ret, shared_from_this());
+		CLOSE_MODE_STRATEGY cms = _cb->on_error((CHANNEL_ERROR_CODE)ret, shared_from_this());
+		handle_close_strategy(cms);
 	}
 }
 
@@ -135,12 +122,14 @@ int32_t	tcp_server_channel::on_recv_buff(const void* buf, const size_t len, bool
 		}
 		else if (ret < 0)
 		{
-			_cb->on_error((CHANNEL_ERROR_CODE)ret, shared_from_this());
+			CLOSE_MODE_STRATEGY cms = _cb->on_error((CHANNEL_ERROR_CODE)ret, shared_from_this());
+			handle_close_strategy(cms);
 			break;
 		}
 		else if (ret + size > len)
 		{
-			_cb->on_error(CEC_RECVBUF_SHORT, shared_from_this());
+			CLOSE_MODE_STRATEGY cms = _cb->on_error(CEC_RECVBUF_SHORT, shared_from_this());
+			handle_close_strategy(cms);
 			break;
 		}
 
@@ -149,4 +138,12 @@ int32_t	tcp_server_channel::on_recv_buff(const void* buf, const size_t len, bool
 	}
 	
 	return size;
+}
+
+void tcp_server_channel::handle_close_strategy(CLOSE_MODE_STRATEGY cms)
+{
+	if (CMS_INNER_AUTO_CLOSE == cms)
+	{
+		close();
+	}
 }

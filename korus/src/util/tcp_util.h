@@ -33,6 +33,12 @@ enum CHANNEL_ERROR_CODE
 	CEC_INVALID_SOCKET = -8,//无效socket
 };
 
+enum CLOSE_MODE_STRATEGY
+{
+	CMS_MANUAL_CONTROL = 0,	//外部用户手工控制
+	CMS_INNER_AUTO_CLOSE = 1,//内部自动关闭
+};
+
 bool set_reuse_port_sock(SOCKET fd, int reuse);
 
 bool set_reuse_addr_sock(SOCKET fd, int reuse);
