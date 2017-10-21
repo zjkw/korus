@@ -1,3 +1,4 @@
+#include <assert.h>
 #include "task_queue.h"
 #include "unique_optional_lock.h"
 
@@ -8,14 +9,45 @@ task_queue::task_queue(bool persistence, bool nolock)
 
 task_queue::~task_queue()
 {
-	unique_optional_lock <std::recursive_mutex> lck(_mutex, _nolock);
-	_task_list.clear();
+	clear();
 }
 
-void task_queue::add(const async_task_t& task)
+void task_queue::add(const async_task_t& task, const task_owner& owner/* = null_owner*/)
 {
 	unique_optional_lock <std::recursive_mutex> lck(_mutex, _nolock);
-	_task_list[++_seq] = task;
+	task_item	item(task, owner);
+	_task_list[++_seq] = item;
+	if (null_owner != owner)
+	{
+		std::map<task_owner, std::map<uint64_t, uint64_t>>::iterator it = _owner_list.find(owner);
+		if (it == _owner_list.end())
+		{
+			std::map<uint64_t, uint64_t> invert;
+			invert.insert(std::make_pair(_seq, _seq));
+			_owner_list[owner] = invert;
+		}
+		else
+		{
+			it->second.insert(std::make_pair(_seq, _seq));
+		}
+	}
+}
+
+void task_queue::del(const task_owner& owner/* = null_owner*/)
+{
+	if (null_owner != owner)
+	{
+		std::map<task_owner, std::map<uint64_t, uint64_t>>::iterator it = _owner_list.find(owner);
+		if (it != _owner_list.end())
+		{
+			for (std::map<uint64_t, uint64_t>::iterator it2 = it->second.begin(); it2 != it->second.end(); it2++)
+			{
+				_task_list.erase(it2->second);
+			}
+
+			_owner_list.erase(owner);
+		}
+	}
 }
 
 void task_queue::execute()
@@ -25,7 +57,7 @@ void task_queue::execute()
 	uint64_t	seq_cursor = 0;
 	while (true)
 	{
-		std::map<uint64_t, async_task_t>::iterator it = _task_list.upper_bound(seq_cursor);
+		std::map<uint64_t, task_item>::iterator it = _task_list.upper_bound(seq_cursor);
 		if (it == _task_list.end())
 		{
 			break;
@@ -35,15 +67,25 @@ void task_queue::execute()
 		{
 			continue;
 		}
-		
-		async_task_t task = it->second;
 
+		task_item	item = it->second;
 		if (!_persistence)
 		{
+			if (null_owner != item.owner)
+			{
+				std::map<task_owner, std::map<uint64_t, uint64_t>>::iterator it2 = _owner_list.find(item.owner);
+				assert(it2 != _owner_list.end());
+				it2->second.erase(seq_cursor);
+				if (!it2->second.size())
+				{
+					_owner_list.erase(item.owner);
+				}
+			}
+
 			_task_list.erase(seq_cursor);
 		}
 
-		task();
+		item.task();
 	}
 }
 
@@ -57,4 +99,5 @@ void	task_queue::clear()
 {
 	unique_optional_lock <std::recursive_mutex> lck(_mutex, _nolock);
 	_task_list.clear();
+	_owner_list.clear();
 }

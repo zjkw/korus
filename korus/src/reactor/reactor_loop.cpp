@@ -105,13 +105,22 @@ bool	reactor_loop::is_current_thread()
 	return _tid == std::this_thread::get_id();
 }
 
-void	reactor_loop::start_async_task(const async_task_t& task)
+void	reactor_loop::start_async_task(const async_task_t& task, const task_owner& owner)
 {
 	if (!is_valid())
 	{
 		return;
 	}
-	_task_queue.add(task);
+	_task_queue.add(task, owner);
+}
+
+void	reactor_loop::stop_async_task(const task_owner& owner)
+{
+	if (!is_valid())
+	{
+		return;
+	}
+	_task_queue.del(owner);
 }
 
 // begin表示起始时间，为0表示无，interval表示后续每步，为0表示无

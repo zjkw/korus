@@ -22,7 +22,8 @@ public:
 	bool	is_current_thread();
 
 	// 如果不是所属线程，加入到其任务队列
-	void	start_async_task(const async_task_t& task);
+	void	start_async_task(const async_task_t& task, const task_owner& owner);
+	void	stop_async_task(const task_owner& owner);
 
 	virtual void	invalid();
 

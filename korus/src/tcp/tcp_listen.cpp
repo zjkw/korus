@@ -14,6 +14,7 @@ tcp_listen::tcp_listen(std::shared_ptr<reactor_loop> reactor, const std::string&
 
 tcp_listen::~tcp_listen()
 {
+	_reactor->stop_async_task(this);
 	_reactor->stop_sockio(this);
 	if (INVALID_SOCKET != _fd)
 	{
@@ -54,7 +55,7 @@ void	tcp_listen::add_accept_handler(const newfd_handle_t handler)
 {
 	if (!_reactor->is_current_thread())
 	{
-		_reactor->start_async_task(std::bind(&tcp_listen::add_accept_handler, this, handler));
+		_reactor->start_async_task(std::bind(&tcp_listen::add_accept_handler, this, handler), this);
 		return;
 	}
 

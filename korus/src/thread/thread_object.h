@@ -1,5 +1,4 @@
-#ifndef _THREADOBJ_H
-#define _THREADOBJ_H
+#pragma once
 
 #include <assert.h>
 #include <condition_variable>
@@ -81,5 +80,3 @@ private:
 		}
 	}
 };
-
-#endif

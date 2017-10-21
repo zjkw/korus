@@ -13,6 +13,7 @@ tcp_server_channel::tcp_server_channel(SOCKET fd, std::shared_ptr<reactor_loop> 
 //析构需要发生在产生线程
 tcp_server_channel::~tcp_server_channel()
 {
+	_reactor->stop_async_task(this);
 }
 
 // 保证原子，考虑多线程环境下，buf最好是一个或若干完整包；可能触发错误/异常 on_error
@@ -26,16 +27,18 @@ int32_t	tcp_server_channel::send(const void* buf, const size_t len)
 	int32_t ret = tcp_channel_base::send(buf, len);
 	if (ret < 0)
 	{
+	/*
 		//报告错误
 		if (!_reactor->is_current_thread())
 		{
 			// tcp_server_channel生命期一般比reactor短，所以加上引用计数
-			_reactor->start_async_task(std::bind(&tcp_server_callback::on_error, _cb, (CHANNEL_ERROR_CODE)ret, shared_from_this()));		
+			_reactor->start_async_task(std::bind(&tcp_server_callback::on_error, _cb, (CHANNEL_ERROR_CODE)ret, this), this);		
 		}
 		else
 		{
 			_cb->on_error((CHANNEL_ERROR_CODE)ret, shared_from_this());
 		}
+	*/
 	}
 	return ret;
 }
@@ -51,7 +54,7 @@ void	tcp_server_channel::close()
 	if (!_reactor->is_current_thread())
 	{
 		// tcp_server_channel生命期一般比reactor短，所以加上引用计数
-		_reactor->start_async_task(std::bind(&tcp_server_channel::invalid, shared_from_this()));
+		_reactor->start_async_task(std::bind(&tcp_server_channel::invalid, this), this);
 		return;
 	}	
 
@@ -69,7 +72,7 @@ void	tcp_server_channel::shutdown(int32_t howto)
 	if (!_reactor->is_current_thread())
 	{
 		// tcp_server_channel生命期一般比reactor短，所以加上引用计数
-		_reactor->start_async_task(std::bind(&tcp_server_channel::shutdown, shared_from_this(), howto));
+		_reactor->start_async_task(std::bind(&tcp_server_channel::shutdown, this, howto), this);
 		return;
 	}
 	tcp_channel_base::shutdown(howto);

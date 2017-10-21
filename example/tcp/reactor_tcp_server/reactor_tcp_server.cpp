@@ -20,7 +20,6 @@ public:
 		char szTest[] = "hello client, i am server!";
 		int32_t ret = channel->send(szTest, strlen(szTest));
 		printf("\nConnected/accepted, then Send %s, ret: %d\n", szTest, ret);
-
 	}
 
 	virtual void	on_closed(std::shared_ptr<tcp_server_channel> channel)

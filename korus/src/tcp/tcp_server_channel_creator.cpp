@@ -14,6 +14,7 @@ tcp_server_channel_creator::tcp_server_channel_creator(std::shared_ptr<reactor_l
 
 tcp_server_channel_creator::~tcp_server_channel_creator()
 {
+	_reactor->stop_async_task(this);
 	_idle_helper.stop();
 	for (std::map<SOCKET, std::shared_ptr<tcp_server_channel>>::iterator it = _channel_list.begin(); it != _channel_list.end(); it++)
 	{
@@ -26,7 +27,7 @@ void tcp_server_channel_creator::on_newfd(const SOCKET fd, const struct sockaddr
 {
 	if (!_reactor->is_current_thread())
 	{
-		_reactor->start_async_task(std::bind(&tcp_server_channel_creator::on_newfd, this, fd, addr));
+		_reactor->start_async_task(std::bind(&tcp_server_channel_creator::on_newfd, this, fd, addr), this);
 		return;
 	}
 

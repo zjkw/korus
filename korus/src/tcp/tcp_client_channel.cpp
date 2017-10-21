@@ -15,6 +15,7 @@ tcp_client_channel::tcp_client_channel(std::shared_ptr<reactor_loop> reactor, co
 
 tcp_client_channel::~tcp_client_channel()
 {
+	_reactor->stop_async_task(this);
 }
 
 // 保证原子，考虑多线程环境下，buf最好是一个或若干完整包；可能触发错误/异常 on_error
@@ -46,7 +47,7 @@ void	tcp_client_channel::close()
 	if (!_reactor->is_current_thread())
 	{
 		// tcp_client_channel生命期一般比reactor短，所以加上引用计数
-		_reactor->start_async_task(std::bind(&tcp_client_channel::close, shared_from_this()));
+		_reactor->start_async_task(std::bind(&tcp_client_channel::close, this), this);
 		return;
 	}
 
@@ -77,7 +78,7 @@ void	tcp_client_channel::shutdown(int32_t howto)
 	if (!_reactor->is_current_thread())
 	{
 		// tcp_client_channel生命期一般比reactor短，所以加上引用计数
-		_reactor->start_async_task(std::bind(&tcp_client_channel::shutdown, shared_from_this(), howto));
+		_reactor->start_async_task(std::bind(&tcp_client_channel::shutdown, this, howto), this);
 		return;
 	}
 
@@ -98,7 +99,7 @@ void	tcp_client_channel::connect()
 	if (!_reactor->is_current_thread())
 	{
 		// tcp_client_channel生命期一般比reactor短，所以加上引用计数
-		_reactor->start_async_task(std::bind(&tcp_client_channel::connect, shared_from_this()));
+		_reactor->start_async_task(std::bind(&tcp_client_channel::connect, this), this);
 		return;
 	}
 
