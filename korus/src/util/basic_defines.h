@@ -38,29 +38,3 @@ enum CLOSE_MODE_STRATEGY
 	CMS_MANUAL_CONTROL = 0,	//外部用户手工控制
 	CMS_INNER_AUTO_CLOSE = 1,//内部自动关闭
 };
-
-bool set_reuse_port_sock(SOCKET fd, int reuse);
-
-bool set_reuse_addr_sock(SOCKET fd, int reuse);
-
-bool set_linger_sock(SOCKET fd, int onoff, int linger);
-
-bool sockaddr_from_string(const std::string& address, struct sockaddr_in& si);
-
-bool listen_sock(SOCKET fd, int backlog);
-
-bool bind_sock(SOCKET fd, const struct sockaddr_in& addr);
-
-bool set_defer_accept_sock(SOCKET fd, int32_t defer);
-
-SOCKET listen_nonblock_reuse_socket(uint32_t backlog, uint32_t defer_accept, const struct sockaddr_in& addr);
-
-SOCKET accept_sock(SOCKET fd, struct sockaddr_in* addr);
-
-SOCKET create_general_tcp_socket(const struct sockaddr_in& addr);
-
-bool set_nonblock_sock(SOCKET fd, unsigned int nonblock);
-
-bool set_socket_sendbuflen(SOCKET fd, uint32_t buf_size);
-
-bool set_socket_recvbuflen(SOCKET fd, uint32_t buf_size);

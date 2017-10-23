@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <functional>
+#include "tcp_helper.h"
 #include "tcp_client_channel.h"
 
 tcp_client_channel::tcp_client_channel(std::shared_ptr<reactor_loop> reactor, const std::string& server_addr, std::shared_ptr<tcp_client_callback> cb,
@@ -15,6 +16,7 @@ tcp_client_channel::tcp_client_channel(std::shared_ptr<reactor_loop> reactor, co
 
 tcp_client_channel::~tcp_client_channel()
 {
+	_reactor->stop_sockio(this);
 	_reactor->stop_async_task(this);
 }
 
@@ -111,7 +113,7 @@ void	tcp_client_channel::connect()
 		return;
 	}
 	assert(INVALID_SOCKET == _conn_fd);
-	_conn_fd = create_general_tcp_socket(si);
+	_conn_fd = create_tcp_socket(si);
 	if (INVALID_SOCKET == _conn_fd)
 	{
 		_timer_connect_retry_wait.start(_connect_retry_wait, _connect_retry_wait);
@@ -297,6 +299,6 @@ void tcp_client_channel::handle_close_strategy(CLOSE_MODE_STRATEGY cms)
 {
 	if (CMS_INNER_AUTO_CLOSE == cms)
 	{
-		close();
+		close();	//内部会自动检查有效性
 	}
 }

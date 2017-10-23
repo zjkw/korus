@@ -6,8 +6,8 @@
 #include <mutex>
 
 using async_task_t = std::function<void()>;
-typedef void* task_owner;
-#define null_owner (nullptr)
+using task_owner = void*;
+#define null_owner nullptr
 
 //非线程安全
 

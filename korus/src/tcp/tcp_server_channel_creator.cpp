@@ -1,4 +1,5 @@
 #include <unistd.h>
+#include "tcp_helper.h"
 #include "tcp_server_channel_creator.h"
 #include "korus/src/util/unique_optional_lock.h"
 
@@ -59,7 +60,11 @@ void tcp_server_channel_creator::on_idle_recover(idle_helper* idle_id)
 {
 	//找到上次位置
 	std::map<SOCKET, std::shared_ptr<tcp_server_channel>>::iterator it = _channel_list.upper_bound(_last_recover_scan_fd);
-	for (size_t i = 0; i < SCAN_STEP_ONCE && it != _channel_list.end();)
+	if (it == _channel_list.end())
+	{
+		it = _channel_list.begin();
+	}
+	for (size_t i = 0; i < SCAN_STEP_ONCE && it != _channel_list.end(); i++)
 	{
 		//就这里引用他
 		if (!it->second->is_valid() && it->second.unique())
@@ -68,7 +73,7 @@ void tcp_server_channel_creator::on_idle_recover(idle_helper* idle_id)
 		}
 		else
 		{
-			i++;
+			it++;
 		}
 	}
 	_last_recover_scan_fd = (it == _channel_list.end()) ? 0 : it->first;

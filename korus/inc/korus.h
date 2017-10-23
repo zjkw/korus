@@ -9,6 +9,11 @@
 #include "korus/src/tcp/tcp_client_channel.h"
 #include "korus/src/tcp/tcp_client.h"
 
+#include "korus/src/udp/udp_server_channel.h"
+#include "korus/src/udp/udp_server.h"
+#include "korus/src/udp/udp_client_channel.h"
+#include "korus/src/udp/udp_client.h"
+
 
 
 

@@ -8,7 +8,7 @@ class tcp_server_callback;
 //这个类用户可以操作，而且是可能多线程环境下操作，对外是shared_ptr，需要保证线程安全
 //考虑到send可能在工作线程，close在主线程，应排除同时进行操作，所以仅仅此两个进行了互斥，带来的坏处：
 //1，是send在最恶劣情况下仅仅是拷贝到本库的缓存，并非到了内核缓存，不同于::send的语义
-//2，close/shudown都可能是跨线程的，导致延迟在fd所在线程执行，此情况下无法做到实时效果，比如先close后可能还能send/recv
+//2，close/shudown都可能是跨线程的，导致延迟在fd所在线程执行，此情况下无法做到实时效果，比如外部先close后可能还能send
 
 //有效性优先级：is_valid > INVALID_SOCKET,即所有函数都会先判断is_valid这是个原子操作
 class tcp_server_channel : public std::enable_shared_from_this<tcp_server_channel>, public thread_safe_objbase, public sockio_channel, public tcp_channel_base
@@ -19,7 +19,7 @@ public:
 	virtual ~tcp_server_channel();
 
 	// 下面四个函数可能运行在多线程环境下	
-	int32_t		send(const void* buf, const size_t len);// 保证原子, 认为是整包
+	int32_t		send(const void* buf, const size_t len);// 保证原子, 认为是整包，返回值若<0参考CHANNEL_ERROR_CODE
 	void		close();	
 	void		shutdown(int32_t howto);// 参数参考全局函数 ::shutdown
 	std::shared_ptr<reactor_loop>	get_reactor() { return _reactor; }
@@ -35,7 +35,7 @@ private:
 	virtual void on_sockio_write();
 	virtual SOCKET	get_fd() { return _fd; }
 
-	virtual	int32_t		on_recv_buff(const void* buf, const size_t len, bool& left_partial_pkg);
+	virtual	int32_t	on_recv_buff(const void* buf, const size_t len, bool& left_partial_pkg);
 
 	void handle_close_strategy(CLOSE_MODE_STRATEGY cms);
 };

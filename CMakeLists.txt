@@ -42,9 +42,15 @@ SET(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/example/bin)
 SET(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/korus/lib)
 
 ADD_SUBDIRECTORY(korus)
+
 ADD_SUBDIRECTORY(example/tcp/multithread_tcp_server)
 ADD_SUBDIRECTORY(example/tcp/multithread_tcp_client)
 ADD_SUBDIRECTORY(example/tcp/reactor_tcp_server)
 ADD_SUBDIRECTORY(example/tcp/reactor_tcp_client)
+
+ADD_SUBDIRECTORY(example/udp/multithread_udp_server)
+ADD_SUBDIRECTORY(example/udp/multithread_udp_client)
+ADD_SUBDIRECTORY(example/udp/reactor_udp_server)
+ADD_SUBDIRECTORY(example/udp/reactor_udp_client)
 
 

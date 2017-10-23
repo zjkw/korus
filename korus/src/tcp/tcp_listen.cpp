@@ -1,7 +1,8 @@
 #include <string.h>
 #include <functional>
 
-#include "korus/src/util/tcp_util.h"
+#include "korus/src/util/basic_defines.h"
+#include "tcp_helper.h"
 #include "tcp_listen.h"
 
 #define SCAN_STEP_ONCE	(1)
@@ -77,6 +78,7 @@ void tcp_listen::on_sockio_read()
 			}
 			else
 			{
+				// 存在资源泄露的可能，即本对象被删除前fd还没到creator，tbd，将fd加上引用计数
 				_last_pos %= _handler_list.size();
 				_handler_list[_last_pos](newfd, client_addr);
 				_last_pos++;

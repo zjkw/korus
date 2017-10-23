@@ -3,6 +3,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <mutex>
+#include "tcp_helper.h"
 #include "tcp_channel_base.h"
 
 tcp_channel_base::tcp_channel_base(SOCKET fd, const uint32_t self_read_size, const uint32_t self_write_size, const uint32_t sock_read_size, const uint32_t sock_write_size)

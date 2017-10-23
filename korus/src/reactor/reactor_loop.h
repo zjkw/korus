@@ -2,7 +2,7 @@
 
 #include <memory>
 #include <thread>
-#include "korus/src/util/tcp_util.h"
+#include "korus/src/util/basic_defines.h"
 #include "korus/src/util/task_queue.h"
 #include "korus/src/util/thread_safe_objbase.h"
 #include "backend_poller.h"
@@ -50,6 +50,8 @@ private:
 	friend	class tcp_listen;
 	friend	class tcp_server_channel;
 	friend	class tcp_client_channel;
+	friend	class udp_server_channel;
+	friend	class udp_client_channel;
 	// 初始新增
 	void start_sockio(sockio_channel* channel, SOCKIO_TYPE type);
 	// 存在更新

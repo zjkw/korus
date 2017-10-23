@@ -13,6 +13,7 @@ tcp_server_channel::tcp_server_channel(SOCKET fd, std::shared_ptr<reactor_loop> 
 //析构需要发生在产生线程
 tcp_server_channel::~tcp_server_channel()
 {
+	_reactor->stop_sockio(this);
 	_reactor->stop_async_task(this);
 }
 
@@ -39,7 +40,7 @@ void	tcp_server_channel::close()
 	if (!_reactor->is_current_thread())
 	{
 		// tcp_server_channel生命期一般比reactor短，所以加上引用计数
-		_reactor->start_async_task(std::bind(&tcp_server_channel::invalid, this), this);
+		_reactor->start_async_task(std::bind(&tcp_server_channel::close, this), this);
 		return;
 	}	
 
@@ -144,6 +145,6 @@ void tcp_server_channel::handle_close_strategy(CLOSE_MODE_STRATEGY cms)
 {
 	if (CMS_INNER_AUTO_CLOSE == cms)
 	{
-		close();
+		close();	//内部会自动检查有效性
 	}
 }

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "korus/src/util/tcp_util.h"
+#include "korus/src/util/basic_defines.h"
 
 class sockio_channel
 {
