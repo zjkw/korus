@@ -68,8 +68,8 @@ void tcp_server_channel_creator::on_idle_recover(idle_helper* idle_id)
 	}
 	for (size_t i = 0; i < SCAN_STEP_ONCE && it != _channel_list.end(); i++)
 	{
-		//就这里引用他
-		if (!it->second->is_valid())
+		// 无效才可剔除，引用为1表示仅仅tcp_server_channel_creator引用这个channel，而channel是这个对象创建（同线程）
+		if (!it->second->is_valid() && it->second.unique())
 		{
 			_channel_list.erase(it++);
 		}

@@ -11,7 +11,7 @@ public:
 	udp_channel_base(const std::string& local_addr, const uint32_t self_read_size, const uint32_t self_write_size, const uint32_t sock_read_size, const uint32_t sock_write_size);
 	virtual ~udp_channel_base();
 
-	// 下面四个函数可能运行在多线程环境下	
+	// 下面两个函数可能运行在多线程环境下	
 	virtual	int32_t		send(const void* buf, const size_t len, const sockaddr_in& peer_addr);// 外部数据发送
 	virtual	void		close();
 	virtual	int32_t		on_recv_buff(const void* buf, const size_t len, const sockaddr_in& peer_addr) = 0;

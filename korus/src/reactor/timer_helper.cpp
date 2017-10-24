@@ -21,6 +21,7 @@ timer_helper::~timer_helper()
 
 void	timer_helper::reactor(reactor_loop* reatcor)
 {
+	assert(!_reactor);
 	_reactor = reatcor;
 }
 

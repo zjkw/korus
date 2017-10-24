@@ -11,7 +11,7 @@ public:
 	tcp_channel_base(SOCKET fd, const uint32_t self_read_size, const uint32_t self_write_size, const uint32_t sock_read_size, const uint32_t sock_write_size);
 	virtual ~tcp_channel_base();
 
-	// 下面四个函数可能运行在多线程环境下	
+	// 下面三个函数可能运行在多线程环境下	
 	virtual	int32_t		send(const void* buf, const size_t len);// 外部数据发送
 	virtual	void		close();
 	virtual	void		shutdown(int32_t howto);

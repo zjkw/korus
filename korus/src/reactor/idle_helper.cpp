@@ -21,6 +21,7 @@ idle_helper::~idle_helper()
 
 void	idle_helper::reactor(reactor_loop* reatcor)
 {
+	assert(!_reactor);
 	_reactor = reatcor;
 }
 
