@@ -5,9 +5,9 @@
 
 #define SCAN_STEP_ONCE	(1)
 
-tcp_server_channel_creator::tcp_server_channel_creator(std::shared_ptr<reactor_loop> reactor, std::shared_ptr<tcp_server_callback> cb,
+tcp_server_channel_creator::tcp_server_channel_creator(std::shared_ptr<reactor_loop> reactor, const tcp_server_channel_factory_t& factory,
 		const uint32_t self_read_size, const uint32_t self_write_size, const uint32_t sock_read_size, const uint32_t sock_write_size)
-		: _reactor(reactor), _cb(cb), _idle_helper(reactor.get()), _last_recover_scan_fd(0), 
+		: _reactor(reactor), _factory(factory), _idle_helper(reactor.get()), _last_recover_scan_fd(0),
 		_self_read_size(self_read_size), _self_write_size(self_write_size), _sock_read_size(sock_read_size), _sock_write_size(sock_write_size)
 {
 	_idle_helper.bind(std::bind(&tcp_server_channel_creator::on_idle_recover, this, std::placeholders::_1));
@@ -40,10 +40,12 @@ void tcp_server_channel_creator::on_newfd(const SOCKET fd, const struct sockaddr
 		}
 		else
 		{
-			std::shared_ptr<tcp_server_channel>	channel = std::make_shared<tcp_server_channel>(fd, _reactor, _cb, _self_read_size, _self_write_size, _sock_read_size, _sock_write_size);
+			std::shared_ptr<tcp_server_handler_base> cb = _factory();
+			std::shared_ptr<tcp_server_channel>	channel = std::make_shared<tcp_server_channel>(fd, _reactor, cb, _self_read_size, _self_write_size, _sock_read_size, _sock_write_size);
+			cb->inner_init(_reactor, channel);
 			_channel_list[fd] = channel;
 
-			_cb->on_accept(channel);
+			cb->on_accept();
 		}
 
 		if (_channel_list.size())
@@ -67,7 +69,7 @@ void tcp_server_channel_creator::on_idle_recover(idle_helper* idle_id)
 	for (size_t i = 0; i < SCAN_STEP_ONCE && it != _channel_list.end(); i++)
 	{
 		//就这里引用他
-		if (!it->second->is_valid() && it->second.unique())
+		if (!it->second->is_valid())
 		{
 			_channel_list.erase(it++);
 		}

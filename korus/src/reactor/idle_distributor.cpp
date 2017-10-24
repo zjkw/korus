@@ -17,7 +17,7 @@ void	idle_distributor::idle()
 	uint64_t		old_seq = _idle_seq;
 	idle_helper*	id = nullptr;
 
-	while (1)
+	while (true)
 	{
 		std::map<idle_helper*, uint64_t>::iterator it = _idle_list.upper_bound(id);//上界，避免递归导致的后续pair被删除而找不到后续
 		if (it == _idle_list.end())

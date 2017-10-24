@@ -7,11 +7,21 @@ idle_helper::idle_helper(reactor_loop* reatcor)
 {
 }
 
+idle_helper::idle_helper()
+	: _reactor(nullptr), _task(nullptr), _is_start(false)
+{
+}
+
 idle_helper::~idle_helper()
 {
 	stop();
 	clear();
 	_reactor = nullptr;
+}
+
+void	idle_helper::reactor(reactor_loop* reatcor)
+{
+	_reactor = reatcor;
 }
 
 void	idle_helper::bind(reactor_idle_callback_t task)
@@ -27,7 +37,7 @@ void	idle_helper::clear()
 
 void	idle_helper::start()
 {
-	if (!_task)
+	if (!_task || !_reactor)
 	{
 		assert(false);
 		return;
@@ -39,7 +49,10 @@ void	idle_helper::start()
 void	idle_helper::stop()
 {
 	_is_start = false;
-	_reactor->stop_idle(this);
+	if (_reactor)
+	{
+		_reactor->stop_idle(this);
+	}
 }
 
 bool	idle_helper::exist()
@@ -49,7 +62,7 @@ bool	idle_helper::exist()
 
 void	idle_helper::action()
 {
-	if (!_task)
+	if (!_task || !_reactor)
 	{
 		assert(false);
 		return;

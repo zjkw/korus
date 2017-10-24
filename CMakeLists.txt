@@ -9,7 +9,7 @@ if(NOT CMAKE_BUILD_TYPE)
 #	set(CMAKE_CXX_FLAGS_DEBUG "-gstabs+ -O0 -DCHECK_PTHREAD_RETURN_VALUE -D_FILE_OFFSET_BITS=64 -Wall -Wextra -Wconversion -Wno-unused-parameter -Woverloaded-virtual -Wpointer-arith -Wshadow -Wwrite-strings -march=native -rdynamic")
 endif()
 
-add_definitions(-DREUSEPORT_TRADITION)
+#add_definitions(-DREUSEPORT_TRADITION)
 #add_definitions(-std=c++11)
 #set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 

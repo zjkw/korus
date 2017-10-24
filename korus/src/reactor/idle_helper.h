@@ -10,9 +10,11 @@ class reactor_loop;
 class idle_helper
 {
 public:
+	idle_helper();
 	idle_helper(reactor_loop* reatcor);
 	virtual ~idle_helper();
 
+	void	reactor(reactor_loop* reatcor);
 	void	bind(reactor_idle_callback_t task);
 	void	clear();
 	void	start();

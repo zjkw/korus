@@ -9,7 +9,7 @@
 #define DEFAULT_LISTEN_BACKLOG	20
 #define DEFAULT_DEFER_ACCEPT	3
 
-// 对应用层可见类：tcp_server_channel, tcp_server_callback, reactor_loop, tcp_server. 都可运行在多线程环境下，所以都要求用shared_ptr包装起来，解决生命期问题
+// 对应用层可见类：tcp_server_channel, tcp_server_handler_base, reactor_loop, tcp_server. 都可运行在多线程环境下，所以都要求用shared_ptr包装起来，解决生命期问题
 // tcp_server不提供遍历channel的接口，这样减少内部复杂性，另外channel遍历需求也只是部分应用需求，上层自己搞定
 // 如果有多进程实例绑定相同本地ip端口，需要注意当某进程挂掉后，原先和之通信的对端对象将和现存进程通信，当严格要求进程与逻辑对象映射时候，需要做转发或拒绝服务
 
@@ -30,10 +30,10 @@ public:
 	// addr格式ip:port
 	// 当thread_num为0表示默认核数
 	// 支持亲缘性绑定
-	// 外部使用 dynamic_pointer_cast 将派生类的智能指针转换成 std::shared_ptr<tcp_server_callback>
-	tcp_server(	uint16_t thread_num, const std::string& listen_addr, std::shared_ptr<tcp_server_callback> cb, uint32_t backlog = DEFAULT_LISTEN_BACKLOG, uint32_t defer_accept = DEFAULT_DEFER_ACCEPT, 
+	// 外部使用 dynamic_pointer_cast 将派生类的智能指针转换成 std::shared_ptr<tcp_server_handler_base>
+	tcp_server(uint16_t thread_num, const std::string& listen_addr, const tcp_server_channel_factory_t& factory, uint32_t backlog = DEFAULT_LISTEN_BACKLOG, uint32_t defer_accept = DEFAULT_DEFER_ACCEPT,
 				const uint32_t self_read_size = DEFAULT_READ_BUFSIZE, const uint32_t self_write_size = DEFAULT_WRITE_BUFSIZE, const uint32_t sock_read_size = 0, const uint32_t sock_write_size = 0)
-				: _thread_num(thread_num), _listen_addr(listen_addr), _cb(cb), _backlog(backlog), _defer_accept(defer_accept), 
+				: _thread_num(thread_num), _listen_addr(listen_addr), _factory(factory), _backlog(backlog), _defer_accept(defer_accept),
 				_self_read_size(self_read_size), _self_write_size(self_write_size), _sock_read_size(sock_read_size), _sock_write_size(sock_write_size)
 #ifdef REUSEPORT_TRADITION
 				, _listen_thread(nullptr), _is_listen_init(false), _alone_listen(nullptr), _num_worker_ready(0)
@@ -73,7 +73,7 @@ public:
 		//atomic::test_and_set检查flag是否被设置，若被设置直接返回true，若没有设置则设置flag为true后再返回false
 		if (!_start.test_and_set())
 		{
-			assert(_cb);
+			assert(_factory);
 
 			assert(_thread_num);
 			int32_t cpu_num = sysconf(_SC_NPROCESSORS_CONF);
@@ -85,7 +85,7 @@ public:
 			_listen_thread = new thread_object(abs(offset % cpu_num));
 			offset++;
 
-			_listen_thread->add_init_task(std::bind(&tcp_server::listen_thread_init, this, _listen_thread, _cb, offset));
+			_listen_thread->add_init_task(std::bind(&tcp_server::listen_thread_init, this, _listen_thread, _factory, offset));
 			_listen_thread->start();	
 			if (1 != _thread_num)
 			{
@@ -111,7 +111,7 @@ public:
 					thread_object*	thread_obj = new thread_object(abs((i + offset) % cpu_num));
 					_thread_pool[i] = thread_obj;
 
-					thread_obj->add_init_task(std::bind(&tcp_server::common_thread_init, this, thread_obj, _cb, listen));
+					thread_obj->add_init_task(std::bind(&tcp_server::common_thread_init, this, thread_obj, _factory, listen));
 					thread_obj->start();
 				}
 #ifdef REUSEPORT_TRADITION
@@ -125,7 +125,7 @@ private:
 	uint16_t								_thread_num;
 	std::map<uint16_t, thread_object*>		_thread_pool;
 	std::atomic_flag						_start = ATOMIC_FLAG_INIT;
-	std::shared_ptr<tcp_server_callback>	_cb;
+	tcp_server_channel_factory_t			_factory;
 	std::string								_listen_addr;
 	uint32_t								_backlog;
 	uint32_t								_defer_accept;
@@ -149,14 +149,14 @@ private:
 #endif
 
 #ifdef REUSEPORT_TRADITION
-	void listen_thread_init(thread_object*	thread_obj, std::shared_ptr<tcp_server_callback> cb, int32_t offset)
+	void listen_thread_init(thread_object*	thread_obj, const tcp_server_channel_factory_t& factory, int32_t offset)
 	{
 		std::shared_ptr<reactor_loop>	reactor = std::make_shared<reactor_loop>();
 		_alone_listen = new tcp_listen(reactor, _listen_addr, _backlog, _defer_accept);
 		tcp_server_channel_creator*		creator = nullptr;
 		if(1 == _thread_num)	//就复用同一个线程好了
 		{
-			creator = new tcp_server_channel_creator(reactor, cb, _self_read_size, _self_write_size, _sock_read_size, _sock_write_size);
+			creator = new tcp_server_channel_creator(reactor, factory, _self_read_size, _self_write_size, _sock_read_size, _sock_write_size);
 			_alone_listen->add_accept_handler(std::bind(&tcp_server_channel_creator::on_newfd, creator, std::placeholders::_1, std::placeholders::_2)); //fd + sockaddr_in
 		}
 
@@ -191,10 +191,10 @@ private:
 		reactor->invalid();	// 可能上层还保持间接或直接引用，这里使其失效：“只管功能失效化，不管生命期释放”
 	}
 #endif
-	void common_thread_init(thread_object*	thread_obj, std::shared_ptr<tcp_server_callback> cb, tcp_listen*	alone_listen)
+	void common_thread_init(thread_object*	thread_obj, const tcp_server_channel_factory_t& factory, tcp_listen*	alone_listen)
 	{
 		std::shared_ptr<reactor_loop>	reactor = std::make_shared<reactor_loop>();
-		tcp_server_channel_creator*		creator = new tcp_server_channel_creator(reactor, cb, _self_read_size, _self_write_size, _sock_read_size, _sock_write_size);
+		tcp_server_channel_creator*		creator = new tcp_server_channel_creator(reactor, factory, _self_read_size, _self_write_size, _sock_read_size, _sock_write_size);
 		tcp_listen*						listen = nullptr;
 		if (!alone_listen)
 		{
@@ -232,10 +232,10 @@ class tcp_server<reactor_loop>
 {
 public:
 	// addr格式ip:port
-	tcp_server(std::shared_ptr<reactor_loop> reactor, const std::string& listen_addr, std::shared_ptr<tcp_server_callback> cb, uint32_t backlog = DEFAULT_LISTEN_BACKLOG, uint32_t defer_accept = DEFAULT_DEFER_ACCEPT,
+	tcp_server(std::shared_ptr<reactor_loop> reactor, const std::string& listen_addr, const tcp_server_channel_factory_t& factory, uint32_t backlog = DEFAULT_LISTEN_BACKLOG, uint32_t defer_accept = DEFAULT_DEFER_ACCEPT,
 		const uint32_t self_read_size = DEFAULT_READ_BUFSIZE, const uint32_t self_write_size = DEFAULT_WRITE_BUFSIZE, const uint32_t sock_read_size = 0, const uint32_t sock_write_size = 0)
 	{
-		_creator = new tcp_server_channel_creator(reactor, cb, self_read_size, self_write_size, sock_read_size, sock_write_size);
+		_creator = new tcp_server_channel_creator(reactor, factory, self_read_size, self_write_size, sock_read_size, sock_write_size);
 		_listen = new tcp_listen(reactor, listen_addr, backlog, defer_accept);
 		_listen->add_accept_handler(std::bind(&tcp_server_channel_creator::on_newfd, _creator, std::placeholders::_1, std::placeholders::_2)); //fd + sockaddr_in
 		_listen->start();

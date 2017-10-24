@@ -20,7 +20,7 @@ public:
 	virtual ~thread_safe_objbase();
 
 	virtual void	invalid();
-	bool	is_valid();
+	virtual bool	is_valid();
 
 protected:
 	std::atomic<bool>	_invalid;

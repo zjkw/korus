@@ -1,7 +1,7 @@
 #include <assert.h>
 #include "udp_server_channel.h"
 
-udp_server_channel::udp_server_channel(std::shared_ptr<reactor_loop> reactor, const std::string& local_addr, std::shared_ptr<udp_server_callback> cb,
+udp_server_channel::udp_server_channel(std::shared_ptr<reactor_loop> reactor, const std::string& local_addr, std::shared_ptr<udp_server_handler_base> cb,
 										const uint32_t self_read_size, const uint32_t self_write_size, const uint32_t sock_read_size, const uint32_t sock_write_size)
 										: _reactor(reactor), _cb(cb), udp_channel_base(local_addr, self_read_size, self_write_size, sock_read_size, sock_write_size)
 										
@@ -11,8 +11,8 @@ udp_server_channel::udp_server_channel(std::shared_ptr<reactor_loop> reactor, co
 //析构需要发生在产生线程
 udp_server_channel::~udp_server_channel()
 {
-	_reactor->stop_async_task(this);
-	_reactor->stop_sockio(this);
+	assert(!_reactor);
+	assert(!_cb);
 }
 
 bool	udp_server_channel::start()
@@ -33,7 +33,7 @@ bool	udp_server_channel::start()
 	if (ret)
 	{
 		_reactor->start_sockio(this, SIT_READ);
-		_cb->on_ready(shared_from_this());
+		_cb->on_ready();
 	}
 	return ret;
 }
@@ -83,7 +83,7 @@ void	udp_server_channel::on_sockio_read()
 	int32_t ret = udp_channel_base::do_recv();
 	if (ret < 0)
 	{
-		CLOSE_MODE_STRATEGY cms = _cb->on_error((CHANNEL_ERROR_CODE)ret, shared_from_this());
+		CLOSE_MODE_STRATEGY cms = _cb->on_error((CHANNEL_ERROR_CODE)ret);
 		handle_close_strategy(cms);
 	}
 }
@@ -97,7 +97,30 @@ void	udp_server_channel::invalid()
 	thread_safe_objbase::invalid();
 	_reactor->stop_sockio(this);
 	udp_channel_base::close();
-	_cb->on_closed(shared_from_this());
+	_cb->on_closed();
+
+	detach();
+}
+
+void	udp_server_channel::detach()
+{
+	if (is_valid())
+	{
+		assert(false);
+		return;
+	}
+
+	if (_cb)
+	{
+		_cb->inner_uninit();
+		_cb = nullptr;
+	}
+	if (_reactor)
+	{
+		_reactor->stop_sockio(this);
+		_reactor->stop_async_task(this);
+		_reactor = nullptr;
+	}
 }
 
 int32_t	udp_server_channel::on_recv_buff(const void* buf, const size_t len, const sockaddr_in& peer_addr)
@@ -107,7 +130,7 @@ int32_t	udp_server_channel::on_recv_buff(const void* buf, const size_t len, cons
 		return 0;
 	}
 
-	_cb->on_recv_pkg((uint8_t*)buf, len, peer_addr, shared_from_this());
+	_cb->on_recv_pkg((uint8_t*)buf, len, peer_addr);
 		
 	return len;
 }

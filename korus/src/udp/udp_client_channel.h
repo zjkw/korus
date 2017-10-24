@@ -9,12 +9,12 @@
 //1，是send在最恶劣情况下仅仅是拷贝到本库的缓存，并非到了内核缓存，不同于::send的语义
 //2，close/shudown都可能是跨线程的，导致延迟在fd所在线程执行，此情况下无法做到实时效果，比如外部先close后可能还能send
 
-class udp_client_callback;
+class udp_client_handler_base;
 //有效性优先级：is_valid > INVALID_SOCKET,即所有函数都会先判断is_valid这是个原子操作
 class udp_client_channel : public std::enable_shared_from_this<udp_client_channel>, public thread_safe_objbase, public sockio_channel, public udp_channel_base
 {
 public:
-	udp_client_channel(std::shared_ptr<reactor_loop> reactor, std::shared_ptr<udp_client_callback> cb, const uint32_t self_read_size, const uint32_t self_write_size, const uint32_t sock_read_size, const uint32_t sock_write_size);
+	udp_client_channel(std::shared_ptr<reactor_loop> reactor, std::shared_ptr<udp_client_handler_base> cb, const uint32_t self_read_size, const uint32_t self_write_size, const uint32_t sock_read_size, const uint32_t sock_write_size);
 	virtual ~udp_client_channel();
 
 	// 下面四个函数可能运行在多线程环境下	
@@ -25,9 +25,10 @@ public:
 
 private:
 	std::shared_ptr<reactor_loop>	_reactor;
-	std::shared_ptr<udp_client_callback>	_cb;
+	std::shared_ptr<udp_client_handler_base>	_cb;
 
 	void		invalid();
+	void		detach();
 
 	virtual void on_sockio_read();
 	virtual void on_sockio_write();
@@ -40,17 +41,36 @@ private:
 
 // 可能处于多线程环境下
 // on_error不能纯虚 tbd，加上close默认处理
-class udp_client_callback : public std::enable_shared_from_this<udp_client_callback>, public thread_safe_objbase
+class udp_client_handler_base : public std::enable_shared_from_this<udp_client_handler_base>, public thread_safe_objbase
 {
 public:
-	udp_client_callback(){}
-	virtual ~udp_client_callback(){}
+	udp_client_handler_base() : _reactor(nullptr), _channel(nullptr){}
+	virtual ~udp_client_handler_base(){ assert(!_reactor); assert(!_channel); }
 
 	//override------------------
-	virtual void	on_ready(std::shared_ptr<udp_client_channel> channel) = 0;	//就绪
-	virtual void	on_closed(std::shared_ptr<udp_client_channel> channel) = 0;
+	virtual void	on_ready() = 0;	//就绪
+	virtual void	on_closed() = 0;
 	//参考TCP_ERROR_CODE定义
-	virtual CLOSE_MODE_STRATEGY	on_error(CHANNEL_ERROR_CODE code, std::shared_ptr<udp_client_channel> channel) = 0;
+	virtual CLOSE_MODE_STRATEGY	on_error(CHANNEL_ERROR_CODE codel) = 0;
 	//这是一个待处理的完整包
-	virtual void	on_recv_pkg(const void* buf, const size_t len, const sockaddr_in& peer_addr, std::shared_ptr<udp_client_channel> channel) = 0;
+	virtual void	on_recv_pkg(const void* buf, const size_t len, const sockaddr_in& peer_addr) = 0;
+
+public:
+	int32_t	send(const void* buf, const size_t len, const sockaddr_in& peer_addr)	{ return _channel->send(buf, len, peer_addr); }
+	void	close()									{ _channel->close(); }
+	std::shared_ptr<reactor_loop>	get_reactor()	{ return _reactor; }
+	void	inner_init(std::shared_ptr<reactor_loop> reactor, std::shared_ptr<udp_client_channel> channel)
+	{
+		_reactor = reactor;
+		_channel = channel;
+	}
+	void	inner_uninit()
+	{
+		_reactor = nullptr;
+		_channel = nullptr;
+	}
+private:
+
+	std::shared_ptr<reactor_loop>		_reactor;
+	std::shared_ptr<udp_client_channel> _channel;
 };

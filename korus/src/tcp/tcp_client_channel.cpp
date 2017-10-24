@@ -3,7 +3,7 @@
 #include "tcp_helper.h"
 #include "tcp_client_channel.h"
 
-tcp_client_channel::tcp_client_channel(std::shared_ptr<reactor_loop> reactor, const std::string& server_addr, std::shared_ptr<tcp_client_callback> cb,
+tcp_client_channel::tcp_client_channel(std::shared_ptr<reactor_loop> reactor, const std::string& server_addr, std::shared_ptr<tcp_client_handler_base> cb,
 	std::chrono::seconds connect_timeout, std::chrono::seconds connect_retry_wait,
 	const uint32_t self_read_size, const uint32_t self_write_size, const uint32_t sock_read_size, const uint32_t sock_write_size)
 	: tcp_channel_base(INVALID_SOCKET, self_read_size, self_write_size, sock_read_size, sock_write_size), 
@@ -16,8 +16,8 @@ tcp_client_channel::tcp_client_channel(std::shared_ptr<reactor_loop> reactor, co
 
 tcp_client_channel::~tcp_client_channel()
 {
-	_reactor->stop_sockio(this);
-	_reactor->stop_async_task(this);
+	assert(!_reactor);
+	assert(!_cb);
 }
 
 // 保证原子，考虑多线程环境下，buf最好是一个或若干完整包；可能触发错误/异常 on_error
@@ -62,7 +62,7 @@ void	tcp_client_channel::close()
 	}
 	_conn_state = CNS_CLOSED;
 
-	_cb->on_closed(shared_from_this());
+	_cb->on_closed();
 }
 
 // 参数参考全局函数 ::shutdown
@@ -128,7 +128,7 @@ void	tcp_client_channel::connect()
 		_conn_fd = INVALID_SOCKET;
 		_conn_state = CNS_CONNECTED;
 		_reactor->start_sockio(this, SIT_READWRITE);
-		_cb->on_connect(shared_from_this());
+		_cb->on_connect();
 	}
 	else
 	{
@@ -204,7 +204,7 @@ void	tcp_client_channel::on_sockio_write()
 				_conn_fd = INVALID_SOCKET;
 				_conn_state = CNS_CONNECTED;
 				_reactor->start_sockio(this, SIT_READWRITE);
-				_cb->on_connect(shared_from_this());
+				_cb->on_connect();
 			}
 		}
 		break;
@@ -213,7 +213,7 @@ void	tcp_client_channel::on_sockio_write()
 			int32_t ret = tcp_channel_base::send_alone();
 			if (ret < 0)
 			{
-				CLOSE_MODE_STRATEGY cms = _cb->on_error((CHANNEL_ERROR_CODE)ret, shared_from_this());
+				CLOSE_MODE_STRATEGY cms = _cb->on_error((CHANNEL_ERROR_CODE)ret);
 				handle_close_strategy(cms);
 			}
 		}
@@ -237,7 +237,7 @@ void	tcp_client_channel::on_sockio_read()
 	int32_t ret = tcp_channel_base::do_recv();
 	if (ret < 0)
 	{
-		CLOSE_MODE_STRATEGY cms = _cb->on_error((CHANNEL_ERROR_CODE)ret, shared_from_this());
+		CLOSE_MODE_STRATEGY cms = _cb->on_error((CHANNEL_ERROR_CODE)ret);
 		handle_close_strategy(cms);
 	}
 }
@@ -253,6 +253,29 @@ void	tcp_client_channel::invalid()
 
 	_timer_connect_timeout.stop();
 	_timer_connect_retry_wait.stop();
+	
+	detach();
+}
+
+void	tcp_client_channel::detach()
+{
+	if (is_valid())
+	{
+		assert(false);
+		return;
+	}
+
+	if (_cb)
+	{
+		_cb->inner_uninit();
+		_cb = nullptr;
+	}
+	if (_reactor)
+	{
+		_reactor->stop_sockio(this);
+		_reactor->stop_async_task(this);
+		_reactor = nullptr;
+	}
 }
 
 int32_t	tcp_client_channel::on_recv_buff(const void* buf, const size_t len, bool& left_partial_pkg)
@@ -269,7 +292,7 @@ int32_t	tcp_client_channel::on_recv_buff(const void* buf, const size_t len, bool
 	int32_t size = 0;
 	while (len > size)
 	{
-		int32_t ret = _cb->on_recv_split((uint8_t*)buf + size, len - size, shared_from_this());
+		int32_t ret = _cb->on_recv_split((uint8_t*)buf + size, len - size);
 		if (ret == 0)
 		{
 			left_partial_pkg = true;	//剩下的不是一个完整的包
@@ -277,18 +300,18 @@ int32_t	tcp_client_channel::on_recv_buff(const void* buf, const size_t len, bool
 		}
 		else if (ret < 0)
 		{
-			CLOSE_MODE_STRATEGY cms = _cb->on_error((CHANNEL_ERROR_CODE)ret, shared_from_this());
+			CLOSE_MODE_STRATEGY cms = _cb->on_error((CHANNEL_ERROR_CODE)ret);
 			handle_close_strategy(cms);
 			break;
 		}
 		else if (ret + size > len)
 		{
-			CLOSE_MODE_STRATEGY cms = _cb->on_error(CEC_RECVBUF_SHORT, shared_from_this());
+			CLOSE_MODE_STRATEGY cms = _cb->on_error(CEC_RECVBUF_SHORT);
 			handle_close_strategy(cms);
 			break;
 		}
 
-		_cb->on_recv_pkg((uint8_t*)buf + size, ret, shared_from_this());
+		_cb->on_recv_pkg((uint8_t*)buf + size, ret);
 		size += ret;
 	}
 

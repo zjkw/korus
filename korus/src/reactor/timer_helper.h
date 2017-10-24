@@ -10,8 +10,11 @@ class reactor_loop;
 class timer_helper
 {
 public:
+	timer_helper();
 	timer_helper(reactor_loop* reatcor);
 	virtual ~timer_helper();
+
+	void	reactor(reactor_loop* reatcor);
 	void	bind(reactor_timer_callback_t task);
 	void	clear();
 	void	start(const std::chrono::system_clock::time_point& begin, const std::chrono::milliseconds& interval);

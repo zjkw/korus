@@ -16,8 +16,8 @@ typedef int SOCKET;
 
 #define INVALID_SOCKET			(-1)
 
-#define DEFAULT_READ_BUFSIZE	(100 * 1025)
-#define DEFAULT_WRITE_BUFSIZE	(100 * 1025)
+#define DEFAULT_READ_BUFSIZE	(100 * 1024)
+#define DEFAULT_WRITE_BUFSIZE	(100 * 1024)
 
 //除非特别说明，内部不会主动close/shutdown
 enum CHANNEL_ERROR_CODE
