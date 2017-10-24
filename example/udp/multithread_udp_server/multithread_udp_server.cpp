@@ -15,11 +15,8 @@ public:
 	virtual ~udp_server_handler(){}
 
 	//override------------------
-	virtual void	on_ready(std::shared_ptr<udp_server_channel> channel)	//连接已经建立
+	virtual void	on_ready(std::shared_ptr<udp_server_channel> channel)	
 	{
-		char szTest[] = "hello client, i am server!";
-//		int32_t ret = channel->send(szTest, strlen(szTest));
-//		printf("\non_ready/accepted, then Send %s, ret: %d\n", szTest, ret);
 	}
 
 	virtual void	on_closed(std::shared_ptr<udp_server_channel> channel)
@@ -27,7 +24,7 @@ public:
 		printf("\nClosed\n");
 	}
 
-	//参考udp_ERROR_CODE定义
+	//参考CHANNEL_ERROR_CODE定义
 	virtual CLOSE_MODE_STRATEGY	on_error(CHANNEL_ERROR_CODE code, std::shared_ptr<udp_server_channel> channel)
 	{
 		printf("\nError code: %d\n", (int32_t)code);
@@ -40,6 +37,10 @@ public:
 		char szTest[1024] = { 0 };
 		memcpy(szTest, buf, min(len, 1023));
 		printf("\non_recv_pkg: %s, len: %u\n", szTest, len);
+
+		char szTest2[] = "hello client, i am server!";
+		int32_t ret = channel->send(szTest2, strlen(szTest2), peer_addr);
+		printf("\necho, then Send %s, ret: %d\n", szTest2, ret);
 	}
 };
 

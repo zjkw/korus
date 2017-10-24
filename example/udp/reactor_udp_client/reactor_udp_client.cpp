@@ -8,6 +8,8 @@
 #define min(a,b) (((a) < (b)) ? (a) : (b))  
 #endif
 
+std::string	server_addr = "0.0.0.0:9099";
+
 class udp_client_handler : public udp_client_callback
 {
 public:
@@ -15,11 +17,17 @@ public:
 	virtual ~udp_client_handler(){}
 
 	//override------------------
-	virtual void	on_ready(std::shared_ptr<udp_client_channel> channel)	//连接已经建立
+	virtual void	on_ready(std::shared_ptr<udp_client_channel> channel)	
 	{
 		char szTest[] = "hello server, i am client!";
-//		int32_t ret = channel->send(szTest, strlen(szTest));
-//		printf("\non_ready, then Send %s, ret: %d\n", szTest, ret);
+
+		struct sockaddr_in	si;
+		if (!sockaddr_from_string(server_addr, si))
+		{
+			return;
+		}
+		int32_t ret = channel->send(szTest, strlen(szTest), si);
+		printf("\non_ready, then Send %s, ret: %d\n", szTest, ret);
 	}
 
 	virtual void	on_closed(std::shared_ptr<udp_client_channel> channel)
@@ -45,8 +53,6 @@ public:
 
 int main(int argc, char* argv[]) 
 {
-	std::string	addr = "0.0.0.0:9099";
-
 	if (argc != 2) 
 	{
 		printf("Usage: %s <port>\n", argv[0]);
@@ -54,14 +60,14 @@ int main(int argc, char* argv[])
 		return 0;
 	}
 
-	addr = std::string("127.0.0.1:") + argv[1];
+	server_addr = std::string("127.0.0.1:") + argv[1];
 			
 	std::shared_ptr<reactor_loop> reactor = std::make_shared<reactor_loop>();
 
 	std::shared_ptr<udp_client_handler> handler = std::make_shared<udp_client_handler>();
 	std::shared_ptr<udp_client_callback> cb = std::dynamic_pointer_cast<udp_client_callback>(handler);
 
-	udp_client<reactor_loop> client(reactor, addr, cb);
+	udp_client<reactor_loop> client(reactor, cb);
 
 	reactor->run();
 

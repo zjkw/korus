@@ -20,7 +20,7 @@ udp_channel_base::~udp_channel_base()
 	delete[]_self_read_buff;
 }
 
-bool	udp_channel_base::bind_local_addr()
+bool	udp_channel_base::init_socket()
 {
 	// 1检查
 	if (INVALID_SOCKET != _fd)
@@ -28,14 +28,30 @@ bool	udp_channel_base::bind_local_addr()
 		return true;
 	}
 
-	struct sockaddr_in	si;
-	if (!sockaddr_from_string(_local_addr, si))
+	SOCKET s = INVALID_SOCKET;
+	if (_local_addr.empty())
 	{
-		return false;
+		s = create_udp_socket();
 	}
+	else
+	{
+		struct sockaddr_in	si;
+		if (!sockaddr_from_string(_local_addr, si))
+		{
+			return false;
+		}
 
-	// 2构造listen socket
-	SOCKET s = bind_udp_nonblock_socket(si);
+		// 2构造listen socket
+		s = create_udp_socket();
+		if (INVALID_SOCKET != s)
+		{
+			if (!bind_sock(s, si))
+			{
+				::close(s);
+				return false;
+			}
+		}
+	}
 	if (INVALID_SOCKET == s)
 	{
 		return false;
@@ -166,7 +182,7 @@ int32_t	udp_channel_base::do_recv_nolock()
 				break;
 			}
 			assert(errno != EFAULT);
-			return (int32_t)CEC_READ_FAILED;		//maybe Connection reset by peer / bad file desc
+			return (int32_t)CEC_READ_FAILED;		
 		}
 		else if (ret == 0)
 		{

@@ -21,7 +21,7 @@ protected:
 	int32_t				send_alone();								// 内部数据发送
 	SOCKET				_fd;
 	void				set_fd(SOCKET fd);
-	bool				bind_local_addr();
+	bool				init_socket();
 
 private:
 	std::mutex			_mutex_write;

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "korus/src/util/socket_ops.h"
 #include "korus/src/reactor/timer_helper.h"
 #include "korus/src/reactor/idle_helper.h"
 #include "korus/src/reactor/reactor_loop.h"

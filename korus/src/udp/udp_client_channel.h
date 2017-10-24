@@ -14,8 +14,7 @@ class udp_client_callback;
 class udp_client_channel : public std::enable_shared_from_this<udp_client_channel>, public thread_safe_objbase, public sockio_channel, public udp_channel_base
 {
 public:
-	udp_client_channel(std::shared_ptr<reactor_loop> reactor, const std::string& local_addr, std::shared_ptr<udp_client_callback> cb,
-		const uint32_t self_read_size, const uint32_t self_write_size, const uint32_t sock_read_size, const uint32_t sock_write_size);
+	udp_client_channel(std::shared_ptr<reactor_loop> reactor, std::shared_ptr<udp_client_callback> cb, const uint32_t self_read_size, const uint32_t self_write_size, const uint32_t sock_read_size, const uint32_t sock_write_size);
 	virtual ~udp_client_channel();
 
 	// 下面四个函数可能运行在多线程环境下	

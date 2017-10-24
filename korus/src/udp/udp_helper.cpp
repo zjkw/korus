@@ -4,10 +4,10 @@
 
 SOCKET create_tcp_origin_sock()
 {
-	return ::socket(AF_INET, SOCK_DGRAM | SOCK_NONBLOCK | SOCK_CLOEXEC, IPPROTO_TCP);
+	return ::socket(AF_INET, SOCK_DGRAM | SOCK_NONBLOCK | SOCK_CLOEXEC, IPPROTO_UDP);
 }
 
-SOCKET create_udp_socket(const struct sockaddr_in& addr)
+SOCKET create_udp_socket()
 {
 	/* Request socket. */
 	SOCKET s = create_tcp_origin_sock();
@@ -23,18 +23,6 @@ SOCKET create_udp_socket(const struct sockaddr_in& addr)
 		return INVALID_SOCKET;
 	}
 
-	return s;
-}
-
-SOCKET bind_udp_nonblock_socket(const struct sockaddr_in& addr)
-{
-	/* Request socket. */
-	SOCKET s = create_udp_socket(addr);
-	if (s == INVALID_SOCKET)
-	{
-		return INVALID_SOCKET;
-	}
-
 	if (!set_reuse_addr_sock(s, 1))
 	{
 		close(s);
@@ -47,12 +35,7 @@ SOCKET bind_udp_nonblock_socket(const struct sockaddr_in& addr)
 		return INVALID_SOCKET;
 	}
 
-	if (!bind_sock(s, addr))
-	{
-		close(s);
-		return false;
-	}
-
 	return s;
 }
+
 

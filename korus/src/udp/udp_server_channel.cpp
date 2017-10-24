@@ -29,10 +29,10 @@ bool	udp_server_channel::start()
 		_reactor->start_async_task(std::bind(&udp_server_channel::start, this), this);
 		return true;
 	}
-	bool ret = udp_channel_base::bind_local_addr();
+	bool ret = udp_channel_base::init_socket();
 	if (ret)
 	{
-		_reactor->start_sockio(this, SIT_READWRITE);
+		_reactor->start_sockio(this, SIT_READ);
 		_cb->on_ready(shared_from_this());
 	}
 	return ret;
@@ -71,16 +71,7 @@ void	udp_server_channel::close()
 //////////////////////////////////
 void	udp_server_channel::on_sockio_write()
 {
-	if (!is_valid())
-	{
-		return;
-	}
-	int32_t ret = udp_channel_base::send_alone();
-	if (ret < 0)
-	{
-		CLOSE_MODE_STRATEGY cms = _cb->on_error((CHANNEL_ERROR_CODE)ret, shared_from_this());
-		handle_close_strategy(cms);
-	}
+	assert(false); //²»´æÔÚ
 }
 
 void	udp_server_channel::on_sockio_read()

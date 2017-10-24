@@ -27,7 +27,7 @@ public:
 		printf("\nClosed\n");
 	}
 
-	//参考TCP_ERROR_CODE定义
+	//参考CHANNEL_ERROR_CODE定义
 	virtual CLOSE_MODE_STRATEGY	on_error(CHANNEL_ERROR_CODE code, std::shared_ptr<tcp_client_channel> channel)
 	{
 		printf("\nError code: %d\n", (int32_t)code);

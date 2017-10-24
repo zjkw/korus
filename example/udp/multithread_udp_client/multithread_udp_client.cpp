@@ -8,6 +8,8 @@
 #define min(a,b) (((a) < (b)) ? (a) : (b))  
 #endif
 
+std::string	server_addr = "0.0.0.0:9099";
+
 class udp_client_handler : public udp_client_callback
 {
 public:
@@ -15,11 +17,17 @@ public:
 	virtual ~udp_client_handler(){}
 
 	//override------------------
-	virtual void	on_ready(std::shared_ptr<udp_client_channel> channel)	//连接已经建立
+	virtual void	on_ready(std::shared_ptr<udp_client_channel> channel)	
 	{
 		char szTest[] = "hello server, i am client!";
-//		int32_t ret = channel->send(szTest, strlen(szTest));
-//		printf("\non_ready, then Send %s, ret: %d\n", szTest, ret);
+
+		struct sockaddr_in	si;
+		if (!sockaddr_from_string(server_addr, si))
+		{
+			return;
+		}
+		int32_t ret = channel->send(szTest, strlen(szTest), si);
+		printf("\non_ready, then Send %s, ret: %d\n", szTest, ret);
 	}
 
 	virtual void	on_closed(std::shared_ptr<udp_client_channel> channel)
@@ -27,7 +35,7 @@ public:
 		printf("\nClosed\n");
 	}
 
-	//参考udp_ERROR_CODE定义
+	//参考CHANNEL_ERROR_CODE定义
 	virtual CLOSE_MODE_STRATEGY	on_error(CHANNEL_ERROR_CODE code, std::shared_ptr<udp_client_channel> channel)
 	{
 		printf("\nError code: %d\n", (int32_t)code);
@@ -45,7 +53,7 @@ public:
 
 int main(int argc, char* argv[]) 
 {
-	std::string	addr = "0.0.0.0:9099";
+
 	uint16_t		thread_num = 4;
 
 #ifdef REUSEPORT_TRADITION
@@ -62,7 +70,7 @@ int main(int argc, char* argv[])
 		return 0;
 	}
 	
-	addr = std::string("127.0.0.1:") + argv[1];
+	server_addr = std::string("127.0.0.1:") + argv[1];
 	if (argc >= 3)
 	{
 		thread_num = (uint16_t)atoi(argv[2]);
@@ -71,9 +79,9 @@ int main(int argc, char* argv[])
 	std::shared_ptr<udp_client_handler> handler = std::make_shared<udp_client_handler>();
 	std::shared_ptr<udp_client_callback> cb = std::dynamic_pointer_cast<udp_client_callback>(handler);
 #ifdef REUSEPORT_TRADITION
-	udp_client<uint16_t> client(addr, cb);
+	udp_client<uint16_t> client(cb);
 #else
-	udp_client<uint16_t> client(thread_num, addr, cb);
+	udp_client<uint16_t> client(thread_num, cb);
 #endif
 	client.start();
 	for (;;)
