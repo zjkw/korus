@@ -56,11 +56,14 @@ public:
 	//这是一个待处理的完整包
 	virtual void	on_recv_pkg(const void* buf, const size_t len, const sockaddr_in& peer_addr) = 0;
 	
-public:
+protected:
 	int32_t	send(const void* buf, const size_t len, const sockaddr_in& peer_addr)	{ if (!_channel) return CEC_INVALID_SOCKET;  return _channel->send(buf, len, peer_addr); }
 	void	close()									{ if (_channel)_channel->close(); }
 	std::shared_ptr<reactor_loop>	get_reactor()	{ return _reactor; }
 
+private:
+	template<typename T> friend class udp_server;
+	friend class udp_server_channel;
 	void	inner_init(std::shared_ptr<reactor_loop> reactor, std::shared_ptr<udp_server_channel> channel)
 	{
 		_reactor = reactor;
@@ -72,7 +75,6 @@ public:
 		_channel = nullptr;
 	}
 
-private:
 	std::shared_ptr<reactor_loop>		_reactor;
 	std::shared_ptr<udp_server_channel> _channel;
 };

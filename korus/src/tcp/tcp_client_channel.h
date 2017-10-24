@@ -81,13 +81,17 @@ public:
 	//这是一个待处理的完整包
 	virtual void	on_recv_pkg(const void* buf, const size_t len) = 0;
 
-public:
+protected:
 	int32_t	send(const void* buf, const size_t len)	{ if (!_channel) return CEC_INVALID_SOCKET; return _channel->send(buf, len); }
 	void	close()									{ if (_channel)_channel->close(); }
 	void	shutdown(int32_t howto)					{ if (_channel)_channel->shutdown(howto); }
 	void	connect()								{ if (_channel)_channel->connect(); }
 	TCP_CLTCONN_STATE	get_state()					{ if (!_channel) return CNS_CLOSED;	return _channel->get_state(); }
 	std::shared_ptr<reactor_loop>	get_reactor()	{ return _reactor; }
+
+private:
+	template<typename T> friend class tcp_client;
+	friend class tcp_client_channel;
 	void	inner_init(std::shared_ptr<reactor_loop> reactor, std::shared_ptr<tcp_client_channel> channel)
 	{
 		_reactor = reactor;
@@ -98,7 +102,6 @@ public:
 		_reactor = nullptr;
 		_channel = nullptr;
 	}
-private:
 
 	std::shared_ptr<reactor_loop>		_reactor;
 	std::shared_ptr<tcp_client_channel> _channel;

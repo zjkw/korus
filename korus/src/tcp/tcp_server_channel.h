@@ -60,7 +60,7 @@ public:
 	//这是一个待处理的完整包
 	virtual void	on_recv_pkg(const void* buf, const size_t len) = 0;
 
-public:
+protected:
 	int32_t	send(const void* buf, const size_t len)	{ if (!_channel) return CEC_INVALID_SOCKET; return _channel->send(buf, len); }
 	void	close()									{ if (_channel)_channel->close(); }
 	void	shutdown(int32_t howto)					{ if (_channel)_channel->shutdown(howto); }
