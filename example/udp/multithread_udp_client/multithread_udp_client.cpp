@@ -84,7 +84,7 @@ int main(int argc, char* argv[])
 	}		
 
 #ifdef REUSEPORT_TRADITION
-	udp_client<uint16_t> client(cb);
+	udp_client<uint16_t> client(channel_factory);
 #else
 	udp_client<uint16_t> client(thread_num, channel_factory);
 #endif

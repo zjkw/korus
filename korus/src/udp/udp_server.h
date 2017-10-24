@@ -83,7 +83,6 @@ public:
 			for (uint16_t i = 0; i < _thread_num; i++)
 #endif
 			{
-
 				thread_object*	thread_obj = new thread_object(abs((i + offset) % cpu_num));
 				_thread_pool[i] = thread_obj;
 
@@ -131,8 +130,8 @@ class udp_server<reactor_loop>
 {
 public:
 	// addr∏Ò Ωip:port
-	udp_server(std::shared_ptr<reactor_loop> reactor, const std::string& local_addr, const udp_server_channel_factory_t& factory, const uint32_t self_read_size = DEFAULT_READ_BUFSIZE, const uint32_t self_write_size = DEFAULT_WRITE_BUFSIZE,
-				const uint32_t sock_read_size = 0, const uint32_t sock_write_size = 0)
+	udp_server(std::shared_ptr<reactor_loop> reactor, const std::string& local_addr, const udp_server_channel_factory_t& factory, 
+				const uint32_t self_read_size = DEFAULT_READ_BUFSIZE, const uint32_t self_write_size = DEFAULT_WRITE_BUFSIZE, const uint32_t sock_read_size = 0, const uint32_t sock_write_size = 0)
 	{
 		std::shared_ptr<udp_server_handler_base> cb = factory();
 		_channel = std::make_shared<udp_server_channel>(reactor, local_addr, cb, self_read_size, self_write_size, sock_read_size, sock_write_size);

@@ -61,9 +61,9 @@ public:
 	virtual void	on_recv_pkg(const void* buf, const size_t len) = 0;
 
 public:
-	int32_t	send(const void* buf, const size_t len)	{	return _channel->send(buf, len);	}
-	void	close()									{	_channel->close();	}
-	void	shutdown(int32_t howto)					{	_channel->shutdown(howto);	}
+	int32_t	send(const void* buf, const size_t len)	{ if (!_channel) return CEC_INVALID_SOCKET; return _channel->send(buf, len); }
+	void	close()									{ if (_channel)_channel->close(); }
+	void	shutdown(int32_t howto)					{ if (_channel)_channel->shutdown(howto); }
 	std::shared_ptr<reactor_loop>	get_reactor()	{	return _reactor; }
 
 private:
