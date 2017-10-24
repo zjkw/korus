@@ -99,17 +99,6 @@ void	udp_server_channel::invalid()
 	udp_channel_base::close();
 	_cb->on_closed();
 
-	detach();
-}
-
-void	udp_server_channel::detach()
-{
-	if (is_valid())
-	{
-		assert(false);
-		return;
-	}
-
 	if (_cb)
 	{
 		_cb->inner_uninit();

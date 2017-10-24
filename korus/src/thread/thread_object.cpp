@@ -79,12 +79,13 @@ void thread_object::thread_routine()
 
 void	thread_object::clear()
 {
-	std::unique_lock <std::mutex> lck(_mutex_taskempty);
-	_is_quit = true;
-	_resident_task_queue.clear();
-	_disposible_task_queue.clear();
-	assert(_init_task_queue.is_empty());
-	assert(_exit_task_queue.is_empty());
+	{
+		std::unique_lock <std::mutex> lck(_mutex_taskempty);
+		_is_quit = true;
+		_resident_task_queue.clear();
+		_disposible_task_queue.clear();
+		_cond_taskempty.notify_one();
+	}
 
 	if (_thread_ptr)
 	{

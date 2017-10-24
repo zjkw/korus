@@ -48,7 +48,6 @@ void	tcp_client_channel::close()
 	//线程调度
 	if (!_reactor->is_current_thread())
 	{
-		// tcp_client_channel生命期一般比reactor短，所以加上引用计数
 		_reactor->start_async_task(std::bind(&tcp_client_channel::close, this), this);
 		return;
 	}
@@ -79,7 +78,6 @@ void	tcp_client_channel::shutdown(int32_t howto)
 	//线程调度
 	if (!_reactor->is_current_thread())
 	{
-		// tcp_client_channel生命期一般比reactor短，所以加上引用计数
 		_reactor->start_async_task(std::bind(&tcp_client_channel::shutdown, this, howto), this);
 		return;
 	}
@@ -254,17 +252,6 @@ void	tcp_client_channel::invalid()
 	_timer_connect_timeout.stop();
 	_timer_connect_retry_wait.stop();
 	
-	detach();
-}
-
-void	tcp_client_channel::detach()
-{
-	if (is_valid())
-	{
-		assert(false);
-		return;
-	}
-
 	if (_cb)
 	{
 		_cb->inner_uninit();

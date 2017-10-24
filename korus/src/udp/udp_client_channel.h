@@ -28,7 +28,6 @@ private:
 	std::shared_ptr<udp_client_handler_base>	_cb;
 
 	void		invalid();
-	void		detach();
 
 	virtual void on_sockio_read();
 	virtual void on_sockio_write();

@@ -52,7 +52,6 @@ private:
 	void									on_timer_connect_retry_wait(timer_helper* timer_id);
 
 	void		invalid();
-	void		detach();
 
 	virtual void on_sockio_read();
 	virtual void on_sockio_write();

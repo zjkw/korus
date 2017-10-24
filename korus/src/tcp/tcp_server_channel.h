@@ -31,7 +31,6 @@ private:
 
 	friend class tcp_server_channel_creator;
 	void		invalid();
-	void		detach();
 
 	virtual void on_sockio_read();
 	virtual void on_sockio_write();

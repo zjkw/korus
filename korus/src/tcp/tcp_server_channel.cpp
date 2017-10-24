@@ -39,7 +39,6 @@ void	tcp_server_channel::close()
 	//线程调度，对于服务端的链接而言，close即意味着死亡，不存在重新连接的可能性
 	if (!_reactor->is_current_thread())
 	{
-		// tcp_server_channel生命期一般比reactor短，所以加上引用计数
 		_reactor->start_async_task(std::bind(&tcp_server_channel::close, this), this);
 		return;
 	}	
@@ -57,7 +56,6 @@ void	tcp_server_channel::shutdown(int32_t howto)
 
 	if (!_reactor->is_current_thread())
 	{
-		// tcp_server_channel生命期一般比reactor短，所以加上引用计数
 		_reactor->start_async_task(std::bind(&tcp_server_channel::shutdown, this, howto), this);
 		return;
 	}
@@ -103,17 +101,6 @@ void	tcp_server_channel::invalid()
 	_reactor->stop_sockio(this);
 	tcp_channel_base::close();
 	_cb->on_closed();
-
-	detach();
-}
-
-void	tcp_server_channel::detach()
-{
-	if (is_valid())
-	{
-		assert(false);
-		return;
-	}
 
 	if (_cb)
 	{
