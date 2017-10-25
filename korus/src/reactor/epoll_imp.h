@@ -21,6 +21,7 @@ protected:
 
 private:
 	int								_fd;
+	int32_t							_current_handler_index;//当前epoll_wait正在处理的索引，这里设定epoll_wait不存在重复的fd返回
 	std::vector<struct epoll_event> _epoll_event;
 
 	uint32_t	convert_event_flag(SOCKIO_TYPE type);

@@ -229,8 +229,7 @@ void	tcp_client_channel::on_sockio_write()
 		break;
 	case CNS_CLOSED:
 	default:
-		//tbd 当正常连接后，停止服务器，在本端注销epoll后还会运行到on_sockio_write这里，很奇怪的事情
-	//	assert(false);
+		assert(false);
 		break;
 	}
 }
@@ -241,6 +240,7 @@ void	tcp_client_channel::on_sockio_read()
 	{
 		return;
 	}
+	printf("on_sockio_read _conn_state %d, Line: %d\n", (int)_conn_state, __LINE__);
 	if (CNS_CONNECTED != _conn_state)
 	{
 		return;
