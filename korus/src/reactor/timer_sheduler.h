@@ -41,7 +41,7 @@ private:
 		{
 			return triggle < a.triggle;
 		}
-		bool operator >(const timer_key& a) const
+		bool operator > (const timer_key& a) const
 		{
 			return triggle > a.triggle;
 		}

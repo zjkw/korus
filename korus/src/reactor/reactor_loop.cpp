@@ -17,13 +17,13 @@ reactor_loop::reactor_loop() : _task_queue(false, true)
 
 #if defined(__linux__) || defined(__linux)  
 	_backend_poller = new epoll_imp;
-#elif defined(__APPLE__) && defined(__GNUC__)  
+//#elif defined(__APPLE__) && defined(__GNUC__)  
 	//	_backend_poller = new kqueue_imp;
-#elif defined(__MACOSX__)  
+//#elif defined(__MACOSX__)  
 //	_backend_poller = new kqueue_imp;
 #else
 	_backend_poller = nullptr;
-#error "platform unsupported"
+	#error "platform unsupported"
 #endif
 	_timer_sheduler = new timer_sheduler;
 	_idle_distributor = new idle_distributor;

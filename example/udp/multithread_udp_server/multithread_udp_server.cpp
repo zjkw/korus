@@ -56,7 +56,7 @@ int main(int argc, char* argv[])
 	std::string	addr = "0.0.0.0:9099";
 	uint16_t		thread_num = 4;
 
-#ifdef REUSEPORT_TRADITION
+#ifndef REUSEPORT_OPTION
 	if (argc != 2) 
 	{
 			printf("Usage: %s <port>\n", argv[0]);
@@ -76,7 +76,7 @@ int main(int argc, char* argv[])
 		thread_num = (uint16_t)atoi(argv[2]);
 	}
 		
-#ifdef REUSEPORT_TRADITION
+#ifndef REUSEPORT_OPTION
 	udp_server<uint16_t> server(addr, channel_factory);
 #else
 	udp_server<uint16_t> server(thread_num, addr, channel_factory);

@@ -63,7 +63,7 @@ int main(int argc, char* argv[])
 
 	uint16_t		thread_num = 4;
 
-#ifdef REUSEPORT_TRADITION
+#ifndef REUSEPORT_OPTION
 	if (argc != 2) 
 	{
 		printf("Usage: %s <port>\n", argv[0]);
@@ -83,7 +83,7 @@ int main(int argc, char* argv[])
 		thread_num = (uint16_t)atoi(argv[2]);
 	}		
 
-#ifdef REUSEPORT_TRADITION
+#ifndef REUSEPORT_OPTION
 	udp_client<uint16_t> client(channel_factory);
 #else
 	udp_client<uint16_t> client(thread_num, channel_factory);

@@ -30,7 +30,7 @@ public:
 	// 支持reuseport时候可用thread_num，其为0表示默认核数，自动亲缘性绑定
 	// 外部使用 dynamic_pointer_cast 将派生类的智能指针转换成 std::shared_ptr<udp_server_handler_base>
 	// sock_write_size仅仅是写到套接口的UDP数据报的大小上限，无类似tcp含义	
-#ifdef REUSEPORT_TRADITION
+#ifndef REUSEPORT_OPTION
 	udp_server(const std::string& local_addr, const udp_server_channel_factory_t& factory, const uint32_t self_read_size = DEFAULT_READ_BUFSIZE, const uint32_t self_write_size = DEFAULT_WRITE_BUFSIZE, const uint32_t sock_read_size = 0, const uint32_t sock_write_size = 0)
 		:	_local_addr(local_addr), _factory(factory), _self_read_size(self_read_size), _self_write_size(self_write_size), _sock_read_size(sock_read_size), _sock_write_size(sock_write_size)
 #else
@@ -39,7 +39,7 @@ public:
 #endif
 	{
 		_tid = std::this_thread::get_id();
-#ifndef REUSEPORT_TRADITION
+#ifdef REUSEPORT_OPTION
 		if (!_thread_num)
 		{
 			_thread_num = (uint16_t)sysconf(_SC_NPROCESSORS_CONF);
@@ -75,7 +75,7 @@ public:
 			assert(cpu_num);
 			int32_t	offset = rand();
 
-#ifdef REUSEPORT_TRADITION
+#ifndef REUSEPORT_OPTION
 			// 步骤1，创建listen线程
 			for (uint16_t i = 0; i < 1; i++)
 #else
@@ -94,7 +94,7 @@ public:
 
 private:
 	std::thread::id							_tid;
-#ifndef REUSEPORT_TRADITION
+#ifdef REUSEPORT_OPTION
 	uint16_t								_thread_num;
 #endif
 	std::map<uint16_t, thread_object*>		_thread_pool;

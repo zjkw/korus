@@ -92,7 +92,7 @@ bool set_reuse_addr_sock(SOCKET fd, int reuse)
 
 bool set_reuse_port_sock(SOCKET fd, int reuse)
 {
-#ifdef REUSEPORT_TRADITION
+#ifndef REUSEPORT_OPTION
 	int val = reuse > 0 ? 1 : 0;
 	return !setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, (const char *)(&val), sizeof(val));
 #else

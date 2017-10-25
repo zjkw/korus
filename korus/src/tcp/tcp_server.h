@@ -35,7 +35,7 @@ public:
 				const uint32_t self_read_size = DEFAULT_READ_BUFSIZE, const uint32_t self_write_size = DEFAULT_WRITE_BUFSIZE, const uint32_t sock_read_size = 0, const uint32_t sock_write_size = 0)
 				: _thread_num(thread_num), _listen_addr(listen_addr), _factory(factory), _backlog(backlog), _defer_accept(defer_accept),
 				_self_read_size(self_read_size), _self_write_size(self_write_size), _sock_read_size(sock_read_size), _sock_write_size(sock_write_size)
-#ifdef REUSEPORT_TRADITION
+#ifndef REUSEPORT_OPTION
 				, _listen_thread(nullptr), _is_listen_init(false), _alone_listen(nullptr), _num_worker_ready(0)
 #endif
 	{
@@ -50,7 +50,7 @@ public:
 	virtual ~tcp_server()
 	{
 		//不加锁，因为避免和exit冲突 std::unique_lock <std::mutex> lck(_mutex_pool);
-#ifdef REUSEPORT_TRADITION
+#ifndef REUSEPORT_OPTION
 		//由于只有tcp_server引用，将会自行销毁
 		delete _listen_thread;		
 		_listen_thread = nullptr;
@@ -80,7 +80,7 @@ public:
 			assert(cpu_num);
 			int32_t	offset = rand();
 
-#ifdef REUSEPORT_TRADITION
+#ifndef REUSEPORT_OPTION
 			// 步骤1，创建listen线程
 			_listen_thread = new thread_object(abs(offset % cpu_num));
 			offset++;
@@ -114,7 +114,7 @@ public:
 					thread_obj->add_init_task(std::bind(&tcp_server::common_thread_init, this, thread_obj, _factory, listen));
 					thread_obj->start();
 				}
-#ifdef REUSEPORT_TRADITION
+#ifndef REUSEPORT_OPTION
 			}
 #endif
 		}
@@ -135,7 +135,7 @@ private:
 	uint32_t								_sock_write_size;
 
 	// 无其他对象依赖，所以不用shared_ptr，下同
-#ifdef REUSEPORT_TRADITION				
+#ifndef REUSEPORT_OPTION				
 	thread_object*							_listen_thread;
 	tcp_listen*								_alone_listen;				//listen线程创建，主线程不做销毁
 
@@ -148,7 +148,7 @@ private:
 	std::mutex								_mutex_worker_ready;
 #endif
 
-#ifdef REUSEPORT_TRADITION
+#ifndef REUSEPORT_OPTION
 	void listen_thread_init(thread_object*	thread_obj, const tcp_server_channel_factory_t& factory, int32_t offset)
 	{
 		std::shared_ptr<reactor_loop>	reactor = std::make_shared<reactor_loop>();
@@ -210,7 +210,7 @@ private:
 		thread_obj->add_exit_task(std::bind(&tcp_server::common_thread_exit, this, thread_obj, reactor, listen, creator));
 		thread_obj->add_resident_task(std::bind(&reactor_loop::run_once, reactor));
 
-#ifdef REUSEPORT_TRADITION
+#ifndef REUSEPORT_OPTION
 		{
 			std::unique_lock <std::mutex> lck(_mutex_worker_ready);
 			_num_worker_ready--;

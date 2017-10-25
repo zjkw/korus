@@ -12,7 +12,6 @@
 class reactor_loop : public std::enable_shared_from_this<reactor_loop>, public thread_safe_objbase
 {
 public:
-	// 为NULL表示当前线程，需要再调用loop_xxx
 	reactor_loop();
 	virtual ~reactor_loop();
 	
