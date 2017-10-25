@@ -91,6 +91,31 @@ void	tcp_server_channel::on_sockio_read()
 	}
 }
 
+bool	tcp_server_channel::check_detach_relation(long call_ref_count)
+{
+	if (!is_valid())
+	{
+		if (_cb)
+		{
+			if (_cb.unique() && shared_from_this().use_count() == 1 + 1 + call_ref_count) //1 for shared_from_this, 1 for _cb
+			{
+				_cb->inner_final();
+				_cb = nullptr;
+
+				_reactor = nullptr;
+
+				return true;
+			}
+		}
+		else
+		{
+			assert(false);
+		}
+	}
+
+	return false;
+}
+
 void	tcp_server_channel::invalid()
 {
 	if (!is_valid())
@@ -99,20 +124,9 @@ void	tcp_server_channel::invalid()
 	}
 	thread_safe_objbase::invalid();
 	_reactor->stop_sockio(this);
+	_reactor->stop_async_task(this);
 	tcp_channel_base::close();
 	_cb->on_closed();
-
-	if (_cb)
-	{
-		_cb->inner_final();
-		_cb = nullptr;
-	}
-	if (_reactor)
-	{
-		_reactor->stop_sockio(this);
-		_reactor->stop_async_task(this);
-		_reactor = nullptr;
-	}
 }
 
 int32_t	tcp_server_channel::on_recv_buff(const void* buf, const size_t len, bool& left_partial_pkg)

@@ -112,7 +112,8 @@ private:
 	}
 	void thread_exit(thread_object*	thread_obj, std::shared_ptr<reactor_loop> reactor, std::shared_ptr<tcp_client_channel> channel)
 	{
-		channel->close();	//可能上层还保持间接或直接引用，这里使其失效：“只管功能失效化，不管生命期释放”
+		channel->invalid();	//可能上层还保持间接或直接引用，这里使其失效：“只管功能失效化，不管生命期释放”
+		channel->check_detach_relation(1);
 		reactor->invalid();	
 	}
 };
@@ -136,7 +137,8 @@ public:
 
 	virtual ~tcp_client()
 	{
-		_channel->close();
+		_channel->invalid();
+		_channel->check_detach_relation(1);
 		_channel = nullptr;
 	}
 

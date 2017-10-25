@@ -13,6 +13,9 @@
 //考虑到send可能在工作线程，close在主线程，应排除同时进行操作，所以仅仅此两个进行了互斥，带来的坏处：
 //1，是send在最恶劣情况下仅仅是拷贝到本库的缓存，并非到了内核缓存，不同于::send的语义
 //2，close/shudown都可能是跨线程的，导致延迟在fd所在线程执行，此情况下无法做到实时效果，比如外部先close后可能还能send
+
+//外部最好确保tcp_client能包裹channel/handler生命期，这样能保证资源回收，否则互相引用的两端(channel和handler)没有可设计的角色来触发回收时机的函数调用check_detach_relation
+
 enum TCP_CLTCONN_STATE
 {
 	CNS_CLOSED = 0,
@@ -51,11 +54,32 @@ private:
 	void									on_timer_connect_timeout(timer_helper* timer_id);
 	void									on_timer_connect_retry_wait(timer_helper* timer_id);
 
+	template<typename T> friend class tcp_client;
+	// channel要析构/回收要看handler是否还没其他对象持有引用
+	bool		check_detach_relation(long call_ref_count);	//true表示已经互相解除关系
 	void		invalid();
 
 	virtual void on_sockio_read();
 	virtual void on_sockio_write();
-	virtual SOCKET	get_fd() { return CNS_CONNECTING == _conn_state ? _conn_fd : _fd; }
+	virtual SOCKET	get_fd() 
+	{ 
+		assert(CNS_CLOSED != _conn_state); 
+		switch (_conn_state)
+		{
+		case CNS_CONNECTING:
+			assert(INVALID_SOCKET != _conn_fd);
+			printf("_conn_fd: %d\n", _conn_fd);
+			return _conn_fd;
+		case CNS_CONNECTED:
+			assert(INVALID_SOCKET != _fd);
+			printf("fd: %d\n", _fd);
+			return _fd;
+		case CNS_CLOSED:
+		default:
+			assert(false);
+			return INVALID_SOCKET;
+		}
+	}
 
 	virtual	int32_t	on_recv_buff(const void* buf, const size_t len, bool& left_partial_pkg);
 

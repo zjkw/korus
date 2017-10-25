@@ -73,6 +73,7 @@ void epoll_imp::add_sock(sockio_channel* channel, SOCKIO_TYPE type)
 	ev.events = convert_event_flag(type);
 	ev.data.ptr = channel;
 	int32_t ret = epoll_ctl(_fd, EPOLL_CTL_ADD, channel->get_fd(), &ev);
+	printf("epoll_ctl add ret: %d, fd: %d, err: %d, errstr: %s\n", ret, channel->get_fd(), errno, strerror(errno));
 }
 
 // ´æÔÚ¸üÐÂ
@@ -83,16 +84,18 @@ void epoll_imp::upt_type(sockio_channel* channel, SOCKIO_TYPE type)
 	ev.events = convert_event_flag(type);
 	ev.data.ptr = channel;
 	int32_t ret = epoll_ctl(_fd, EPOLL_CTL_MOD, channel->get_fd(), &ev);
+	printf("epoll_ctl mod ret: %d, fd: %d, err: %d, errstr: %s\n", ret, channel->get_fd(), errno, strerror(errno));
 }
 
 // É¾³ý
 void epoll_imp::del_sock(sockio_channel* channel)
 {
-	struct epoll_event ev;
-	memset(&ev, 0, sizeof(ev));
-	ev.events = 0;
-	ev.data.ptr = channel;
-	int32_t ret = epoll_ctl(_fd, EPOLL_CTL_DEL, channel->get_fd(), &ev);
+//	struct epoll_event ev;
+//	memset(&ev, 0, sizeof(ev));
+//	ev.events = convert_event_flag(SIT_READWRITE);
+//	ev.data.ptr = channel;
+	int32_t ret = epoll_ctl(_fd, EPOLL_CTL_DEL, channel->get_fd(), nullptr);
+	printf("epoll_ctl del ret: %d, fd: %d, err: %d, errstr: %s\n", ret, channel->get_fd(), errno, strerror(errno));
 }
 
 void epoll_imp::clear()

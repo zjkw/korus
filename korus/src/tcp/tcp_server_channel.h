@@ -11,6 +11,8 @@ class tcp_server_handler_base;
 //1，是send在最恶劣情况下仅仅是拷贝到本库的缓存，并非到了内核缓存，不同于::send的语义
 //2，close/shudown都可能是跨线程的，导致延迟在fd所在线程执行，此情况下无法做到实时效果，比如外部先close后可能还能send
 
+//外部最好确保tcp_server能包裹channel/handler生命期，这样能保证资源回收，否则互相引用的两端(channel和handler)没有可设计的角色来触发回收时机的函数调用check_detach_relation
+
 //有效性优先级：is_valid > INVALID_SOCKET,即所有函数都会先判断is_valid这是个原子操作
 class tcp_server_channel : public std::enable_shared_from_this<tcp_server_channel>, public thread_safe_objbase, public sockio_channel, public tcp_channel_base
 {
@@ -30,6 +32,8 @@ private:
 	std::shared_ptr<tcp_server_handler_base>	_cb;
 
 	friend class tcp_server_channel_creator;
+	// channel要析构/回收要看handler是否还没其他对象持有引用
+	bool		check_detach_relation(long call_ref_count);	//true表示已经互相解除关系
 	void		invalid();
 
 	virtual void on_sockio_read();

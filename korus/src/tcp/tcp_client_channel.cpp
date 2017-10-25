@@ -52,10 +52,13 @@ void	tcp_client_channel::close()
 		return;
 	}
 
+	printf("stop_sockio, %d\n", __LINE__);
 	_reactor->stop_sockio(this);
+	printf("close fd, %d, Line: %d\n", _fd, __LINE__);
 	tcp_channel_base::close();
-	if (INVALID_SOCKET == _conn_fd)
+	if (INVALID_SOCKET != _conn_fd)
 	{
+		printf("close fd, %d, Line: %d\n", _conn_fd, __LINE__);
 		::close(_conn_fd);
 		_conn_fd = INVALID_SOCKET;
 	}
@@ -125,6 +128,7 @@ void	tcp_client_channel::connect()
 		set_fd(_conn_fd);
 		_conn_fd = INVALID_SOCKET;
 		_conn_state = CNS_CONNECTED;
+		printf("start_sockio, %d\n", __LINE__);
 		_reactor->start_sockio(this, SIT_READWRITE);
 		_cb->on_connect();
 	}
@@ -133,8 +137,8 @@ void	tcp_client_channel::connect()
 		if (errno == EINPROGRESS)
 		{
 			_conn_state = CNS_CONNECTING;	//start_sockio将会获取fd
+			printf("start_sockio, %d\n", __LINE__);
 			_reactor->start_sockio(this, SIT_WRITE);
-
 			if (_connect_timeout.count())
 			{
 				_timer_connect_timeout.start(_connect_timeout, _connect_timeout);
@@ -142,6 +146,7 @@ void	tcp_client_channel::connect()
 		}
 		else
 		{
+			printf("close fd, %d, Line: %d\n", _conn_fd, __LINE__);
 			::close(_conn_fd);
 			_conn_fd = INVALID_SOCKET;
 
@@ -156,9 +161,11 @@ void	tcp_client_channel::connect()
 //触发时机：执行connect且等待状态下；当connect结果在超时前出来，将关掉定时器；触发动作：强行切换到CLOSED
 void	tcp_client_channel::on_timer_connect_timeout(timer_helper* timer_id)
 {
+	printf("stop_sockio, %d\n", __LINE__);
 	_reactor->stop_sockio(this);
 	_timer_connect_timeout.stop();
 
+	printf("close fd, %d, Line: %d\n", _conn_fd, __LINE__);
 	::close(_conn_fd);
 	_conn_fd = INVALID_SOCKET;
 	_conn_state = CNS_CLOSED;
@@ -181,10 +188,12 @@ void	tcp_client_channel::on_sockio_write()
 	{
 		return;
 	}
+	printf("on_sockio_write _conn_state %d, Line: %d\n", (int)_conn_state, __LINE__);
 	switch (_conn_state)
 	{
 	case CNS_CONNECTING:
 		{
+			printf("stopt_sockio, %d\n", __LINE__);
 			_reactor->stop_sockio(this);
 			_timer_connect_timeout.stop();
 
@@ -192,6 +201,7 @@ void	tcp_client_channel::on_sockio_write()
 			socklen_t len = sizeof(int32_t);
 			if (getsockopt(_conn_fd, SOL_SOCKET, SO_ERROR, (void *)&err, &len) < 0 || err != 0)
 			{
+				printf("close fd, %d, Line: %d\n", _conn_fd, __LINE__);
 				::close(_conn_fd);
 				_conn_fd = INVALID_SOCKET;
 				_conn_state = CNS_CLOSED;
@@ -201,6 +211,7 @@ void	tcp_client_channel::on_sockio_write()
 				set_fd(_conn_fd);
 				_conn_fd = INVALID_SOCKET;
 				_conn_state = CNS_CONNECTED;
+				printf("start_sockio, %d\n", __LINE__);
 				_reactor->start_sockio(this, SIT_READWRITE);
 				_cb->on_connect();
 			}
@@ -218,7 +229,9 @@ void	tcp_client_channel::on_sockio_write()
 		break;
 	case CNS_CLOSED:
 	default:
-		assert(false);
+		//tbd 当正常连接后，停止服务器，在本端注销epoll后还会运行到on_sockio_write这里，很奇怪的事情
+	//	assert(false);
+		break;
 	}
 }
 
@@ -240,6 +253,31 @@ void	tcp_client_channel::on_sockio_read()
 	}
 }
 
+bool	tcp_client_channel::check_detach_relation(long call_ref_count)
+{
+	if (!is_valid())
+	{
+		if (_cb)
+		{
+			if (_cb.unique() && shared_from_this().use_count() == 1 + 1 + call_ref_count) //1 for shared_from_this, 1 for _cb
+			{
+				_cb->inner_final();
+				_cb = nullptr;
+				
+				_reactor = nullptr;
+
+				return true;
+			}
+		}
+		else
+		{
+			assert(false);
+		}
+	}
+
+	return false;
+}
+
 void	tcp_client_channel::invalid()
 {
 	if (!is_valid())
@@ -247,22 +285,14 @@ void	tcp_client_channel::invalid()
 		return;
 	}
 	thread_safe_objbase::invalid();
-	close();
 
 	_timer_connect_timeout.stop();
 	_timer_connect_retry_wait.stop();
-	
-	if (_cb)
-	{
-		_cb->inner_final();
-		_cb = nullptr;
-	}
-	if (_reactor)
-	{
-		_reactor->stop_sockio(this);
-		_reactor->stop_async_task(this);
-		_reactor = nullptr;
-	}
+	printf("stopt_sockio, %d\n", __LINE__);
+	_reactor->stop_sockio(this);
+	_reactor->stop_async_task(this);
+
+	close();
 }
 
 int32_t	tcp_client_channel::on_recv_buff(const void* buf, const size_t len, bool& left_partial_pkg)

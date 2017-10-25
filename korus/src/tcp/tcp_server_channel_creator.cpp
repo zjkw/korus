@@ -20,6 +20,7 @@ tcp_server_channel_creator::~tcp_server_channel_creator()
 	for (std::map<SOCKET, std::shared_ptr<tcp_server_channel>>::iterator it = _channel_list.begin(); it != _channel_list.end(); it++)
 	{
 		it->second->invalid();
+		it->second->check_detach_relation(1);
 	}
 	_channel_list.clear();
 }
@@ -69,7 +70,7 @@ void tcp_server_channel_creator::on_idle_recover(idle_helper* idle_id)
 	for (size_t i = 0; i < SCAN_STEP_ONCE && it != _channel_list.end(); i++)
 	{
 		// 无效才可剔除，引用为1表示仅仅tcp_server_channel_creator引用这个channel，而channel是这个对象创建（同线程）
-		if (!it->second->is_valid() && it->second.unique())
+		if (!it->second->check_detach_relation(1))
 		{
 			_channel_list.erase(it++);
 		}
