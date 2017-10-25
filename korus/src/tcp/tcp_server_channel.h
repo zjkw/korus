@@ -50,6 +50,8 @@ public:
 	virtual ~tcp_server_handler_base(){ assert(!_reactor); assert(!_channel); }
 
 	//override------------------
+	virtual void	on_init() = 0;
+	virtual void	on_final() = 0;
 	virtual void	on_accept() = 0;	//连接已经建立
 	virtual void	on_closed() = 0;
 	//参考TCP_ERROR_CODE定义
@@ -72,11 +74,15 @@ private:
 	{
 		_reactor = reactor;
 		_channel = channel;
+
+		on_init();
 	}
-	void	inner_uninit()
+	void	inner_final()
 	{
 		_reactor = nullptr;
 		_channel = nullptr;
+
+		on_final();
 	}
 
 	std::shared_ptr<reactor_loop>		_reactor;

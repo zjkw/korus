@@ -17,6 +17,12 @@ public:
 	virtual ~udp_client_handler(){}
 
 	//override------------------
+	virtual void	on_init()
+	{
+	}
+	virtual void	on_final()
+	{
+	}
 	virtual void	on_ready()	
 	{
 		char szTest[] = "hello server, i am client!";

@@ -15,6 +15,12 @@ public:
 	virtual ~udp_server_handler(){}
 
 	//override------------------
+	virtual void	on_init()
+	{
+	}
+	virtual void	on_final()
+	{
+	}
 	virtual void	on_ready()	
 	{
 	}

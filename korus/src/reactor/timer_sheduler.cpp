@@ -96,7 +96,12 @@ std::chrono::milliseconds	timer_sheduler::min_interval()
 		{
 			break;
 		}
-		return std::chrono::duration_cast<std::chrono::milliseconds>(it->first.triggle - std::chrono::system_clock::now());
+		const std::chrono::system_clock::time_point now = std::chrono::system_clock::now();
+		if (it->first.triggle <= now)
+		{
+			return std::chrono::milliseconds(0);
+		}
+		return std::chrono::duration_cast<std::chrono::milliseconds>(it->first.triggle - now);
 	} while (0);
 
 	return std::chrono::milliseconds(0);

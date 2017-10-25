@@ -101,7 +101,7 @@ void	udp_server_channel::invalid()
 
 	if (_cb)
 	{
-		_cb->inner_uninit();
+		_cb->inner_final();
 		_cb = nullptr;
 	}
 	if (_reactor)

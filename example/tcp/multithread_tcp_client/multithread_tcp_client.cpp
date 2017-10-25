@@ -15,6 +15,12 @@ public:
 	virtual ~tcp_client_handler(){}
 
 	//override------------------
+	virtual void	on_init()
+	{
+	}
+	virtual void	on_final()
+	{
+	}
 	virtual void	on_connect()	//连接已经建立
 	{
 		char szTest[] = "hello server, i am client!";
