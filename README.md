@@ -1,5 +1,5 @@
 # korus (means chorus)
-##  now oct 2017, only demo，without strength test yet
+##  now oct 2017, only demo, without strength test yet
 
 #####  development plan：
 #####    nov 2017 support socks5-proxy client/server.                 
