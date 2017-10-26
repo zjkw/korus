@@ -8,15 +8,15 @@
 #define SCAN_STEP_ONCE	(1)
 
 tcp_listen::tcp_listen(std::shared_ptr<reactor_loop> reactor, const std::string& listen_addr, uint32_t backlog, uint32_t defer_accept)
-	: _reactor(reactor), _fd(INVALID_SOCKET), _listen_addr(listen_addr), _backlog(backlog), _defer_accept(defer_accept), _last_pos(0)
+	: _reactor(reactor), _fd(INVALID_SOCKET), _sockio_helper(reactor.get()), _listen_addr(listen_addr), _backlog(backlog), _defer_accept(defer_accept), _last_pos(0)
 {
-
+	_sockio_helper.bind(std::bind(&tcp_listen::on_sockio_read, this, std::placeholders::_1), nullptr);
 }
 
 tcp_listen::~tcp_listen()
 {
+	_sockio_helper.clear();
 	_reactor->stop_async_task(this);
-	_reactor->stop_sockio(this);
 	if (INVALID_SOCKET != _fd)
 	{
 		::close(_fd);
@@ -47,7 +47,8 @@ bool	tcp_listen::start()
 
 	// 3¿ªÆô
 	_fd = s;
-	_reactor->start_sockio(this, SIT_READ);
+	_sockio_helper.set(s);
+	_sockio_helper.start(SIT_READ);
 	
 	return true;
 }
@@ -63,7 +64,7 @@ void	tcp_listen::add_accept_handler(const newfd_handle_t handler)
 	_handler_list.emplace_back(handler);
 }
 
-void tcp_listen::on_sockio_read()
+void tcp_listen::on_sockio_read(sockio_helper* sockio_id)
 {
 	while (true)
 	{
@@ -107,9 +108,5 @@ void tcp_listen::on_sockio_read()
 	}
 }
 
-SOCKET	tcp_listen::get_fd()
-{
-	return _fd;
-}
 
 

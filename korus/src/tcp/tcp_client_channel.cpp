@@ -7,11 +7,14 @@ tcp_client_channel::tcp_client_channel(std::shared_ptr<reactor_loop> reactor, co
 	std::chrono::seconds connect_timeout, std::chrono::seconds connect_retry_wait,
 	const uint32_t self_read_size, const uint32_t self_write_size, const uint32_t sock_read_size, const uint32_t sock_write_size)
 	: tcp_channel_base(INVALID_SOCKET, self_read_size, self_write_size, sock_read_size, sock_write_size), 
-	_conn_fd(INVALID_SOCKET), _server_addr(server_addr), _conn_state(CNS_CLOSED), _reactor(reactor), _cb(cb), _connect_timeout(connect_timeout), _connect_retry_wait(connect_retry_wait),
-	_timer_connect_timeout(reactor.get()), _timer_connect_retry_wait(reactor.get())
+	_conn_fd(INVALID_SOCKET), _server_addr(server_addr), _conn_state(CNS_CLOSED), _reactor(reactor), _cb(cb), _sockio_helper_connect(reactor.get()), _sockio_helper(reactor.get()),
+	_connect_timeout(connect_timeout), _connect_retry_wait(connect_retry_wait),	_timer_connect_timeout(reactor.get()), _timer_connect_retry_wait(reactor.get())
 {
 	_timer_connect_timeout.bind(std::bind(&tcp_client_channel::on_timer_connect_timeout, this, std::placeholders::_1));
 	_timer_connect_retry_wait.bind(std::bind(&tcp_client_channel::on_timer_connect_retry_wait, this, std::placeholders::_1));
+
+	_sockio_helper_connect.bind(nullptr, std::bind(&tcp_client_channel::on_sockio_write_connect, this, std::placeholders::_1));
+	_sockio_helper.bind(std::bind(&tcp_client_channel::on_sockio_read, this, std::placeholders::_1), std::bind(&tcp_client_channel::on_sockio_write, this, std::placeholders::_1));
 }
 
 tcp_client_channel::~tcp_client_channel()
@@ -53,7 +56,10 @@ void	tcp_client_channel::close()
 	}
 
 	printf("stop_sockio, %d\n", __LINE__);
-	_reactor->stop_sockio(this);
+	_sockio_helper_connect.stop();
+	_sockio_helper_connect.set(INVALID_SOCKET);
+	_sockio_helper.stop();
+	_sockio_helper.set(INVALID_SOCKET);
 	printf("close fd, %d, Line: %d\n", _fd, __LINE__);
 	tcp_channel_base::close();
 	if (INVALID_SOCKET != _conn_fd)
@@ -126,10 +132,11 @@ void	tcp_client_channel::connect()
 	if (!ret)
 	{
 		set_fd(_conn_fd);
+		_sockio_helper.set(_conn_fd);
 		_conn_fd = INVALID_SOCKET;
 		_conn_state = CNS_CONNECTED;
 		printf("start_sockio, %d\n", __LINE__);
-		_reactor->start_sockio(this, SIT_READWRITE);
+		_sockio_helper.start(SIT_READWRITE);
 		_cb->on_connect();
 	}
 	else
@@ -138,7 +145,8 @@ void	tcp_client_channel::connect()
 		{
 			_conn_state = CNS_CONNECTING;	//start_sockio将会获取fd
 			printf("start_sockio, %d\n", __LINE__);
-			_reactor->start_sockio(this, SIT_WRITE);
+			_sockio_helper_connect.set(_conn_fd);
+			_sockio_helper_connect.start(SIT_WRITE);
 			if (_connect_timeout.count())
 			{
 				_timer_connect_timeout.start(_connect_timeout, _connect_timeout);
@@ -162,12 +170,13 @@ void	tcp_client_channel::connect()
 void	tcp_client_channel::on_timer_connect_timeout(timer_helper* timer_id)
 {
 	printf("stop_sockio, %d\n", __LINE__);
-	_reactor->stop_sockio(this);
+	_sockio_helper_connect.stop();
 	_timer_connect_timeout.stop();
 
 	printf("close fd, %d, Line: %d\n", _conn_fd, __LINE__);
 	::close(_conn_fd);
 	_conn_fd = INVALID_SOCKET;
+	_sockio_helper_connect.set(INVALID_SOCKET);
 	_conn_state = CNS_CLOSED;
 
 	_timer_connect_retry_wait.start(_connect_retry_wait, _connect_retry_wait);
@@ -181,60 +190,68 @@ void	tcp_client_channel::on_timer_connect_retry_wait(timer_helper* timer_id)
 	connect();
 }
 
-//可能是连接成功后触发，也可能是一般写触发
-void	tcp_client_channel::on_sockio_write()
+void tcp_client_channel::on_sockio_write_connect(sockio_helper* sockio_id)
 {
 	if (!is_valid())
 	{
 		return;
 	}
 	printf("on_sockio_write _conn_state %d, Line: %d\n", (int)_conn_state, __LINE__);
-	switch (_conn_state)
+	if (CNS_CONNECTING != _conn_state)
 	{
-	case CNS_CONNECTING:
-		{
-			printf("stopt_sockio, %d\n", __LINE__);
-			_reactor->stop_sockio(this);
-			_timer_connect_timeout.stop();
-
-			int32_t err = 0;
-			socklen_t len = sizeof(int32_t);
-			if (getsockopt(_conn_fd, SOL_SOCKET, SO_ERROR, (void *)&err, &len) < 0 || err != 0)
-			{
-				printf("close fd, %d, Line: %d\n", _conn_fd, __LINE__);
-				::close(_conn_fd);
-				_conn_fd = INVALID_SOCKET;
-				_conn_state = CNS_CLOSED;
-			}
-			else
-			{
-				set_fd(_conn_fd);
-				_conn_fd = INVALID_SOCKET;
-				_conn_state = CNS_CONNECTED;
-				printf("start_sockio, %d\n", __LINE__);
-				_reactor->start_sockio(this, SIT_READWRITE);
-				_cb->on_connect();
-			}
-		}
-		break;
-	case CNS_CONNECTED:
-		{
-			int32_t ret = tcp_channel_base::send_alone();
-			if (ret < 0)
-			{
-				CLOSE_MODE_STRATEGY cms = _cb->on_error((CHANNEL_ERROR_CODE)ret);
-				handle_close_strategy(cms);
-			}
-		}
-		break;
-	case CNS_CLOSED:
-	default:
 		assert(false);
-		break;
+		return;
+	}
+
+	printf("stopt_sockio, %d\n", __LINE__);
+	_sockio_helper_connect.stop();
+	_sockio_helper_connect.set(INVALID_SOCKET);
+	_timer_connect_timeout.stop();
+
+	int32_t err = 0;
+	socklen_t len = sizeof(int32_t);
+	if (getsockopt(_conn_fd, SOL_SOCKET, SO_ERROR, (void *)&err, &len) < 0 || err != 0)
+	{
+		printf("close fd, %d, Line: %d\n", _conn_fd, __LINE__);
+		::close(_conn_fd);
+		_conn_fd = INVALID_SOCKET;
+		_conn_state = CNS_CLOSED;
+	}
+	else
+	{
+		set_fd(_conn_fd);
+		_sockio_helper.set(_conn_fd);
+		_conn_fd = INVALID_SOCKET;
+		_conn_state = CNS_CONNECTED;
+		printf("start_sockio, %d\n", __LINE__);
+
+		_sockio_helper.start(SIT_READWRITE);
+		_cb->on_connect();
 	}
 }
 
-void	tcp_client_channel::on_sockio_read()
+void	tcp_client_channel::on_sockio_write(sockio_helper* sockio_id)
+{
+	if (!is_valid())
+	{
+		return;
+	}
+	printf("on_sockio_write _conn_state %d, Line: %d\n", (int)_conn_state, __LINE__);
+	if (CNS_CONNECTED != _conn_state)
+	{
+		assert(false);
+		return;
+	}
+
+	int32_t ret = tcp_channel_base::send_alone();
+	if (ret < 0)
+	{
+		CLOSE_MODE_STRATEGY cms = _cb->on_error((CHANNEL_ERROR_CODE)ret);
+		handle_close_strategy(cms);
+	}
+}
+
+void	tcp_client_channel::on_sockio_read(sockio_helper* sockio_id)
 {
 	if (!is_valid())
 	{
@@ -289,7 +306,8 @@ void	tcp_client_channel::invalid()
 	_timer_connect_timeout.stop();
 	_timer_connect_retry_wait.stop();
 	printf("stopt_sockio, %d\n", __LINE__);
-	_reactor->stop_sockio(this);
+	_sockio_helper_connect.clear();
+	_sockio_helper.clear();
 	_reactor->stop_async_task(this);
 
 	close();

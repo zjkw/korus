@@ -45,18 +45,11 @@ private:
 	void	stop_idle(idle_helper* idle_id);
 	bool	exist_idle(idle_helper* idle_id);
 
-	// poll后端
-	friend	class tcp_listen;
-	friend	class tcp_server_channel;
-	friend	class tcp_client_channel;
-	friend	class udp_server_channel;
-	friend	class udp_client_channel;
-	// 初始新增
-	void start_sockio(sockio_channel* channel, SOCKIO_TYPE type);
-	// 存在更新
-	void update_sockio(sockio_channel* channel, SOCKIO_TYPE type);
-	// 删除
-	void stop_sockio(sockio_channel* channel);
+	// poll后端，非线程安全，sockio_helper也仅仅限于内部使用
+	friend	class sockio_helper;
+	void start_sockio(sockio_helper* sockio_id, SOCKET fd, SOCKIO_TYPE type);
+	void update_sockio(sockio_helper* sockio_id, SOCKET fd, SOCKIO_TYPE type);
+	void stop_sockio(sockio_helper* sockio_id, SOCKET fd);
 
 	void run_once_inner();
 };

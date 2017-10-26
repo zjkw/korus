@@ -3,10 +3,11 @@
 
 udp_client_channel::udp_client_channel(std::shared_ptr<reactor_loop> reactor, std::shared_ptr<udp_client_handler_base> cb,
 	const uint32_t self_read_size, const uint32_t self_write_size, const uint32_t sock_read_size, const uint32_t sock_write_size)
-	: _reactor(reactor), _cb(cb),
+	: _reactor(reactor), _cb(cb), _sockio_helper(reactor.get()), 
 	udp_channel_base("", self_read_size, self_write_size, sock_read_size, sock_write_size)
 
 {
+	_sockio_helper.bind(std::bind(&udp_client_channel::on_sockio_read, this, std::placeholders::_1), nullptr);
 }
 
 //析构需要发生在产生线程
@@ -34,7 +35,8 @@ bool	udp_client_channel::start()
 	bool ret = udp_channel_base::init_socket();
 	if (ret)
 	{
-		_reactor->start_sockio(this, SIT_READ);
+		_sockio_helper.set(_fd);
+		_sockio_helper.start(SIT_READ);
 		_cb->on_ready();
 	}
 	return ret;
@@ -70,13 +72,7 @@ void	udp_client_channel::close()
 	invalid();
 }
 
-//////////////////////////////////
-void	udp_client_channel::on_sockio_write()
-{
-	assert(false); //不存在
-}
-
-void	udp_client_channel::on_sockio_read()
+void	udp_client_channel::on_sockio_read(sockio_helper* sockio_id)
 {
 	if (!is_valid())
 	{
@@ -121,7 +117,7 @@ void	udp_client_channel::invalid()
 		return;
 	}
 	thread_safe_objbase::invalid();
-	_reactor->stop_sockio(this);
+	_sockio_helper.clear();
 	_reactor->stop_async_task(this);
 	udp_channel_base::close();
 	_cb->on_closed();

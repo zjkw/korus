@@ -6,7 +6,7 @@
 
 #define DEFAULT_EPOLL_SIZE	(2000)
 
-epoll_imp::epoll_imp() : _current_handler_index(-1)
+epoll_imp::epoll_imp()
 {
 	_epoll_event.resize(DEFAULT_EPOLL_SIZE);
 	_fd = epoll_create1(EPOLL_CLOEXEC);	//tbd 异常处理
@@ -29,33 +29,28 @@ int32_t epoll_imp::poll(int32_t mill_sec)
 	}
 	else
 	{
-		for (_current_handler_index = 0; _current_handler_index < ret; ++_current_handler_index)
+		for (int32_t i = 0; i < ret; ++i)
 		{
-			sockio_channel* channel = (sockio_channel*)_epoll_event[_current_handler_index].data.ptr;
+			sockio_helper* channel = (sockio_helper*)_epoll_event[i].data.ptr;
 			assert(channel);
 
-			if (_epoll_event[_current_handler_index].events & (EPOLLERR | EPOLLHUP))
+			if (_epoll_event[i].events & (EPOLLERR | EPOLLHUP))
 			{			
-				_epoll_event[_current_handler_index].events |= EPOLLIN | EPOLLOUT;
+				_epoll_event[i].events |= EPOLLIN | EPOLLOUT;
 			}
 
 #if 0
-			if (_epoll_event[_current_handler_index].events & ~(EPOLLIN | EPOLLOUT | EPOLLERR | EPOLLHUP)) 
+			if (_epoll_event[i].events & ~(EPOLLIN | EPOLLOUT | EPOLLERR | EPOLLHUP)) 
 			{
 				// log
 			}
 #endif
-			// 对比nginx，我们处理[i]的时候需要考虑是否影响[i]后面的对象是否存在，而一个线程中的对象是否回收由listen的idle/server_client的生命期决定
-			if (_epoll_event[_current_handler_index].events & (EPOLLERR | EPOLLIN))
-			{	
-				channel->on_sockio_read();
-			}
-			if (_epoll_event[_current_handler_index].events & EPOLLOUT)
+			if (_epoll_event[i].events & (EPOLLERR | EPOLLIN | EPOLLOUT))
 			{
-				channel->on_sockio_write();
-			}			
+				channel->action();
+			}
+		
 		}
-		_current_handler_index = -1;
 		// 参考muduo扩容，下次poll将会有更多fd进来
 		if (ret == (int32_t)_epoll_event.size())
 		{
@@ -67,41 +62,36 @@ int32_t epoll_imp::poll(int32_t mill_sec)
 }
 
 // 初始新增
-void epoll_imp::add_sock(sockio_channel* channel, SOCKIO_TYPE type)
+void epoll_imp::add_sock(sockio_helper* sockio_id, SOCKET fd, SOCKIO_TYPE type)
 {
 	struct epoll_event ev;
 	memset(&ev, 0, sizeof(ev));
 	ev.events = convert_event_flag(type);
-	ev.data.ptr = channel;
-	int32_t ret = epoll_ctl(_fd, EPOLL_CTL_ADD, channel->get_fd(), &ev);
-	printf("epoll_ctl add ret: %d, fd: %d, err: %d, errstr: %s\n", ret, channel->get_fd(), errno, strerror(errno));
+	ev.data.ptr = sockio_id;
+	int32_t ret = epoll_ctl(_fd, EPOLL_CTL_ADD, fd, &ev);
+	printf("epoll_ctl add ret: %d, fd: %d, err: %d, errstr: %s\n", ret, fd, errno, strerror(errno));
 }
 
 // 存在更新
-void epoll_imp::upt_type(sockio_channel* channel, SOCKIO_TYPE type)
+void epoll_imp::upt_type(sockio_helper* sockio_id, SOCKET fd, SOCKIO_TYPE type)
 {
 	struct epoll_event ev;
 	memset(&ev, 0, sizeof(ev));
 	ev.events = convert_event_flag(type);
-	ev.data.ptr = channel;
-	int32_t ret = epoll_ctl(_fd, EPOLL_CTL_MOD, channel->get_fd(), &ev);
-	printf("epoll_ctl mod ret: %d, fd: %d, err: %d, errstr: %s\n", ret, channel->get_fd(), errno, strerror(errno));
+	ev.data.ptr = sockio_id;
+	int32_t ret = epoll_ctl(_fd, EPOLL_CTL_MOD, fd, &ev);
+	printf("epoll_ctl mod ret: %d, fd: %d, err: %d, errstr: %s\n", ret, fd, errno, strerror(errno));
 }
 
 // 删除
-void epoll_imp::del_sock(sockio_channel* channel)
+void epoll_imp::del_sock(sockio_helper* sockio_id, SOCKET fd)
 {
 //	struct epoll_event ev;
 //	memset(&ev, 0, sizeof(ev));
 //	ev.events = convert_event_flag(SIT_READWRITE);
 //	ev.data.ptr = channel;
-	if (_current_handler_index >= 0)
-	{
-		assert(_current_handler_index < _epoll_event.size());
-		_epoll_event[_current_handler_index].events = 0;
-	}
-	int32_t ret = epoll_ctl(_fd, EPOLL_CTL_DEL, channel->get_fd(), nullptr);
-	printf("epoll_ctl del ret: %d, fd: %d, err: %d, errstr: %s\n", ret, channel->get_fd(), errno, strerror(errno));
+	int32_t ret = epoll_ctl(_fd, EPOLL_CTL_DEL, fd, nullptr);
+	printf("epoll_ctl del ret: %d, fd: %d, err: %d, errstr: %s\n", ret, fd, errno, strerror(errno));
 }
 
 void epoll_imp::clear()

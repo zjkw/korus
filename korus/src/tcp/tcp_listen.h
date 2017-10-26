@@ -5,11 +5,12 @@
 #include <vector>
 #include "korus/src/util/thread_safe_objbase.h"
 #include "korus/src/reactor/reactor_loop.h"
+#include "korus/src/reactor/sockio_helper.h"
 
 using	newfd_handle_t = std::function<void(const SOCKET fd, const struct sockaddr_in& addr)>;
 
 //线程安全，不会在非所属线程运行
-class tcp_listen : public sockio_channel, public noncopyable
+class tcp_listen : public noncopyable
 {
 public:
 	// thread_obj为空表示无须跨线程调度
@@ -20,8 +21,8 @@ public:
 	void	add_accept_handler(const newfd_handle_t handler);
 	 
 private:
-	virtual void on_sockio_read();
-	virtual SOCKET	get_fd();
+	sockio_helper	_sockio_helper;
+	virtual void on_sockio_read(sockio_helper* sockio_id);
 	
 	std::shared_ptr<reactor_loop>	_reactor;
 	SOCKET		_fd;

@@ -2,7 +2,7 @@
 
 #include "udp_channel_base.h"
 #include "korus/src/reactor/reactor_loop.h"
-#include "korus/src/reactor/backend_poller.h"
+#include "korus/src/reactor/sockio_helper.h"
 
 class udp_server_handler_base;
 //这个类用户可以操作，而且是可能多线程环境下操作，对外是shared_ptr，需要保证线程安全
@@ -13,7 +13,7 @@ class udp_server_handler_base;
 //外部最好确保udp_server能包裹channel/handler生命期，这样能保证资源回收，否则互相引用的两端(channel和handler)没有可设计的角色来触发回收时机的函数调用check_detach_relation
 
 //有效性优先级：is_valid > INVALID_SOCKET,即所有函数都会先判断is_valid这是个原子操作
-class udp_server_channel : public std::enable_shared_from_this<udp_server_channel>, public thread_safe_objbase, public sockio_channel, public udp_channel_base
+class udp_server_channel : public std::enable_shared_from_this<udp_server_channel>, public thread_safe_objbase, public udp_channel_base
 {
 public:
 	udp_server_channel(std::shared_ptr<reactor_loop> reactor, const std::string& local_addr, std::shared_ptr<udp_server_handler_base> cb,
@@ -35,9 +35,8 @@ private:
 	bool		check_detach_relation(long call_ref_count);	//true表示已经互相解除关系
 	void		invalid();
 
-	virtual void on_sockio_read();
-	virtual void on_sockio_write();
-	virtual SOCKET	get_fd() { return _fd; }
+	sockio_helper	_sockio_helper;
+	virtual void on_sockio_read(sockio_helper* sockio_id);
 
 	virtual	int32_t	on_recv_buff(const void* buf, const size_t len, const sockaddr_in& peer_addr);
 

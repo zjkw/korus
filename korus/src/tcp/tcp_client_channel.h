@@ -6,6 +6,7 @@
 #include <chrono>
 #include "korus/src/util/thread_safe_objbase.h"
 #include "korus/src/reactor/timer_helper.h"
+#include "korus/src/reactor/sockio_helper.h"
 #include "korus/src/reactor/reactor_loop.h"
 #include "tcp_channel_base.h"
 
@@ -24,7 +25,7 @@ enum TCP_CLTCONN_STATE
 };
 //有效性优先级：is_valid > INVALID_SOCKET,即所有函数都会先判断is_valid这是个原子操作
 class tcp_client_handler_base;
-class tcp_client_channel : public std::enable_shared_from_this<tcp_client_channel>, public thread_safe_objbase, public sockio_channel, public tcp_channel_base
+class tcp_client_channel : public std::enable_shared_from_this<tcp_client_channel>, public thread_safe_objbase, public tcp_channel_base
 {
 public:
 	tcp_client_channel(std::shared_ptr<reactor_loop> reactor, const std::string& server_addr, std::shared_ptr<tcp_client_handler_base> cb,
@@ -59,28 +60,12 @@ private:
 	bool		check_detach_relation(long call_ref_count);	//true表示已经互相解除关系
 	void		invalid();
 
-	virtual void on_sockio_read();
-	virtual void on_sockio_write();
-	virtual SOCKET	get_fd() 
-	{ 
-		assert(CNS_CLOSED != _conn_state); 
-		switch (_conn_state)
-		{
-		case CNS_CONNECTING:
-			assert(INVALID_SOCKET != _conn_fd);
-			printf("_conn_fd: %d\n", _conn_fd);
-			return _conn_fd;
-		case CNS_CONNECTED:
-			assert(INVALID_SOCKET != _fd);
-			printf("fd: %d\n", _fd);
-			return _fd;
-		case CNS_CLOSED:
-		default:
-			assert(false);
-			return INVALID_SOCKET;
-		}
-	}
-
+	sockio_helper	_sockio_helper_connect;
+	sockio_helper	_sockio_helper;
+	virtual void on_sockio_write_connect(sockio_helper* sockio_id);
+	virtual void on_sockio_read(sockio_helper* sockio_id);
+	virtual void on_sockio_write(sockio_helper* sockio_id);
+	
 	virtual	int32_t	on_recv_buff(const void* buf, const size_t len, bool& left_partial_pkg);
 
 	void handle_close_strategy(CLOSE_MODE_STRATEGY cms);
@@ -99,7 +84,7 @@ public:
 	virtual void	on_final() = 0;
 	virtual void	on_connect() = 0;
 	virtual void	on_closed() = 0;
-	//参考TCP_ERROR_CODE定义
+	//参考CHANNEL_ERROR_CODE定义
 	virtual CLOSE_MODE_STRATEGY	on_error(CHANNEL_ERROR_CODE code) = 0;
 	//提取数据包：返回值 =0 表示包不完整； >0 完整的包(长)
 	virtual int32_t on_recv_split(const void* buf, const size_t len) = 0;

@@ -3,11 +3,13 @@
 
 tcp_server_channel::tcp_server_channel(SOCKET fd, std::shared_ptr<reactor_loop> reactor, std::shared_ptr<tcp_server_handler_base> cb,
 										const uint32_t self_read_size, const uint32_t self_write_size, const uint32_t sock_read_size, const uint32_t sock_write_size)
-										: tcp_channel_base(fd, self_read_size, self_write_size, sock_read_size, sock_write_size),
-										_reactor(reactor), _cb(cb)
+										: _reactor(reactor), _cb(cb), _sockio_helper(reactor.get()), tcp_channel_base(fd, self_read_size, self_write_size, sock_read_size, sock_write_size)
+										
 {
 	assert(INVALID_SOCKET != fd);
-	_reactor->start_sockio(this, SIT_READWRITE);
+	_sockio_helper.set(fd);
+	_sockio_helper.bind(std::bind(&tcp_server_channel::on_sockio_read, this, std::placeholders::_1), std::bind(&tcp_server_channel::on_sockio_write, this, std::placeholders::_1));
+	_sockio_helper.start(SIT_READWRITE);
 }
 
 //析构需要发生在产生线程
@@ -63,7 +65,7 @@ void	tcp_server_channel::shutdown(int32_t howto)
 }
 
 //////////////////////////////////
-void	tcp_server_channel::on_sockio_write()
+void	tcp_server_channel::on_sockio_write(sockio_helper* sockio_id)
 {
 	if (!is_valid())
 	{
@@ -77,7 +79,7 @@ void	tcp_server_channel::on_sockio_write()
 	}
 }
 
-void	tcp_server_channel::on_sockio_read()
+void	tcp_server_channel::on_sockio_read(sockio_helper* sockio_id)
 {
 	if (!is_valid())
 	{
@@ -123,7 +125,7 @@ void	tcp_server_channel::invalid()
 		return;
 	}
 	thread_safe_objbase::invalid();
-	_reactor->stop_sockio(this);
+	_sockio_helper.clear();
 	_reactor->stop_async_task(this);
 	tcp_channel_base::close();
 	_cb->on_closed();

@@ -2,7 +2,7 @@
 
 #include "udp_channel_base.h"
 #include "korus/src/reactor/reactor_loop.h"
-#include "korus/src/reactor/backend_poller.h"
+#include "korus/src/reactor/sockio_helper.h"
 
 //这个类用户可以操作，而且是可能多线程环境下操作，对外是shared_ptr，需要保证线程安全
 //考虑到send可能在工作线程，close在主线程，应排除同时进行操作，所以仅仅此两个进行了互斥，带来的坏处：
@@ -13,7 +13,7 @@
 
 class udp_client_handler_base;
 //有效性优先级：is_valid > INVALID_SOCKET,即所有函数都会先判断is_valid这是个原子操作
-class udp_client_channel : public std::enable_shared_from_this<udp_client_channel>, public thread_safe_objbase, public sockio_channel, public udp_channel_base
+class udp_client_channel : public std::enable_shared_from_this<udp_client_channel>, public thread_safe_objbase, public udp_channel_base
 {
 public:
 	udp_client_channel(std::shared_ptr<reactor_loop> reactor, std::shared_ptr<udp_client_handler_base> cb, const uint32_t self_read_size, const uint32_t self_write_size, const uint32_t sock_read_size, const uint32_t sock_write_size);
@@ -34,9 +34,8 @@ private:
 	bool		check_detach_relation(long call_ref_count);	//true表示已经互相解除关系
 	void		invalid();
 
-	virtual void on_sockio_read();
-	virtual void on_sockio_write();
-	virtual SOCKET	get_fd() { return _fd; }
+	sockio_helper	_sockio_helper;
+	virtual void on_sockio_read(sockio_helper* sockio_id);
 
 	virtual	int32_t	on_recv_buff(const void* buf, const size_t len, const sockaddr_in& peer_addr);
 
