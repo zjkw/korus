@@ -43,16 +43,22 @@ void	idle_helper::start()
 		assert(false);
 		return;
 	}
-	_is_start = true;
-	_reactor->start_idle(this);
+	if (!_is_start)
+	{
+		_is_start = true;
+		_reactor->start_idle(this);
+	}
 }
 
 void	idle_helper::stop()
 {
-	_is_start = false;
-	if (_reactor)
+	if (_is_start)
 	{
-		_reactor->stop_idle(this);
+		_is_start = false;
+		if (_reactor)
+		{
+			_reactor->stop_idle(this);
+		}
 	}
 }
 

@@ -56,7 +56,7 @@ public:
 	virtual void	on_final() = 0;
 	virtual void	on_ready() = 0;	//就绪
 	virtual void	on_closed() = 0;
-	//参考TCP_ERROR_CODE定义
+	//参考CHANNEL_ERROR_CODE定义
 	virtual CLOSE_MODE_STRATEGY	on_error(CHANNEL_ERROR_CODE code) = 0;
 	//这是一个待处理的完整包
 	virtual void	on_recv_pkg(const void* buf, const size_t len, const sockaddr_in& peer_addr) = 0;

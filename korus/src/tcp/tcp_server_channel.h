@@ -58,7 +58,7 @@ public:
 	virtual void	on_final() = 0;
 	virtual void	on_accept() = 0;	//连接已经建立
 	virtual void	on_closed() = 0;
-	//参考TCP_ERROR_CODE定义
+	//参考CHANNEL_ERROR_CODE定义
 	virtual CLOSE_MODE_STRATEGY	on_error(CHANNEL_ERROR_CODE code) = 0;
 	//提取数据包：返回值 =0 表示包不完整； >0 完整的包(长)
 	virtual int32_t on_recv_split(const void* buf, const size_t len) = 0;

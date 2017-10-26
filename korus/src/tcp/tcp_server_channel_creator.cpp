@@ -84,6 +84,5 @@ void tcp_server_channel_creator::on_idle_recover(idle_helper* idle_id)
 	if (!_channel_list.size())
 	{
 		_idle_helper.stop();
-		return;
 	}
 }

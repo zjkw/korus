@@ -43,8 +43,11 @@ void	timer_helper::start(const std::chrono::system_clock::time_point& begin, con
 		assert(false);
 		return;
 	}
-	_is_start = true;
-	_reactor->start_timer(this, begin, interval);
+	if (!_is_start)
+	{
+		_is_start = true;
+		_reactor->start_timer(this, begin, interval);
+	}
 }
 
 void	timer_helper::start(const std::chrono::milliseconds& begin, const std::chrono::milliseconds& interval)
@@ -54,16 +57,22 @@ void	timer_helper::start(const std::chrono::milliseconds& begin, const std::chro
 		assert(false);
 		return;
 	}
-	_is_start = true;
-	_reactor->start_timer(this, begin, interval);
+	if (!_is_start)
+	{
+		_is_start = true;
+		_reactor->start_timer(this, begin, interval);
+	}
 }
 
 void	timer_helper::stop()
 {
-	_is_start = false;
-	if (_reactor)
+	if (_is_start)
 	{
-		_reactor->stop_timer(this);	
+		_is_start = false;
+		if (_reactor)
+		{
+			_reactor->stop_timer(this);	
+		}
 	}
 }
 
