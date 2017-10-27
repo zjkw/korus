@@ -189,8 +189,6 @@ bool	reactor_loop::exist_idle(idle_helper* idle_id)
 	return _idle_distributor->exist_idle(idle_id);
 }
 
-// 仅限tcp_listen 和 tcp_server_channel 使用	-------begin
-// 初始新增
 void reactor_loop::start_sockio(sockio_helper* sockio_id, SOCKET fd, SOCKIO_TYPE type)
 {
 	assert(_tid == std::this_thread::get_id());
@@ -199,7 +197,6 @@ void reactor_loop::start_sockio(sockio_helper* sockio_id, SOCKET fd, SOCKIO_TYPE
 	_backend_poller->add_sock(sockio_id, fd, type);
 }
 
-// 存在更新
 void reactor_loop::update_sockio(sockio_helper* sockio_id, SOCKET fd, SOCKIO_TYPE type)
 {
 	assert(_tid == std::this_thread::get_id());
@@ -208,7 +205,6 @@ void reactor_loop::update_sockio(sockio_helper* sockio_id, SOCKET fd, SOCKIO_TYP
 	_backend_poller->upt_type(sockio_id, fd, type);
 }
 
-// 删除
 void reactor_loop::stop_sockio(sockio_helper* sockio_id, SOCKET fd)
 {
 	assert(_tid == std::this_thread::get_id());

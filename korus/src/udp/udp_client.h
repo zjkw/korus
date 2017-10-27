@@ -19,8 +19,6 @@ public:
 	virtual ~udp_client(){}
 };
 
-using udp_client_channel_factory_t = std::function<std::shared_ptr<udp_client_handler_base>()>;
-
 // 一个udp_client拥有多线程，应用场景感觉不多？多线程下载同一文件？
 template <>
 class udp_client<uint16_t>
@@ -33,12 +31,13 @@ public:
 	// 在使用reuseport情况下，注意服务器是否也开启了这个选项，因为5元组才能确定一条"连接"
 #ifndef REUSEPORT_OPTION
 	udp_client(const udp_client_channel_factory_t& factory, const uint32_t self_read_size = DEFAULT_READ_BUFSIZE, const uint32_t self_write_size = DEFAULT_WRITE_BUFSIZE, const uint32_t sock_read_size = 0, const uint32_t sock_write_size = 0)
-		: _factory(factory), _self_read_size(self_read_size), _self_write_size(self_write_size), _sock_read_size(sock_read_size), _sock_write_size(sock_write_size)
+		: _self_read_size(self_read_size), _self_write_size(self_write_size), _sock_read_size(sock_read_size), _sock_write_size(sock_write_size)
 #else
 	udp_client(uint16_t thread_num, const udp_client_channel_factory_t& factory, const uint32_t self_read_size = DEFAULT_READ_BUFSIZE, const uint32_t self_write_size = DEFAULT_WRITE_BUFSIZE, const uint32_t sock_read_size = 0, const uint32_t sock_write_size = 0)
-		: _thread_num(thread_num), _factory(factory), _self_read_size(self_read_size), _self_write_size(self_write_size), _sock_read_size(sock_read_size), _sock_write_size(sock_write_size)
+		: _thread_num(thread_num), _factory_chain(factory_chain), _self_read_size(self_read_size), _self_write_size(self_write_size), _sock_read_size(sock_read_size), _sock_write_size(sock_write_size)
 #endif
 	{
+		_factory_chain.push_back(factory);
 		_tid = std::this_thread::get_id();
 #ifdef REUSEPORT_OPTION
 		if (!_thread_num)
@@ -70,8 +69,7 @@ public:
 		//atomic::test_and_set检查flag是否被设置，若被设置直接返回true，若没有设置则设置flag为true后再返回false
 		if (!_start.test_and_set())
 		{
-			assert(_factory);
-
+			assert(_factory_chain.size());
 
 			int32_t cpu_num = sysconf(_SC_NPROCESSORS_CONF);
 			assert(cpu_num);
@@ -88,7 +86,7 @@ public:
 				thread_object*	thread_obj = new thread_object(abs((i + offset) % cpu_num));
 				_thread_pool[i] = thread_obj;
 
-				thread_obj->add_init_task(std::bind(&udp_client::common_thread_init, this, thread_obj, _factory));
+				thread_obj->add_init_task(std::bind(&udp_client::common_thread_init, this, thread_obj, _factory_chain));
 				thread_obj->start();
 			}
 		}
@@ -101,16 +99,16 @@ private:
 #endif
 	std::map<uint16_t, thread_object*>		_thread_pool;
 	std::atomic_flag						_start = ATOMIC_FLAG_INIT;
-	udp_client_channel_factory_t			_factory;
+	udp_client_channel_factory_chain_t		_factory_chain;
 	uint32_t								_self_read_size;
 	uint32_t								_self_write_size;
 	uint32_t								_sock_read_size;
 	uint32_t								_sock_write_size;
 
-	void common_thread_init(thread_object*	thread_obj, const udp_client_channel_factory_t& factory)
+	void common_thread_init(thread_object*	thread_obj, const udp_client_channel_factory_chain_t& factory_chain)
 	{
 		std::shared_ptr<reactor_loop>		reactor = std::make_shared<reactor_loop>();
-		std::shared_ptr<udp_client_handler_base> cb = factory();
+		std::shared_ptr<udp_client_handler_base> cb = factory_chain.front()();
 		std::shared_ptr<udp_client_channel>	channel = std::make_shared<udp_client_channel>(reactor, cb, _self_read_size, _self_write_size, _sock_read_size, _sock_write_size);
 		cb->inner_init(reactor, channel);
 		channel->start();
@@ -135,7 +133,9 @@ public:
 	udp_client(std::shared_ptr<reactor_loop> reactor, const udp_client_channel_factory_t& factory, const uint32_t self_read_size = DEFAULT_READ_BUFSIZE, const uint32_t self_write_size = DEFAULT_WRITE_BUFSIZE,
 		const uint32_t sock_read_size = 0, const uint32_t sock_write_size = 0)
 	{
-		std::shared_ptr<udp_client_handler_base> cb = factory();
+		udp_client_channel_factory_chain_t factory_chain;
+		factory_chain.push_back(factory);
+		std::shared_ptr<udp_client_handler_base> cb = factory_chain.front()();
 		_channel = std::make_shared<udp_client_channel>(reactor, cb, self_read_size, self_write_size, sock_read_size, sock_write_size);
 		cb->inner_init(reactor, _channel);
 		_channel->start();

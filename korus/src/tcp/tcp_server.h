@@ -33,12 +33,13 @@ public:
 	// 外部使用 dynamic_pointer_cast 将派生类的智能指针转换成 std::shared_ptr<tcp_server_handler_base>
 	tcp_server(uint16_t thread_num, const std::string& listen_addr, const tcp_server_channel_factory_t& factory, uint32_t backlog = DEFAULT_LISTEN_BACKLOG, uint32_t defer_accept = DEFAULT_DEFER_ACCEPT,
 				const uint32_t self_read_size = DEFAULT_READ_BUFSIZE, const uint32_t self_write_size = DEFAULT_WRITE_BUFSIZE, const uint32_t sock_read_size = 0, const uint32_t sock_write_size = 0)
-				: _thread_num(thread_num), _listen_addr(listen_addr), _factory(factory), _backlog(backlog), _defer_accept(defer_accept),
+				: _thread_num(thread_num), _listen_addr(listen_addr), _backlog(backlog), _defer_accept(defer_accept),
 				_self_read_size(self_read_size), _self_write_size(self_write_size), _sock_read_size(sock_read_size), _sock_write_size(sock_write_size)
 #ifndef REUSEPORT_OPTION
 				, _listen_thread(nullptr), _is_listen_init(false), _alone_listen(nullptr), _num_worker_ready(0)
 #endif
 	{
+		_factory_chain.push_back(factory);
 		_tid = std::this_thread::get_id();
 		if (!_thread_num)
 		{
@@ -73,7 +74,7 @@ public:
 		//atomic::test_and_set检查flag是否被设置，若被设置直接返回true，若没有设置则设置flag为true后再返回false
 		if (!_start.test_and_set())
 		{
-			assert(_factory);
+			assert(_factory_chain.size());
 
 			assert(_thread_num);
 			int32_t cpu_num = sysconf(_SC_NPROCESSORS_CONF);
@@ -85,7 +86,7 @@ public:
 			_listen_thread = new thread_object(abs(offset % cpu_num));
 			offset++;
 
-			_listen_thread->add_init_task(std::bind(&tcp_server::listen_thread_init, this, _listen_thread, _factory, offset));
+			_listen_thread->add_init_task(std::bind(&tcp_server::listen_thread_init, this, _listen_thread, _factory_chain, offset));
 			_listen_thread->start();	
 			if (1 != _thread_num)
 			{
@@ -111,7 +112,7 @@ public:
 					thread_object*	thread_obj = new thread_object(abs((i + offset) % cpu_num));
 					_thread_pool[i] = thread_obj;
 
-					thread_obj->add_init_task(std::bind(&tcp_server::common_thread_init, this, thread_obj, _factory, listen));
+					thread_obj->add_init_task(std::bind(&tcp_server::common_thread_init, this, thread_obj, _factory_chain, listen));
 					thread_obj->start();
 				}
 #ifndef REUSEPORT_OPTION
@@ -125,7 +126,7 @@ private:
 	uint16_t								_thread_num;
 	std::map<uint16_t, thread_object*>		_thread_pool;
 	std::atomic_flag						_start = ATOMIC_FLAG_INIT;
-	tcp_server_channel_factory_t			_factory;
+	tcp_server_channel_factory_chain_t		_factory_chain;
 	std::string								_listen_addr;
 	uint32_t								_backlog;
 	uint32_t								_defer_accept;
@@ -149,14 +150,14 @@ private:
 #endif
 
 #ifndef REUSEPORT_OPTION
-	void listen_thread_init(thread_object*	thread_obj, const tcp_server_channel_factory_t& factory, int32_t offset)
+	void listen_thread_init(thread_object*	thread_obj, const tcp_server_channel_factory_chain_t& factory_chain, int32_t offset)
 	{
 		std::shared_ptr<reactor_loop>	reactor = std::make_shared<reactor_loop>();
 		_alone_listen = new tcp_listen(reactor, _listen_addr, _backlog, _defer_accept);
 		tcp_server_channel_creator*		creator = nullptr;
 		if(1 == _thread_num)	//就复用同一个线程好了
 		{
-			creator = new tcp_server_channel_creator(reactor, factory, _self_read_size, _self_write_size, _sock_read_size, _sock_write_size);
+			creator = new tcp_server_channel_creator(reactor, factory_chain, _self_read_size, _self_write_size, _sock_read_size, _sock_write_size);
 			_alone_listen->add_accept_handler(std::bind(&tcp_server_channel_creator::on_newfd, creator, std::placeholders::_1, std::placeholders::_2)); //fd + sockaddr_in
 		}
 
@@ -191,10 +192,10 @@ private:
 		reactor->invalid();	// 可能上层还保持间接或直接引用，这里使其失效：“只管功能失效化，不管生命期释放”
 	}
 #endif
-	void common_thread_init(thread_object*	thread_obj, const tcp_server_channel_factory_t& factory, tcp_listen*	alone_listen)
+	void common_thread_init(thread_object*	thread_obj, const tcp_server_channel_factory_chain_t& factory_chain, tcp_listen*	alone_listen)
 	{
 		std::shared_ptr<reactor_loop>	reactor = std::make_shared<reactor_loop>();
-		tcp_server_channel_creator*		creator = new tcp_server_channel_creator(reactor, factory, _self_read_size, _self_write_size, _sock_read_size, _sock_write_size);
+		tcp_server_channel_creator*		creator = new tcp_server_channel_creator(reactor, factory_chain, _self_read_size, _self_write_size, _sock_read_size, _sock_write_size);
 		tcp_listen*						listen = nullptr;
 		if (!alone_listen)
 		{
@@ -235,7 +236,9 @@ public:
 	tcp_server(std::shared_ptr<reactor_loop> reactor, const std::string& listen_addr, const tcp_server_channel_factory_t& factory, uint32_t backlog = DEFAULT_LISTEN_BACKLOG, uint32_t defer_accept = DEFAULT_DEFER_ACCEPT,
 		const uint32_t self_read_size = DEFAULT_READ_BUFSIZE, const uint32_t self_write_size = DEFAULT_WRITE_BUFSIZE, const uint32_t sock_read_size = 0, const uint32_t sock_write_size = 0)
 	{
-		_creator = new tcp_server_channel_creator(reactor, factory, self_read_size, self_write_size, sock_read_size, sock_write_size);
+		tcp_server_channel_factory_chain_t	factory_chain;
+		factory_chain.push_back(factory);
+		_creator = new tcp_server_channel_creator(reactor, factory_chain, self_read_size, self_write_size, sock_read_size, sock_write_size);
 		_listen = new tcp_listen(reactor, listen_addr, backlog, defer_accept);
 		_listen->add_accept_handler(std::bind(&tcp_server_channel_creator::on_newfd, _creator, std::placeholders::_1, std::placeholders::_2)); //fd + sockaddr_in
 		_listen->start();

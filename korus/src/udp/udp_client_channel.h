@@ -1,8 +1,14 @@
 #pragma once
 
+#include <list>
 #include "udp_channel_base.h"
 #include "korus/src/reactor/reactor_loop.h"
 #include "korus/src/reactor/sockio_helper.h"
+
+class udp_client_handler_base;
+
+using udp_client_channel_factory_t = std::function<std::shared_ptr<udp_client_handler_base>()>;
+using udp_client_channel_factory_chain_t = std::list<udp_client_channel_factory_t>;
 
 //这个类用户可以操作，而且是可能多线程环境下操作，对外是shared_ptr，需要保证线程安全
 //考虑到send可能在工作线程，close在主线程，应排除同时进行操作，所以仅仅此两个进行了互斥，带来的坏处：
@@ -11,7 +17,6 @@
 
 //外部最好确保udp_client能包裹channel/handler生命期，这样能保证资源回收，否则互相引用的两端(channel和handler)没有可设计的角色来触发回收时机的函数调用check_detach_relation
 
-class udp_client_handler_base;
 //有效性优先级：is_valid > INVALID_SOCKET,即所有函数都会先判断is_valid这是个原子操作
 class udp_client_channel : public std::enable_shared_from_this<udp_client_channel>, public thread_safe_objbase, public udp_channel_base
 {

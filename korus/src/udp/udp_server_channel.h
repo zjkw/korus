@@ -1,10 +1,15 @@
 #pragma once
 
+#include <list>
 #include "udp_channel_base.h"
 #include "korus/src/reactor/reactor_loop.h"
 #include "korus/src/reactor/sockio_helper.h"
 
 class udp_server_handler_base;
+
+using udp_server_channel_factory_t = std::function<std::shared_ptr<udp_server_handler_base>()>;
+using udp_server_channel_factory_chain_t = std::list<udp_server_channel_factory_t>;
+
 //这个类用户可以操作，而且是可能多线程环境下操作，对外是shared_ptr，需要保证线程安全
 //考虑到send可能在工作线程，close在主线程，应排除同时进行操作，所以仅仅此两个进行了互斥，带来的坏处：
 //1，是send在最恶劣情况下仅仅是拷贝到本库的缓存，并非到了内核缓存，不同于::send的语义

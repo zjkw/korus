@@ -16,7 +16,7 @@ enum SOCKIO_TYPE
 
 class reactor_loop;
 
-// 非线程安全，外部不得直接使用
+// 非线程安全，用户不得直接使用
 class sockio_helper
 {
 public:

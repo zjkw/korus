@@ -4,11 +4,17 @@
 #include <memory>
 #include <atomic>
 #include <chrono>
+#include <list>
 #include "korus/src/util/thread_safe_objbase.h"
 #include "korus/src/reactor/timer_helper.h"
 #include "korus/src/reactor/sockio_helper.h"
 #include "korus/src/reactor/reactor_loop.h"
 #include "tcp_channel_base.h"
+
+class tcp_client_handler_base;
+
+using tcp_client_channel_factory_t = std::function<std::shared_ptr<tcp_client_handler_base>()>;
+using tcp_client_channel_factory_chain_t = std::list<tcp_client_channel_factory_t>;
 
 //这个类用户可以操作，而且是可能多线程环境下操作，对外是shared_ptr，需要保证线程安全
 //考虑到send可能在工作线程，close在主线程，应排除同时进行操作，所以仅仅此两个进行了互斥，带来的坏处：
@@ -24,7 +30,7 @@ enum TCP_CLTCONN_STATE
 	CNS_CONNECTED = 3,
 };
 //有效性优先级：is_valid > INVALID_SOCKET,即所有函数都会先判断is_valid这是个原子操作
-class tcp_client_handler_base;
+
 class tcp_client_channel : public std::enable_shared_from_this<tcp_client_channel>, public thread_safe_objbase, public tcp_channel_base
 {
 public:
