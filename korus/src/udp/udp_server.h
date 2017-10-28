@@ -108,18 +108,22 @@ private:
 	void common_thread_init(thread_object*	thread_obj, const udp_server_channel_factory_chain_t& factory_chain)
 	{
 		std::shared_ptr<reactor_loop>		reactor = std::make_shared<reactor_loop>();
-		std::shared_ptr<udp_server_handler_base> cb = factory_chain.front()();
-		std::shared_ptr<udp_server_channel>	channel = std::make_shared<udp_server_channel>(reactor, _local_addr, cb, _self_read_size, _self_write_size, _sock_read_size, _sock_write_size);
-		cb->inner_init(reactor, channel);
-		channel->start();
+		std::shared_ptr<udp_server_channel>	channel = std::make_shared<udp_server_channel>(_local_addr, _self_read_size, _self_write_size, _sock_read_size, _sock_write_size);
+
+		build_chain(reactor, std::dynamic_pointer_cast<udp_server_handler_base>(channel), factory_chain);
 		
 		thread_obj->add_exit_task(std::bind(&udp_server::common_thread_exit, this, thread_obj, reactor, channel));
 		thread_obj->add_resident_task(std::bind(&reactor_loop::run_once, reactor));
+
+		channel->start();
 	}
 	void common_thread_exit(thread_object*	thread_obj, std::shared_ptr<reactor_loop> reactor, std::shared_ptr<udp_server_channel>	channel)
 	{
 		channel->invalid();
-		channel->check_detach_relation(1);
+		if (!channel->can_delete(1))
+		{
+			channel->inner_final();
+		}
 		reactor->invalid();	//可能上层还保持间接或直接引用，这里使其失效：“只管功能失效化，不管生命期释放”
 	}
 };
@@ -135,16 +139,20 @@ public:
 	{
 		udp_server_channel_factory_chain_t	factory_chain;
 		factory_chain.push_back(factory);
-		std::shared_ptr<udp_server_handler_base> cb = factory_chain.front()();
-		_channel = std::make_shared<udp_server_channel>(reactor, local_addr, cb, self_read_size, self_write_size, sock_read_size, sock_write_size);
-		cb->inner_init(reactor, _channel);
+
+		_channel = std::make_shared<udp_server_channel>(local_addr, self_read_size, self_write_size, sock_read_size, sock_write_size);
+		build_chain(reactor, std::dynamic_pointer_cast<udp_server_handler_base>(_channel), factory_chain);
+
 		_channel->start();
 	}
 
 	virtual ~udp_server()
 	{
 		_channel->invalid();
-		_channel->check_detach_relation(1);
+		if (!_channel->can_delete(1))
+		{
+			_channel->inner_final();
+		}
 	}
 	
 private:

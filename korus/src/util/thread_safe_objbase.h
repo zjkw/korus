@@ -19,6 +19,7 @@ public:
 	thread_safe_objbase();
 	virtual ~thread_safe_objbase();
 
+	virtual void	valid();
 	virtual void	invalid();
 	virtual bool	is_valid();
 

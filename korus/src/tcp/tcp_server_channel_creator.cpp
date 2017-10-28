@@ -20,34 +20,12 @@ tcp_server_channel_creator::~tcp_server_channel_creator()
 	for (std::map<SOCKET, std::shared_ptr<tcp_server_channel>>::iterator it = _channel_list.begin(); it != _channel_list.end(); it++)
 	{
 		it->second->invalid();
-		it->second->check_detach_relation(1);
+		if (!it->second->can_delete(1))
+		{
+			it->second->inner_final();
+		}
 	}
 	_channel_list.clear();
-}
-
-//using tcp_server_channel_factory_t = std::function<std::shared_ptr<tcp_server_handler_base>()>;
-//using tcp_server_channel_factory_chain_t = std::list<tcp_server_channel_factory_t>;
-template<typename T>
-T chain_handler(std::shared_ptr<reactor_loop> reactor, std::list< std::function<T()> >& chain)
-{	
-#if 0
-	std::list<T> objs;
-	for (std::list< std::function<T()> >::iterator it = chain.begin(); it != chain.end(); it++)
-	{
-		T t = (*it)();
-		if (!t)
-		{
-			return nullptr;
-		}
-
-		objs.push_back(t);
-	}
-
-	for (std::list<T>::iterator it = objs.begin(); it != objs.end(); it++)
-	{
-
-	}
-#endif
 }
 
 void tcp_server_channel_creator::on_newfd(const SOCKET fd, const struct sockaddr_in& addr)
@@ -67,12 +45,11 @@ void tcp_server_channel_creator::on_newfd(const SOCKET fd, const struct sockaddr
 		else
 		{
 			std::shared_ptr<tcp_server_handler_base> cb = _factory_chain.front()();
-			//std::shared_ptr<tcp_server_handler_base> cb = chain_handler(_reactor, _factory_chain);
-			std::shared_ptr<tcp_server_channel>	channel = std::make_shared<tcp_server_channel>(fd, _reactor, cb, _self_read_size, _self_write_size, _sock_read_size, _sock_write_size);
-			cb->inner_init(_reactor, channel);
+			std::shared_ptr<tcp_server_channel>	channel = std::make_shared<tcp_server_channel>(fd, _self_read_size, _self_write_size, _sock_read_size, _sock_write_size);
+			build_chain(_reactor, std::dynamic_pointer_cast<tcp_server_handler_base>(channel), _factory_chain);
 			_channel_list[fd] = channel;
-
-			cb->on_accept();
+			channel->start();
+			channel->on_accept();
 		}
 
 		if (_channel_list.size())
@@ -96,8 +73,9 @@ void tcp_server_channel_creator::on_idle_recover(idle_helper* idle_id)
 	for (size_t i = 0; i < SCAN_STEP_ONCE && it != _channel_list.end(); i++)
 	{
 		// 无效才可剔除，引用为1表示仅仅tcp_server_channel_creator引用这个channel，而channel是这个对象创建（同线程）
-		if (!it->second->check_detach_relation(1))
+		if (!it->second->can_delete(1))
 		{
+			it->second->inner_final();
 			_channel_list.erase(it++);
 		}
 		else

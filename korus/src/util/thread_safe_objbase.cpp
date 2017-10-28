@@ -23,6 +23,11 @@ void	thread_safe_objbase::invalid()
 	_invalid = false;
 }
 
+void	thread_safe_objbase::valid()
+{
+	_invalid = true;
+}
+
 bool	thread_safe_objbase::is_valid()
 {
 	return _invalid;

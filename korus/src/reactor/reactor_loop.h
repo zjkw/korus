@@ -2,6 +2,8 @@
 
 #include <memory>
 #include <thread>
+#include <vector>
+#include <list>
 #include "korus/src/util/basic_defines.h"
 #include "korus/src/util/task_queue.h"
 #include "korus/src/util/thread_safe_objbase.h"
@@ -53,3 +55,38 @@ private:
 
 	void run_once_inner();
 };
+
+template<typename T>
+bool build_chain(std::shared_ptr<reactor_loop> reactor, T tail, const std::list<std::function<T()> >& chain)
+{
+	if (!tail)
+	{
+		return false;
+	}
+	std::vector<T> objs;
+	typedef typename std::list<std::function<T()> >::const_iterator list_iterator;
+	for (list_iterator it = chain.begin(); it != chain.end(); it++)
+	{
+		T t = (*it)();
+		if (!t)
+		{
+			return false;
+		}
+
+		objs.push_back(t);
+	}
+	if (!objs.size())
+	{
+		return false;
+	}
+	objs.push_back(tail);
+
+	for (size_t i = 0; i < objs.size(); i++)
+	{
+		T prev = i > 0 ? objs[i - 1] : nullptr;
+		T next = i + 1 < objs.size() ? objs[i + 1] : nullptr;
+		objs[i]->inner_init(reactor, prev, next);
+	}
+
+	return true;
+}

@@ -3,12 +3,10 @@
 #include "tcp_helper.h"
 #include "tcp_client_channel.h"
 
-tcp_client_channel::tcp_client_channel(std::shared_ptr<reactor_loop> reactor, const std::string& server_addr, std::shared_ptr<tcp_client_handler_base> cb,
-	std::chrono::seconds connect_timeout, std::chrono::seconds connect_retry_wait,
+tcp_client_channel::tcp_client_channel(const std::string& server_addr, std::chrono::seconds connect_timeout, std::chrono::seconds connect_retry_wait,
 	const uint32_t self_read_size, const uint32_t self_write_size, const uint32_t sock_read_size, const uint32_t sock_write_size)
-	: tcp_channel_base(INVALID_SOCKET, self_read_size, self_write_size, sock_read_size, sock_write_size), 
-	_conn_fd(INVALID_SOCKET), _server_addr(server_addr), _conn_state(CNS_CLOSED), _reactor(reactor), _cb(cb), _sockio_helper_connect(reactor.get()), _sockio_helper(reactor.get()),
-	_connect_timeout(connect_timeout), _connect_retry_wait(connect_retry_wait),	_timer_connect_timeout(reactor.get()), _timer_connect_retry_wait(reactor.get())
+	: tcp_channel_base(INVALID_SOCKET, self_read_size, self_write_size, sock_read_size, sock_write_size),
+	_conn_fd(INVALID_SOCKET), _server_addr(server_addr), _conn_state(CNS_CLOSED), _connect_timeout(connect_timeout), _connect_retry_wait(connect_retry_wait)
 {
 	_timer_connect_timeout.bind(std::bind(&tcp_client_channel::on_timer_connect_timeout, this, std::placeholders::_1));
 	_timer_connect_retry_wait.bind(std::bind(&tcp_client_channel::on_timer_connect_retry_wait, this, std::placeholders::_1));
@@ -19,8 +17,6 @@ tcp_client_channel::tcp_client_channel(std::shared_ptr<reactor_loop> reactor, co
 
 tcp_client_channel::~tcp_client_channel()
 {
-	assert(!_reactor);
-	assert(!_cb);
 }
 
 // 保证原子，考虑多线程环境下，buf最好是一个或若干完整包；可能触发错误/异常 on_error
@@ -49,9 +45,9 @@ void	tcp_client_channel::close()
 		return;
 	}
 	//线程调度
-	if (!_reactor->is_current_thread())
+	if (!reactor()->is_current_thread())
 	{
-		_reactor->start_async_task(std::bind(&tcp_client_channel::close, this), this);
+		reactor()->start_async_task(std::bind(&tcp_client_channel::close, this), this);
 		return;
 	}
 
@@ -70,7 +66,7 @@ void	tcp_client_channel::close()
 	}
 	_conn_state = CNS_CLOSED;
 
-	_cb->on_closed();
+	on_closed();
 }
 
 // 参数参考全局函数 ::shutdown
@@ -85,9 +81,9 @@ void	tcp_client_channel::shutdown(int32_t howto)
 		return;
 	}
 	//线程调度
-	if (!_reactor->is_current_thread())
+	if (!reactor()->is_current_thread())
 	{
-		_reactor->start_async_task(std::bind(&tcp_client_channel::shutdown, this, howto), this);
+		reactor()->start_async_task(std::bind(&tcp_client_channel::shutdown, this, howto), this);
 		return;
 	}
 
@@ -100,17 +96,26 @@ void	tcp_client_channel::connect()
 	{
 		return;
 	}
+	if (!reactor())
+	{
+		assert(false);
+		return;
+	}
 	if (CNS_CLOSED != _conn_state)
 	{
 		return;
 	}
 	//线程调度
-	if (!_reactor->is_current_thread())
+	if (!reactor()->is_current_thread())
 	{
 		// tcp_client_channel生命期一般比reactor短，所以加上引用计数
-		_reactor->start_async_task(std::bind(&tcp_client_channel::connect, this), this);
+		reactor()->start_async_task(std::bind(&tcp_client_channel::connect, this), this);
 		return;
 	}
+	_sockio_helper_connect.reactor(reactor().get());
+	_sockio_helper.reactor(reactor().get());
+	_timer_connect_timeout.reactor(reactor().get());
+	_timer_connect_retry_wait.reactor(reactor().get());
 
 	_timer_connect_retry_wait.stop();
 
@@ -137,7 +142,7 @@ void	tcp_client_channel::connect()
 		_conn_state = CNS_CONNECTED;
 		printf("start_sockio, %d\n", __LINE__);
 		_sockio_helper.start(SIT_READWRITE);
-		_cb->on_connect();
+		on_connect();
 	}
 	else
 	{
@@ -226,7 +231,7 @@ void tcp_client_channel::on_sockio_write_connect(sockio_helper* sockio_id)
 		printf("start_sockio, %d\n", __LINE__);
 
 		_sockio_helper.start(SIT_READWRITE);
-		_cb->on_connect();
+		on_connect();
 	}
 }
 
@@ -246,7 +251,7 @@ void	tcp_client_channel::on_sockio_write(sockio_helper* sockio_id)
 	int32_t ret = tcp_channel_base::send_alone();
 	if (ret < 0)
 	{
-		CLOSE_MODE_STRATEGY cms = _cb->on_error((CHANNEL_ERROR_CODE)ret);
+		CLOSE_MODE_STRATEGY cms = on_error((CHANNEL_ERROR_CODE)ret);
 		handle_close_strategy(cms);
 	}
 }
@@ -265,34 +270,9 @@ void	tcp_client_channel::on_sockio_read(sockio_helper* sockio_id)
 	int32_t ret = tcp_channel_base::do_recv();
 	if (ret < 0)
 	{
-		CLOSE_MODE_STRATEGY cms = _cb->on_error((CHANNEL_ERROR_CODE)ret);
+		CLOSE_MODE_STRATEGY cms = on_error((CHANNEL_ERROR_CODE)ret);
 		handle_close_strategy(cms);
 	}
-}
-
-bool	tcp_client_channel::check_detach_relation(long call_ref_count)
-{
-	if (!is_valid())
-	{
-		if (_cb)
-		{
-			if (_cb.unique() && shared_from_this().use_count() == 1 + 1 + call_ref_count) //1 for shared_from_this, 1 for _cb
-			{
-				_cb->inner_final();
-				_cb = nullptr;
-				
-				_reactor = nullptr;
-
-				return true;
-			}
-		}
-		else
-		{
-			assert(false);
-		}
-	}
-
-	return false;
 }
 
 void	tcp_client_channel::invalid()
@@ -308,7 +288,7 @@ void	tcp_client_channel::invalid()
 	printf("stopt_sockio, %d\n", __LINE__);
 	_sockio_helper_connect.clear();
 	_sockio_helper.clear();
-	_reactor->stop_async_task(this);
+	reactor()->stop_async_task(this);
 
 	close();
 }
@@ -327,7 +307,7 @@ int32_t	tcp_client_channel::on_recv_buff(const void* buf, const size_t len, bool
 	int32_t size = 0;
 	while (len > size)
 	{
-		int32_t ret = _cb->on_recv_split((uint8_t*)buf + size, len - size);
+		int32_t ret = on_recv_split((uint8_t*)buf + size, len - size);
 		if (ret == 0)
 		{
 			left_partial_pkg = true;	//剩下的不是一个完整的包
@@ -335,18 +315,18 @@ int32_t	tcp_client_channel::on_recv_buff(const void* buf, const size_t len, bool
 		}
 		else if (ret < 0)
 		{
-			CLOSE_MODE_STRATEGY cms = _cb->on_error((CHANNEL_ERROR_CODE)ret);
+			CLOSE_MODE_STRATEGY cms = on_error((CHANNEL_ERROR_CODE)ret);
 			handle_close_strategy(cms);
 			break;
 		}
 		else if (ret + size > len)
 		{
-			CLOSE_MODE_STRATEGY cms = _cb->on_error(CEC_RECVBUF_SHORT);
+			CLOSE_MODE_STRATEGY cms = on_error(CEC_RECVBUF_SHORT);
 			handle_close_strategy(cms);
 			break;
 		}
 
-		_cb->on_recv_pkg((uint8_t*)buf + size, ret);
+		on_recv_pkg((uint8_t*)buf + size, ret);
 		size += ret;
 	}
 

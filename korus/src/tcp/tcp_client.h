@@ -101,19 +101,23 @@ private:
 	void thread_init(thread_object*	thread_obj, const tcp_client_channel_factory_chain_t& factory_chain)
 	{
 		std::shared_ptr<reactor_loop>		reactor = std::make_shared<reactor_loop>();
-		std::shared_ptr<tcp_client_handler_base> cb = factory_chain.front()();
-		std::shared_ptr<tcp_client_channel>	channel = std::make_shared<tcp_client_channel>(reactor, _server_addr, cb, _connect_timeout, _connect_retry_wait, _self_read_size, _self_write_size, _sock_read_size, _sock_write_size);
-		cb->inner_init(reactor, channel);
+		std::shared_ptr<tcp_client_channel>	channel = std::make_shared<tcp_client_channel>(_server_addr, _connect_timeout, _connect_retry_wait, _self_read_size, _self_write_size, _sock_read_size, _sock_write_size);
+
+		build_chain(reactor, std::dynamic_pointer_cast<tcp_client_handler_base>(channel), factory_chain);
 
 		thread_obj->add_exit_task(std::bind(&tcp_client::thread_exit, this, thread_obj, reactor, channel));
-		channel->connect();//tbd 返回值 log print
 		thread_obj->add_resident_task(std::bind(&reactor_loop::run_once, reactor));
+
+		channel->connect();//tbd 返回值 log print
 	}
 	void thread_exit(thread_object*	thread_obj, std::shared_ptr<reactor_loop> reactor, std::shared_ptr<tcp_client_channel> channel)
 	{
 		channel->invalid();	//可能上层还保持间接或直接引用，这里使其失效：“只管功能失效化，不管生命期释放”
-		channel->check_detach_relation(1);
-		reactor->invalid();	
+		if (!channel->can_delete(1))
+		{
+			channel->inner_final();
+		}
+		reactor->invalid();
 	}
 };
 
@@ -129,20 +133,23 @@ public:
 	{
 		tcp_client_channel_factory_chain_t factory_chain;
 		factory_chain.push_back(factory);
-		std::shared_ptr<tcp_client_handler_base> cb = factory();
+		
 		// 构造中执行::connect，无需外部手动调用
-		_channel = std::make_shared<tcp_client_channel>(reactor, server_addr, cb, connect_timeout, connect_retry_wait, self_read_size, self_write_size, sock_read_size, sock_write_size);
-		cb->inner_init(reactor, _channel);
+		_channel = std::make_shared<tcp_client_channel>(server_addr, connect_timeout, connect_retry_wait, self_read_size, self_write_size, sock_read_size, sock_write_size);
+		build_chain(reactor, std::dynamic_pointer_cast<tcp_client_handler_base>(_channel), factory_chain);
 		_channel->connect();
 	}
 
 	virtual ~tcp_client()
 	{
 		_channel->invalid();
-		_channel->check_detach_relation(1);
+		if (!_channel->can_delete(1))
+		{
+			_channel->inner_final();
+		}
 		_channel = nullptr;
 	}
-
+	
 private:
 	std::shared_ptr<tcp_client_channel>	_channel;
 };
