@@ -25,6 +25,8 @@ public:
 	}
 	virtual void	on_ready()	
 	{
+		udp_client_handler_base::on_ready();
+
 		char szTest[] = "hello server, i am client!";
 
 		struct sockaddr_in	si;

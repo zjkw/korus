@@ -114,7 +114,7 @@ void	tcp_server_channel::invalid()
 	{
 		return;
 	}
-	thread_safe_objbase::invalid();
+	double_state::invalid();
 	_sockio_helper.clear();
 	reactor()->stop_async_task(this);
 	tcp_channel_base::close();

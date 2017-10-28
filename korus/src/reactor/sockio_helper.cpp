@@ -15,7 +15,6 @@ sockio_helper::sockio_helper(reactor_loop* reatcor)
 sockio_helper:: ~sockio_helper()
 {
 	clear();
-	_reactor = nullptr;
 }
 
 void	sockio_helper::reactor(reactor_loop* reatcor)
@@ -59,6 +58,7 @@ void	sockio_helper::clear()
 
 	_read = nullptr;
 	_write = nullptr;
+	_reactor = nullptr;
 }
 
 void	sockio_helper::start(SOCKIO_TYPE type)

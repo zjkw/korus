@@ -14,9 +14,7 @@ idle_helper::idle_helper()
 
 idle_helper::~idle_helper()
 {
-	stop();
 	clear();
-	_reactor = nullptr;
 }
 
 void	idle_helper::reactor(reactor_loop* reatcor)
@@ -33,7 +31,9 @@ void	idle_helper::bind(reactor_idle_callback_t task)
 
 void	idle_helper::clear()
 {
+	stop();
 	_task = nullptr;
+	_reactor = nullptr;
 }
 
 void	idle_helper::start()

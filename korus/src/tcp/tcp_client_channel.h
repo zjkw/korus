@@ -5,7 +5,7 @@
 #include <atomic>
 #include <chrono>
 #include <list>
-#include "korus/src/util/thread_safe_objbase.h"
+#include "korus/src/util/object_state.h"
 #include "korus/src/reactor/timer_helper.h"
 #include "korus/src/reactor/sockio_helper.h"
 #include "korus/src/reactor/reactor_loop.h"
@@ -30,7 +30,7 @@ enum TCP_CLTCONN_STATE
 
 // 可能处于多线程环境下
 // on_error不能纯虚 tbd，加上close默认处理
-class tcp_client_handler_base : public std::enable_shared_from_this<tcp_client_handler_base>, public thread_safe_objbase
+class tcp_client_handler_base : public std::enable_shared_from_this<tcp_client_handler_base>, public double_state
 {
 public:
 	tcp_client_handler_base() : _reactor(nullptr), _tunnel_prev(nullptr), _tunnel_next(nullptr){}

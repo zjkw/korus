@@ -3,7 +3,7 @@
 #include <map>
 #include <mutex>
 #include <vector>
-#include "korus/src/util/thread_safe_objbase.h"
+#include "korus/src/util/object_state.h"
 #include "korus/src/reactor/idle_helper.h"
 #include "tcp_server_channel.h"
 

@@ -14,9 +14,7 @@ timer_helper::timer_helper(reactor_loop* reatcor)
 
 timer_helper::~timer_helper()
 {
-	stop();
 	clear();
-	_reactor = nullptr;
 }
 
 void	timer_helper::reactor(reactor_loop* reatcor)
@@ -33,7 +31,9 @@ void	timer_helper::bind(reactor_timer_callback_t task)
 
 void	timer_helper::clear()
 {
+	stop();
 	_task = nullptr;
+	_reactor = nullptr;
 }
 
 void	timer_helper::start(const std::chrono::system_clock::time_point& begin, const std::chrono::milliseconds& interval)

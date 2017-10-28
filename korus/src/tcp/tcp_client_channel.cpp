@@ -281,7 +281,7 @@ void	tcp_client_channel::invalid()
 	{
 		return;
 	}
-	thread_safe_objbase::invalid();
+	double_state::invalid();
 
 	_timer_connect_timeout.stop();
 	_timer_connect_retry_wait.stop();

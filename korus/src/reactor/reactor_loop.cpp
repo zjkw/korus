@@ -94,7 +94,7 @@ void	reactor_loop::invalid()
 		return;
 	}
 
-	thread_safe_objbase::invalid();
+	double_state::invalid();
 	_backend_poller->clear();
 	_timer_sheduler->clear();
 	_idle_distributor->clear();

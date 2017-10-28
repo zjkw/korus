@@ -1,6 +1,6 @@
 #pragma once
 
-#include "thread_safe_objbase.h"
+#include "object_state.h"
 
 template<class _Mutex>
 class unique_optional_lock : public noncopyable

@@ -5,7 +5,7 @@
 #include <thread>
 #include <mutex>
 
-#include "korus/src/util/thread_safe_objbase.h"
+#include "korus/src/util/object_state.h"
 #include "korus/src/util/task_queue.h"
 
 //支持常驻任务队列(不提供显式撤销接口)

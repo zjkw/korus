@@ -6,12 +6,12 @@
 #include <list>
 #include "korus/src/util/basic_defines.h"
 #include "korus/src/util/task_queue.h"
-#include "korus/src/util/thread_safe_objbase.h"
+#include "korus/src/util/object_state.h"
 #include "backend_poller.h"
 #include "timer_sheduler.h"
 #include "idle_distributor.h"
 
-class reactor_loop : public std::enable_shared_from_this<reactor_loop>, public thread_safe_objbase
+class reactor_loop : public std::enable_shared_from_this<reactor_loop>, public double_state
 {
 public:
 	reactor_loop();

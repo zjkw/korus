@@ -3,7 +3,7 @@
 #include <unistd.h>
 #include <string>
 #include <vector>
-#include "korus/src/util/thread_safe_objbase.h"
+#include "korus/src/util/object_state.h"
 #include "korus/src/reactor/reactor_loop.h"
 #include "korus/src/reactor/sockio_helper.h"
 
