@@ -5,7 +5,6 @@
 udp_server_handler_base::udp_server_handler_base() 
 	: _reactor(nullptr), _tunnel_prev(nullptr), _tunnel_next(nullptr)
 {
-	set_prepare();
 }
 
 udp_server_handler_base::~udp_server_handler_base()
@@ -97,13 +96,8 @@ std::shared_ptr<reactor_loop>	udp_server_handler_base::reactor()
 	return _reactor; 
 }
 
-bool	udp_server_handler_base::can_delete(long call_ref_count)			//端头如果有别的对象引用此，需要重载
+bool	udp_server_handler_base::can_delete(bool force, long call_ref_count)			//端头如果有别的对象引用此，需要重载
 {
-	// 必须先设为release才行,要求外部掌握生命期管理
-	if (!is_release())
-	{
-		return false;
-	}
 	long ref = 0;
 	if (_tunnel_prev)
 	{
@@ -118,7 +112,7 @@ bool	udp_server_handler_base::can_delete(long call_ref_count)			//端头如果有别的
 		// 成立，尝试向上查询
 		if (_tunnel_prev)
 		{
-			return _tunnel_prev->can_delete(0);
+			return _tunnel_prev->can_delete(force, 0);
 		}
 		else
 		{
@@ -131,11 +125,6 @@ bool	udp_server_handler_base::can_delete(long call_ref_count)			//端头如果有别的
 
 void	udp_server_handler_base::inner_init(std::shared_ptr<reactor_loop> reactor, std::shared_ptr<udp_server_handler_base> tunnel_prev, std::shared_ptr<udp_server_handler_base> tunnel_next)
 {
-	if (!is_prepare())
-	{
-		assert(false);
-		return;
-	}
 	_reactor = reactor;
 	_tunnel_prev = tunnel_prev;
 	_tunnel_next = tunnel_next;
@@ -152,7 +141,6 @@ void	udp_server_handler_base::inner_final()
 	_reactor = nullptr;
 	_tunnel_prev = nullptr;
 	_tunnel_next = nullptr;
-	set_dead();
 
 	on_final();
 }
@@ -163,6 +151,7 @@ udp_server_channel::udp_server_channel(const std::string& local_addr, const uint
 										
 {
 	_sockio_helper.bind(std::bind(&udp_server_channel::on_sockio_read, this, std::placeholders::_1), nullptr);
+	set_prepare();
 }
 
 //析构需要发生在产生线程
@@ -210,7 +199,7 @@ int32_t	udp_server_channel::send(const void* buf, const size_t len, const sockad
 	if (!is_normal())
 	{
 		assert(false);
-		return 0;
+		return CEC_INVALID_SOCKET;
 	}
 	
 	int32_t ret = udp_channel_base::send(buf, len, peer_addr);
@@ -219,12 +208,6 @@ int32_t	udp_server_channel::send(const void* buf, const size_t len, const sockad
 
 void	udp_server_channel::close()
 {	
-	if (!is_normal())
-	{
-		assert(false);
-		return;
-	}
-
 	if (!reactor())
 	{
 		assert(false);
@@ -277,7 +260,7 @@ int32_t	udp_server_channel::on_recv_buff(const void* buf, const size_t len, cons
 	if (!is_normal())
 	{
 		assert(false);
-		return 0;
+		return CEC_INVALID_SOCKET;
 	}
 
 	on_recv_pkg((uint8_t*)buf, len, peer_addr);
@@ -291,4 +274,19 @@ void udp_server_channel::handle_close_strategy(CLOSE_MODE_STRATEGY cms)
 	{
 		close();	//内部会自动检查有效性
 	}
+}
+
+bool	udp_server_channel::can_delete(bool force, long call_ref_count)
+{
+	if (force)
+	{
+		return udp_server_handler_base::can_delete(force, call_ref_count);
+	}
+
+	if (!is_release())
+	{
+		return udp_server_handler_base::can_delete(force, call_ref_count);
+	}
+
+	return false;
 }

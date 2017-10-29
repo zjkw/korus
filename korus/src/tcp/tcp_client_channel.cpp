@@ -3,6 +3,195 @@
 #include "tcp_helper.h"
 #include "tcp_client_channel.h"
 
+/////////////////base
+tcp_client_handler_base::tcp_client_handler_base()
+	: _reactor(nullptr), _tunnel_prev(nullptr), _tunnel_next(nullptr)
+{
+}
+
+tcp_client_handler_base::~tcp_client_handler_base()
+{ 
+	// 必须执行inner_final
+	assert(!_tunnel_prev); 
+	assert(!_tunnel_next); 
+}
+
+void	tcp_client_handler_base::on_init()
+{
+}
+
+void	tcp_client_handler_base::on_final()
+{
+}
+
+void	tcp_client_handler_base::on_connect()	
+{
+	if (!_tunnel_prev)
+	{
+		assert(false);
+		return;
+	}
+
+	_tunnel_prev->on_connect();
+}
+
+void	tcp_client_handler_base::on_closed()
+{
+	if (!_tunnel_prev)
+	{
+		assert(false);
+		return;
+	}
+
+	_tunnel_prev->on_closed();
+}
+
+//参考CHANNEL_ERROR_CODE定义
+CLOSE_MODE_STRATEGY	tcp_client_handler_base::on_error(CHANNEL_ERROR_CODE code)
+{
+	if (!_tunnel_prev)
+	{
+		assert(false);
+		return CMS_INNER_AUTO_CLOSE;
+	}
+
+	return _tunnel_prev->on_error(code);
+}
+
+//提取数据包：返回值 =0 表示包不完整； >0 完整的包(长)
+int32_t tcp_client_handler_base::on_recv_split(const void* buf, const size_t len)
+{ 
+	if (!_tunnel_prev)
+	{
+		assert(false);
+		return CEC_SPLIT_FAILED;
+	}
+	
+	return _tunnel_prev->on_recv_split(buf, len);
+}
+
+//这是一个待处理的完整包
+void	tcp_client_handler_base::on_recv_pkg(const void* buf, const size_t len)
+{ 
+	if (!_tunnel_prev)
+	{
+		assert(false);
+		return;
+	}
+	
+	return _tunnel_prev->on_recv_pkg(buf, len);
+}
+
+int32_t	tcp_client_handler_base::send(const void* buf, const size_t len)
+{
+	if (!_tunnel_next)
+	{
+		assert(false);
+		return CEC_INVALID_SOCKET;
+	}
+
+	return _tunnel_next->send(buf, len);
+}
+
+void	tcp_client_handler_base::close()
+{
+	if (!_tunnel_next)
+	{
+		assert(false);
+		return;
+	}
+
+	_tunnel_next->close();
+}
+
+void	tcp_client_handler_base::shutdown(int32_t howto)	
+{ 
+	if (!_tunnel_next)
+	{
+		assert(false);
+		return;
+	}
+
+	_tunnel_next->shutdown(howto); 
+}
+
+void	tcp_client_handler_base::connect()
+{ 
+	if (!_tunnel_next)
+	{
+		assert(false);
+		return;
+	}
+
+	_tunnel_next->connect(); 
+}
+
+TCP_CLTCONN_STATE	tcp_client_handler_base::state()	
+{
+	if (!_tunnel_next)
+	{
+		assert(false);
+		return CNS_CLOSED;
+	}
+
+	return _tunnel_next->state(); 
+}
+
+std::shared_ptr<reactor_loop>	tcp_client_handler_base::reactor()
+{
+	return _reactor;
+}
+
+bool	tcp_client_handler_base::can_delete(bool force, long call_ref_count)			//端头如果有别的对象引用此，需要重载
+{
+	long ref = 0;
+	if (_tunnel_prev)
+	{
+		ref++;
+	}
+	if (_tunnel_next)
+	{
+		ref++;
+	}
+	if (call_ref_count + ref + 1 == shared_from_this().use_count())
+	{
+		// 成立，尝试向上查询
+		if (_tunnel_prev)
+		{
+			return _tunnel_prev->can_delete(force, 0);
+		}
+		else
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
+void	tcp_client_handler_base::inner_init(std::shared_ptr<reactor_loop> reactor, std::shared_ptr<tcp_client_handler_base> tunnel_prev, std::shared_ptr<tcp_client_handler_base> tunnel_next)
+{
+	_reactor = reactor;
+	_tunnel_prev = tunnel_prev;
+	_tunnel_next = tunnel_next;
+
+	on_init();
+}
+void	tcp_client_handler_base::inner_final()
+{
+	// 无需前置is_release判断，相信调用者
+	if (_tunnel_prev)
+	{
+		_tunnel_prev->inner_final();
+	}
+	_reactor = nullptr;
+	_tunnel_prev = nullptr;
+	_tunnel_next = nullptr;
+
+	on_final();
+}
+/////////////////channel
+
 tcp_client_channel::tcp_client_channel(const std::string& server_addr, std::chrono::seconds connect_timeout, std::chrono::seconds connect_retry_wait,
 	const uint32_t self_read_size, const uint32_t self_write_size, const uint32_t sock_read_size, const uint32_t sock_write_size)
 	: tcp_channel_base(INVALID_SOCKET, self_read_size, self_write_size, sock_read_size, sock_write_size),
@@ -13,6 +202,8 @@ tcp_client_channel::tcp_client_channel(const std::string& server_addr, std::chro
 
 	_sockio_helper_connect.bind(nullptr, std::bind(&tcp_client_channel::on_sockio_write_connect, this, std::placeholders::_1));
 	_sockio_helper.bind(std::bind(&tcp_client_channel::on_sockio_read, this, std::placeholders::_1), std::bind(&tcp_client_channel::on_sockio_write, this, std::placeholders::_1));
+
+	set_prepare();
 }
 
 tcp_client_channel::~tcp_client_channel()
@@ -22,10 +213,12 @@ tcp_client_channel::~tcp_client_channel()
 // 保证原子，考虑多线程环境下，buf最好是一个或若干完整包；可能触发错误/异常 on_error
 int32_t	tcp_client_channel::send(const void* buf, const size_t len)
 {
-	if (!is_valid())
+	if (!is_normal())
 	{
-		return (int32_t)CEC_INVALID_SOCKET;
+		assert(false);
+		return CEC_INVALID_SOCKET;
 	}
+
 	if (CNS_CONNECTED != _conn_state)
 	{
 		return (int32_t)CEC_INVALID_SOCKET;
@@ -36,7 +229,7 @@ int32_t	tcp_client_channel::send(const void* buf, const size_t len)
 
 void	tcp_client_channel::close()
 {
-	if (!is_valid())
+	if (is_dead())
 	{
 		return;
 	}
@@ -65,6 +258,7 @@ void	tcp_client_channel::close()
 		_conn_fd = INVALID_SOCKET;
 	}
 	_conn_state = CNS_CLOSED;
+	set_prepare();
 
 	on_closed();
 }
@@ -72,8 +266,9 @@ void	tcp_client_channel::close()
 // 参数参考全局函数 ::shutdown
 void	tcp_client_channel::shutdown(int32_t howto)
 {
-	if (!is_valid())
+	if (!is_prepare() && !is_normal())
 	{
+		assert(false);
 		return;
 	}
 	if (CNS_CONNECTED != _conn_state)
@@ -92,7 +287,7 @@ void	tcp_client_channel::shutdown(int32_t howto)
 
 void	tcp_client_channel::connect()
 {
-	if (!is_valid())
+	if (!is_prepare())
 	{
 		return;
 	}
@@ -142,6 +337,7 @@ void	tcp_client_channel::connect()
 		_conn_state = CNS_CONNECTED;
 		printf("start_sockio, %d\n", __LINE__);
 		_sockio_helper.start(SIT_READWRITE);
+		set_normal();
 		on_connect();
 	}
 	else
@@ -197,8 +393,9 @@ void	tcp_client_channel::on_timer_connect_retry_wait(timer_helper* timer_id)
 
 void tcp_client_channel::on_sockio_write_connect(sockio_helper* sockio_id)
 {
-	if (!is_valid())
+	if (!is_prepare())
 	{
+		assert(false);
 		return;
 	}
 	printf("on_sockio_write _conn_state %d, Line: %d\n", (int)_conn_state, __LINE__);
@@ -231,14 +428,16 @@ void tcp_client_channel::on_sockio_write_connect(sockio_helper* sockio_id)
 		printf("start_sockio, %d\n", __LINE__);
 
 		_sockio_helper.start(SIT_READWRITE);
+		set_normal();
 		on_connect();
 	}
 }
 
 void	tcp_client_channel::on_sockio_write(sockio_helper* sockio_id)
 {
-	if (!is_valid())
+	if (!is_normal())
 	{
+		assert(false);
 		return;
 	}
 	printf("on_sockio_write _conn_state %d, Line: %d\n", (int)_conn_state, __LINE__);
@@ -258,8 +457,9 @@ void	tcp_client_channel::on_sockio_write(sockio_helper* sockio_id)
 
 void	tcp_client_channel::on_sockio_read(sockio_helper* sockio_id)
 {
-	if (!is_valid())
+	if (!is_normal())
 	{
+		assert(false);
 		return;
 	}
 	printf("on_sockio_read _conn_state %d, Line: %d\n", (int)_conn_state, __LINE__);
@@ -275,13 +475,15 @@ void	tcp_client_channel::on_sockio_read(sockio_helper* sockio_id)
 	}
 }
 
-void	tcp_client_channel::invalid()
+void	tcp_client_channel::set_release()
 {
-	if (!is_valid())
+	if (is_release() || is_dead())
 	{
+		assert(false);
 		return;
 	}
-	double_state::invalid();
+
+	multiform_state::set_release();
 
 	_timer_connect_timeout.stop();
 	_timer_connect_retry_wait.stop();
@@ -295,9 +497,9 @@ void	tcp_client_channel::invalid()
 
 int32_t	tcp_client_channel::on_recv_buff(const void* buf, const size_t len, bool& left_partial_pkg)
 {
-	if (!is_valid())
+	if (!is_normal())
 	{
-		return 0;
+		return CEC_INVALID_SOCKET;
 	}
 	if (CNS_CONNECTED != _conn_state)
 	{
@@ -339,4 +541,19 @@ void tcp_client_channel::handle_close_strategy(CLOSE_MODE_STRATEGY cms)
 	{
 		close();	//内部会自动检查有效性
 	}
+}
+
+bool	tcp_client_channel::can_delete(bool force, long call_ref_count)
+{
+	if (force)
+	{
+		return tcp_client_handler_base::can_delete(force, call_ref_count);
+	}
+
+	if (!is_release())
+	{
+		return tcp_client_handler_base::can_delete(force, call_ref_count);
+	}
+
+	return false;
 }

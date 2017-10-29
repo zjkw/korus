@@ -21,6 +21,11 @@ public:
 	virtual void	on_final()
 	{
 	}
+	virtual bool	can_delete(bool force, long call_ref_count)//force为真表示强制查询，比如母体退出
+	{
+		// 因为没有被其他对象引用，本对象可在框架要求下退出,如force为真，可以主动与消去外界引用
+		return true;
+	}
 	virtual void	on_connect()	//连接已经建立
 	{
 		char szTest[] = "hello server, i am client!";

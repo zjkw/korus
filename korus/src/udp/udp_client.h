@@ -119,7 +119,7 @@ private:
 	void common_thread_exit(thread_object*	thread_obj, std::shared_ptr<reactor_loop> reactor, std::shared_ptr<udp_client_channel>	channel)
 	{
 		channel->set_release();
-		if (!channel->can_delete(1))
+		if (!channel->can_delete(true, 1))
 		{
 			channel->inner_final();
 		}
@@ -149,7 +149,7 @@ public:
 	virtual ~udp_client()
 	{
 		_channel->set_release();
-		if (!_channel->can_delete(1))
+		if (!_channel->can_delete(true, 1))
 		{
 			_channel->inner_final();
 		}

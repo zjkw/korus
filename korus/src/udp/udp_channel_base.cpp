@@ -107,6 +107,7 @@ int32_t		udp_channel_base::do_send_inlock(const void* buf, uint32_t	len, const s
 			{
 				continue;
 			}
+#if 0
 #if EAGAIN == EWOULDBLOCK
 			else if (errno == EAGAIN)
 #else
@@ -115,7 +116,7 @@ int32_t		udp_channel_base::do_send_inlock(const void* buf, uint32_t	len, const s
 			{
 				break;
 			}
-
+#endif
 			return (int32_t)CEC_WRITE_FAILED;
 		}
 		else

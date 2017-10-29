@@ -56,6 +56,7 @@ private:
 	void run_once_inner();
 };
 
+// 增加tail是因为tail需要更多与框架交互，而这要求更多的个性化派生类而非base基类接口
 template<typename T>
 bool build_chain(std::shared_ptr<reactor_loop> reactor, T tail, const std::list<std::function<T()> >& chain)
 {

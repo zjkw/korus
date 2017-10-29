@@ -19,7 +19,7 @@ using udp_client_channel_factory_chain_t = std::list<udp_client_channel_factory_
 
 // 可能处于多线程环境下
 // on_error不能纯虚 tbd，加上close默认处理
-class udp_client_handler_base : public std::enable_shared_from_this<udp_client_handler_base>, public multiform_state
+class udp_client_handler_base : public std::enable_shared_from_this<udp_client_handler_base>
 {
 public:
 	udp_client_handler_base();
@@ -38,7 +38,7 @@ public:
 	virtual int32_t	send(const void* buf, const size_t len, const sockaddr_in& peer_addr);
 	virtual void	close();
 	std::shared_ptr<reactor_loop>	reactor();
-	virtual bool	can_delete(long call_ref_count);
+	virtual bool	can_delete(bool force, long call_ref_count);
 
 private:
 	template<typename T> friend bool build_chain(std::shared_ptr<reactor_loop> reactor, T tail, const std::list<std::function<T()> >& chain);
@@ -52,7 +52,7 @@ private:
 };
 
 //有效性优先级：is_valid > INVALID_SOCKET,即所有函数都会先判断is_valid这是个原子操作
-class udp_client_channel : public udp_channel_base, public udp_client_handler_base
+class udp_client_channel : public udp_channel_base, public udp_client_handler_base, public multiform_state
 {
 public:
 	udp_client_channel(const uint32_t self_read_size, const uint32_t self_write_size, const uint32_t sock_read_size, const uint32_t sock_write_size);
@@ -65,12 +65,13 @@ public:
 
 private:
 	template<typename T> friend class udp_client;
-	void		set_release();
+	virtual void		set_release();
 
 	sockio_helper	_sockio_helper;
 	virtual void on_sockio_read(sockio_helper* sockio_id);
 
 	virtual	int32_t	on_recv_buff(const void* buf, const size_t len, const sockaddr_in& peer_addr);
+	virtual bool	can_delete(bool force, long call_ref_count);
 
 	void handle_close_strategy(CLOSE_MODE_STRATEGY cms);
 };

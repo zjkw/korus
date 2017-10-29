@@ -19,7 +19,7 @@ using udp_server_channel_factory_chain_t = std::list<udp_server_channel_factory_
 
 // 可能处于多线程环境下
 // on_error不能纯虚 tbd，加上close默认处理
-class udp_server_handler_base : public std::enable_shared_from_this<udp_server_handler_base>, public multiform_state
+class udp_server_handler_base : public std::enable_shared_from_this<udp_server_handler_base>
 {
 public:
 	udp_server_handler_base();
@@ -38,7 +38,7 @@ public:
 	virtual int32_t	send(const void* buf, const size_t len, const sockaddr_in& peer_addr);
 	virtual void	close();
 	std::shared_ptr<reactor_loop>	reactor();
-	virtual bool	can_delete(long call_ref_count);
+	virtual bool	can_delete(bool force, long call_ref_count);//force为真表示强制查询，比如母体退出
 
 private:
 	template<typename T> friend bool build_chain(std::shared_ptr<reactor_loop> reactor, T tail, const std::list<std::function<T()> >& chain);
@@ -51,7 +51,7 @@ private:
 	std::shared_ptr<udp_server_handler_base>	_tunnel_next;
 };
 
-class udp_server_channel : public udp_channel_base, public udp_server_handler_base
+class udp_server_channel : public udp_channel_base, public udp_server_handler_base, public multiform_state
 {
 public:
 	udp_server_channel(const std::string& local_addr, const uint32_t self_read_size, const uint32_t self_write_size, const uint32_t sock_read_size, const uint32_t sock_write_size);
@@ -60,7 +60,7 @@ public:
 	// 下面四个函数可能运行在多线程环境下	
 	virtual int32_t		send(const void* buf, const size_t len, const sockaddr_in& peer_addr);// 保证原子, 认为是整包，返回值若<0参考CHANNEL_ERROR_CODE
 	virtual void		close();
-	bool		start();
+	bool				start();
 
 private:
 	template<typename T> friend class udp_server;
@@ -70,6 +70,7 @@ private:
 	virtual void on_sockio_read(sockio_helper* sockio_id);
 
 	virtual	int32_t	on_recv_buff(const void* buf, const size_t len, const sockaddr_in& peer_addr);
+	virtual bool	can_delete(bool force, long call_ref_count);
 
 	void handle_close_strategy(CLOSE_MODE_STRATEGY cms);
 };

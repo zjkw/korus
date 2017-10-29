@@ -12,7 +12,10 @@ class tcp_server_handler : public tcp_server_handler_base
 {
 public:
 	tcp_server_handler(){}
-	virtual ~tcp_server_handler(){}
+	virtual ~tcp_server_handler()
+	{
+		printf("\nexit: 0x%x\n", this);
+	}
 
 	//override------------------
 	virtual void	on_init()
@@ -20,6 +23,12 @@ public:
 	}
 	virtual void	on_final()
 	{
+	}
+	virtual bool	can_delete(bool force, long call_ref_count)//force为真表示强制查询，比如母体退出
+	{
+		printf("\nref: %d\n", shared_from_this().use_count() - 1);
+		// 因为没有被其他对象引用，本对象可在框架要求下退出,如force为真，可以主动与消去外界引用
+		return true;
 	}
 	virtual void	on_accept()	//连接已经建立
 	{

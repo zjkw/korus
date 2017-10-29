@@ -112,8 +112,8 @@ private:
 	}
 	void thread_exit(thread_object*	thread_obj, std::shared_ptr<reactor_loop> reactor, std::shared_ptr<tcp_client_channel> channel)
 	{
-		channel->invalid();	//可能上层还保持间接或直接引用，这里使其失效：“只管功能失效化，不管生命期释放”
-		if (!channel->can_delete(1))
+		channel->set_release();	//可能上层还保持间接或直接引用，这里使其失效：“只管功能失效化，不管生命期释放”
+		if (!channel->can_delete(true, 1))
 		{
 			channel->inner_final();
 		}
@@ -142,8 +142,8 @@ public:
 
 	virtual ~tcp_client()
 	{
-		_channel->invalid();
-		if (!_channel->can_delete(1))
+		_channel->set_release();
+		if (!_channel->can_delete(true, 1))
 		{
 			_channel->inner_final();
 		}
