@@ -37,12 +37,7 @@ public:
 		_self_read_size(self_read_size), _self_write_size(self_write_size), _sock_read_size(sock_read_size), _sock_write_size(sock_write_size)
 	{
 		_factory_chain.push_back(factory);
-		_tid = std::this_thread::get_id();
-		if (!_thread_num)
-		{
-			_thread_num = (uint16_t)sysconf(_SC_NPROCESSORS_CONF);
-		}
-		srand(time(NULL));
+		inner_init();
 	}
 
 	virtual ~tcp_client()
@@ -55,7 +50,7 @@ public:
 		_thread_pool.clear();
 	}
 
-	void start()
+	virtual void start()
 	{
 		//必须同个线程，避免数据管理问题：构造/析构不与start不在一个线程将会使得问题复杂化：假设tcp_server是非引用计数的，生命期结束/析构时候同时又遇到了其他线程调用start
 		if (_tid != std::this_thread::get_id())
@@ -84,12 +79,24 @@ public:
 		}
 	}
 
+protected:
+	tcp_client_channel_factory_chain_t		_factory_chain;
+	void inner_init()
+	{
+		_tid = std::this_thread::get_id();
+		if (!_thread_num)
+		{
+			_thread_num = (uint16_t)sysconf(_SC_NPROCESSORS_CONF);
+		}
+		srand(time(NULL));
+	}
+
 private:
 	std::thread::id							_tid;
 	uint16_t								_thread_num;
 	std::map<uint16_t, thread_object*>		_thread_pool;
 	std::atomic_flag						_start = ATOMIC_FLAG_INIT;
-	tcp_client_channel_factory_chain_t		_factory_chain;
+
 	std::string								_server_addr;
 	std::chrono::seconds					_connect_timeout;
 	std::chrono::seconds					_connect_retry_wait;
@@ -134,10 +141,7 @@ public:
 		tcp_client_channel_factory_chain_t factory_chain;
 		factory_chain.push_back(factory);
 		
-		// 构造中执行::connect，无需外部手动调用
-		_channel = std::make_shared<tcp_client_channel>(server_addr, connect_timeout, connect_retry_wait, self_read_size, self_write_size, sock_read_size, sock_write_size);
-		build_chain(reactor, std::dynamic_pointer_cast<tcp_client_handler_base>(_channel), factory_chain);
-		_channel->connect();
+		inner_init(reactor, server_addr, factory_chain,	connect_timeout, connect_retry_wait, self_read_size, self_write_size, sock_read_size, sock_write_size);
 	}
 
 	virtual ~tcp_client()
@@ -150,6 +154,16 @@ public:
 		_channel = nullptr;
 	}
 	
+protected:
+	void inner_init(std::shared_ptr<reactor_loop> reactor, const std::string& server_addr, tcp_client_channel_factory_chain_t factory_chain,
+		std::chrono::seconds connect_timeout, std::chrono::seconds connect_retry_wait,
+		const uint32_t self_read_size, const uint32_t self_write_size, const uint32_t sock_read_size, const uint32_t sock_write_size)
+	{
+		// 构造中执行::connect，无需外部手动调用
+		_channel = std::make_shared<tcp_client_channel>(server_addr, connect_timeout, connect_retry_wait, self_read_size, self_write_size, sock_read_size, sock_write_size);
+		build_chain(reactor, std::dynamic_pointer_cast<tcp_client_handler_base>(_channel), factory_chain);
+		_channel->connect();
+	}
 private:
 	std::shared_ptr<tcp_client_channel>	_channel;
 };

@@ -8,13 +8,13 @@
 #define min(a,b) (((a) < (b)) ? (a) : (b))  
 #endif
 
-class tcp_server_handler : public tcp_server_handler_base
+class tcp_client_handler : public tcp_client_handler_base
 {
 public:
-	tcp_server_handler(){}
-	virtual ~tcp_server_handler()
+	tcp_client_handler(){}
+	virtual ~tcp_client_handler()
 	{
-		printf("\nexit: 0x%x\n", this);
+		printf("\nexit: 0x%p\n", this);
 	}
 
 	//override------------------
@@ -26,15 +26,14 @@ public:
 	}
 	virtual bool	can_delete(bool force, long call_ref_count)//force为真表示强制查询，比如母体退出
 	{
-		printf("\nref: %d\n", shared_from_this().use_count() - 1);
 		// 因为没有被其他对象引用，本对象可在框架要求下退出,如force为真，可以主动与消去外界引用
 		return true;
 	}
-	virtual void	on_accept()	//连接已经建立
+	virtual void	on_connect()	//连接已经建立
 	{
-		char szTest[] = "hello client, i am server!";
+		char szTest[] = "hello server, i am client!";
 		int32_t ret = send(szTest, strlen(szTest));
-		printf("\nConnected/accepted, then Send %s, ret: %d\n", szTest, ret);
+		printf("\nConnected, then Send %s, ret: %d\n", szTest, ret);
 	}
 
 	virtual void	on_closed()
@@ -59,17 +58,17 @@ public:
 	//这是一个待处理的完整包
 	virtual void	on_recv_pkg(const void* buf, const size_t len)
 	{
-		char szTest[1024] = { 0 };
+		char szTest[1024] = {0};
 		memcpy(szTest, buf, min(len, 1023));
 		printf("\non_recv_pkg: %s, len: %u\n", szTest, len);
 	}
 };
 
-std::shared_ptr<tcp_server_handler_base> channel_factory()
+std::shared_ptr<tcp_client_handler_base> channel_factory()
 {
-	std::shared_ptr<tcp_server_handler> handler = std::make_shared<tcp_server_handler>();
-	std::shared_ptr<tcp_server_handler_base> cb = std::dynamic_pointer_cast<tcp_server_handler_base>(handler);
-	return cb;
+//	std::shared_ptr<tcp_client_handler> handler = std::make_shared<tcp_client_handler>();
+//	std::shared_ptr<tcp_client_handler_base> cb = std::dynamic_pointer_cast<tcp_client_handler_base>(handler);
+	return nullptr;
 }
 
 int main(int argc, char* argv[]) 
@@ -84,11 +83,11 @@ int main(int argc, char* argv[])
 		return 0;
 	}
 
-	addr = std::string("0.0.0.0:") + argv[1];
+	addr = std::string("127.0.0.1:") + argv[1];
 	thread_num = (uint16_t)atoi(argv[2]);
 		
-	tcp_server<uint16_t> server(thread_num, addr, channel_factory);
-	server.start();
+	socks5_tcp_client<uint16_t> client(thread_num, addr, channel_factory);
+//	client.start();
 	for (;;)
 	{
 		sleep(1);

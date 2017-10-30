@@ -40,12 +40,7 @@ public:
 #endif
 	{
 		_factory_chain.push_back(factory);
-		_tid = std::this_thread::get_id();
-		if (!_thread_num)
-		{
-			_thread_num = (uint16_t)sysconf(_SC_NPROCESSORS_CONF);
-		}
-		srand(time(NULL));
+		inner_init();
 	}
 
 	virtual ~tcp_server()
@@ -119,6 +114,17 @@ public:
 			}
 #endif
 		}
+	}
+
+protected:
+	void inner_init()
+	{
+		_tid = std::this_thread::get_id();
+		if (!_thread_num)
+		{
+			_thread_num = (uint16_t)sysconf(_SC_NPROCESSORS_CONF);
+		}
+		srand(time(NULL));
 	}
 
 private:
@@ -238,10 +244,8 @@ public:
 	{
 		tcp_server_channel_factory_chain_t	factory_chain;
 		factory_chain.push_back(factory);
-		_creator = new tcp_server_channel_creator(reactor, factory_chain, self_read_size, self_write_size, sock_read_size, sock_write_size);
-		_listen = new tcp_listen(reactor, listen_addr, backlog, defer_accept);
-		_listen->add_accept_handler(std::bind(&tcp_server_channel_creator::on_newfd, _creator, std::placeholders::_1, std::placeholders::_2)); //fd + sockaddr_in
-		_listen->start();
+
+		inner_init(reactor, listen_addr, factory_chain, backlog, defer_accept, self_read_size, self_write_size, sock_read_size, sock_write_size);
 	}
 
 	virtual ~tcp_server()
@@ -250,6 +254,16 @@ public:
 		delete _creator;
 	}
 	
+protected:
+	void inner_init(std::shared_ptr<reactor_loop> reactor, const std::string& listen_addr, const tcp_server_channel_factory_chain_t& factory_chain, uint32_t backlog, uint32_t defer_accept,
+		const uint32_t self_read_size, const uint32_t self_write_size, const uint32_t sock_read_size, const uint32_t sock_write_size)
+	{
+		_creator = new tcp_server_channel_creator(reactor, factory_chain, self_read_size, self_write_size, sock_read_size, sock_write_size);
+		_listen = new tcp_listen(reactor, listen_addr, backlog, defer_accept);
+		_listen->add_accept_handler(std::bind(&tcp_server_channel_creator::on_newfd, _creator, std::placeholders::_1, std::placeholders::_2)); //fd + sockaddr_in
+		_listen->start();
+	}
+
 private:
 	tcp_listen*								_listen;
 	tcp_server_channel_creator*				_creator;

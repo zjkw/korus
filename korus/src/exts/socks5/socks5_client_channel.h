@@ -1,4 +1,5 @@
 #pragma once
+
 class socks5_client_channel
 {
 public:
