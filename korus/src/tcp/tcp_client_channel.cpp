@@ -24,7 +24,7 @@ void	tcp_client_handler_base::on_final()
 {
 }
 
-void	tcp_client_handler_base::on_connect()	
+void	tcp_client_handler_base::on_connected()	
 {
 	if (!_tunnel_prev)
 	{
@@ -32,7 +32,7 @@ void	tcp_client_handler_base::on_connect()
 		return;
 	}
 
-	_tunnel_prev->on_connect();
+	_tunnel_prev->on_connected();
 }
 
 void	tcp_client_handler_base::on_closed()
@@ -179,6 +179,8 @@ void	tcp_client_handler_base::inner_init(std::shared_ptr<reactor_loop> reactor, 
 }
 void	tcp_client_handler_base::inner_final()
 {
+	on_final();
+
 	// 无需前置is_release判断，相信调用者
 	if (_tunnel_prev)
 	{
@@ -187,8 +189,6 @@ void	tcp_client_handler_base::inner_final()
 	_reactor = nullptr;
 	_tunnel_prev = nullptr;
 	_tunnel_next = nullptr;
-
-	on_final();
 }
 /////////////////channel
 
@@ -338,7 +338,7 @@ void	tcp_client_channel::connect()
 		printf("start_sockio, %d\n", __LINE__);
 		_sockio_helper.start(SIT_READWRITE);
 		set_normal();
-		on_connect();
+		on_connected();
 	}
 	else
 	{
@@ -429,7 +429,7 @@ void tcp_client_channel::on_sockio_write_connect(sockio_helper* sockio_id)
 
 		_sockio_helper.start(SIT_READWRITE);
 		set_normal();
-		on_connect();
+		on_connected();
 	}
 }
 

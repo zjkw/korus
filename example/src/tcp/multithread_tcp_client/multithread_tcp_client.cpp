@@ -29,7 +29,7 @@ public:
 		// 因为没有被其他对象引用，本对象可在框架要求下退出,如force为真，可以主动与消去外界引用
 		return true;
 	}
-	virtual void	on_connect()	//连接已经建立
+	virtual void	on_connected()	//连接已经建立
 	{
 		char szTest[] = "hello server, i am client!";
 		int32_t ret = send(szTest, strlen(szTest));

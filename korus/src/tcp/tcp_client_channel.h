@@ -39,7 +39,7 @@ public:
 	//override------------------
 	virtual void	on_init();
 	virtual void	on_final();
-	virtual void	on_connect();
+	virtual void	on_connected();
 	virtual void	on_closed();
 	//²Î¿¼CHANNEL_ERROR_CODE¶¨Òå
 	virtual CLOSE_MODE_STRATEGY	on_error(CHANNEL_ERROR_CODE code);

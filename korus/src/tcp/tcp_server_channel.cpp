@@ -157,6 +157,8 @@ void	tcp_server_handler_base::inner_init(std::shared_ptr<reactor_loop> reactor, 
 }
 void	tcp_server_handler_base::inner_final()
 {
+	on_final();
+
 	if (_tunnel_prev)
 	{
 		_tunnel_prev->inner_final();
@@ -164,8 +166,6 @@ void	tcp_server_handler_base::inner_final()
 	_reactor = nullptr;
 	_tunnel_prev = nullptr;
 	_tunnel_next = nullptr;
-
-	on_final();
 }
 
 ///////////////////////////channel

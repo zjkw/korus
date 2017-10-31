@@ -29,7 +29,7 @@ public:
 		// 因为没有被其他对象引用，本对象可在框架要求下退出,如force为真，可以主动与消去外界引用
 		return true;
 	}
-	virtual void	on_connect()	//连接已经建立
+	virtual void	on_connected()	//连接已经建立
 	{
 		char szTest[] = "hello server, i am client!";
 		int32_t ret = send(szTest, strlen(szTest));
@@ -66,8 +66,8 @@ public:
 
 std::shared_ptr<tcp_client_handler_base> channel_factory()
 {
-//	std::shared_ptr<tcp_client_handler> handler = std::make_shared<tcp_client_handler>();
-//	std::shared_ptr<tcp_client_handler_base> cb = std::dynamic_pointer_cast<tcp_client_handler_base>(handler);
+	std::shared_ptr<tcp_client_handler> handler = std::make_shared<tcp_client_handler>();
+	std::shared_ptr<tcp_client_handler_base> cb = std::dynamic_pointer_cast<tcp_client_handler_base>(handler);
 	return nullptr;
 }
 
@@ -87,7 +87,7 @@ int main(int argc, char* argv[])
 	thread_num = (uint16_t)atoi(argv[2]);
 		
 	socks5_tcp_client<uint16_t> client(thread_num, addr, channel_factory);
-//	client.start();
+	client.start();
 	for (;;)
 	{
 		sleep(1);

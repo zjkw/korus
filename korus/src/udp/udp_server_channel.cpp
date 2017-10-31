@@ -133,6 +133,8 @@ void	udp_server_handler_base::inner_init(std::shared_ptr<reactor_loop> reactor, 
 }
 void	udp_server_handler_base::inner_final()
 {
+	on_final();
+
 	// 无需前置is_release判断，相信调用者
 	if (_tunnel_prev)
 	{
@@ -141,8 +143,6 @@ void	udp_server_handler_base::inner_final()
 	_reactor = nullptr;
 	_tunnel_prev = nullptr;
 	_tunnel_next = nullptr;
-
-	on_final();
 }
 
 //////////////////////////////////channel
