@@ -2,55 +2,220 @@
 
 #include "string.h"
 #include "korus/src/tcp/tcp_client.h"
-#include "socks5_client_channel.h"
-/////////////////////////////////////// tcp_client
+#include "korus/src/udp/udp_client.h"
+#include "socks5_connectcmd_client_channel.h"
+#include "socks5_connectcmd_embedbind_client_channel.h"	//取代bindcmd作为入口
+#include "socks5_associatecmd_client_channel.h"
+/////////////////////////////////////// connect_cmd_mode
+
 // 占坑
 template<typename T>
-class socks5_tcp_client
+class socks5_connectcmd_client
 {
 public:
-	socks5_tcp_client(){}
-	virtual ~socks5_tcp_client(){}
+	socks5_connectcmd_client(){}
+	virtual ~socks5_connectcmd_client(){}
 };
 
 template <>
-class socks5_tcp_client<uint16_t> : public tcp_client<uint16_t>
+class socks5_connectcmd_client<uint16_t> : public tcp_client<uint16_t>
 {
 public:
-	socks5_tcp_client(uint16_t thread_num, const std::string& server_addr, const tcp_client_channel_factory_t& factory,
+	socks5_connectcmd_client(uint16_t thread_num, const std::string& proxy_addr, const std::string& server_addr, const tcp_client_channel_factory_t& factory,
+		const std::string& socks_user = "", const std::string& socks_psw = "",	// 如果账号为空，将忽略密码，认为是无需鉴权
 		std::chrono::seconds connect_timeout = std::chrono::seconds(0), std::chrono::seconds connect_retry_wait = std::chrono::seconds(-1),
 		const uint32_t self_read_size = DEFAULT_READ_BUFSIZE, const uint32_t self_write_size = DEFAULT_WRITE_BUFSIZE, const uint32_t sock_read_size = 0, const uint32_t sock_write_size = 0)
-		: tcp_client(thread_num, server_addr, factory,	connect_timeout, connect_retry_wait, self_read_size, self_write_size, sock_read_size, sock_write_size)
+		: tcp_client(thread_num, proxy_addr, factory, connect_timeout, connect_retry_wait, self_read_size, self_write_size, sock_read_size, sock_write_size),
+		_server_addr(_server_addr), _socks_user(socks_user), _socks_psw(socks_psw)
 	{
-		_factory_chain.push_back(factory);
-		_factory_chain.push_back(std::bind(&socks5_tcp_client::socks5_channel_factory, this));
-		inner_init();
+		_factory_chain.push_back(std::bind(&socks5_connectcmd_client::socks5_channel_factory, this));
 	}
-	virtual ~socks5_tcp_client()
+	virtual ~socks5_connectcmd_client()
 	{
-	}
-
-	void	add_method_noauth()
-	{
-		SOCKS_METHOD_DATA	data;
-		_method_list[SMT_NOAUTH] = data;
-	}
-	void	add_method_userpsw(const std::string& user, const std::string& psw)
-	{
-		SOCKS_METHOD_DATA	data;
-		strncpy(data.userpsw.user, user.data(), sizeof(data.userpsw.user));
-		strncpy(data.userpsw.psw, psw.data(), sizeof(data.userpsw.psw));
-		_method_list[SMT_USERPSW] = data;
 	}
 
 private:
 	std::shared_ptr<tcp_client_handler_base>	socks5_channel_factory()
 	{
-		std::shared_ptr<socks5_tcp_client_channel>	channel = std::make_shared<socks5_tcp_client_channel>(_method_list);
-		return std::dynamic_pointer_cast<tcp_client_handler_base>(channel);
+		std::shared_ptr<socks5_connectcmd_client_channel>	channel = std::make_shared<socks5_connectcmd_client_channel>(_server_addr, _socks_user, _socks_psw);
+		std::dynamic_pointer_cast<tcp_client_handler_base>(channel);
 	}
 
-	std::map<SOCKS_METHOD_TYPE, SOCKS_METHOD_DATA>	_method_list;
+	std::string _server_addr;
+	std::string _socks_user;
+	std::string _socks_psw;
 };
 
-///////////////////////////////////// udp_client
+template <>
+class socks5_connectcmd_client<reactor_loop> : public tcp_client<reactor_loop>
+{
+public:
+	// addr格式ip:port
+	socks5_connectcmd_client(std::shared_ptr<reactor_loop> reactor, const std::string& proxy_addr, const std::string& server_addr, const tcp_client_channel_factory_t& factory,
+		const std::string& socks_user = "", const std::string& socks_psw = "",	// 如果账号为空，将忽略密码，认为是无需鉴权
+		std::chrono::seconds connect_timeout = std::chrono::seconds(0), std::chrono::seconds connect_retry_wait = std::chrono::seconds(-1),
+		const uint32_t self_read_size = DEFAULT_READ_BUFSIZE, const uint32_t self_write_size = DEFAULT_WRITE_BUFSIZE, const uint32_t sock_read_size = 0, const uint32_t sock_write_size = 0)
+		: tcp_client(reactor, proxy_addr, factory, connect_timeout, connect_retry_wait, self_read_size, self_write_size, sock_read_size, sock_write_size),
+		_server_addr(_server_addr), _socks_user(socks_user), _socks_psw(socks_psw)
+	{
+		_factory_chain.push_back(std::bind(&socks5_connectcmd_client::socks5_channel_factory, this));
+	}
+
+	virtual ~socks5_connectcmd_client()
+	{
+	}
+private:
+	std::shared_ptr<tcp_client_handler_base>	socks5_channel_factory()
+	{
+		std::shared_ptr<socks5_connectcmd_client_channel>	channel = std::make_shared<socks5_connectcmd_client_channel>(_server_addr, _socks_user, _socks_psw);
+		std::dynamic_pointer_cast<tcp_client_handler_base>(channel);
+	}
+
+	std::string _server_addr;
+	std::string _socks_user;
+	std::string _socks_psw;
+};
+
+
+///////////////////////////////////// bind_cmd_mode
+// 占坑
+template<typename T>
+class socks5_bindcmd_client
+{
+public:
+	socks5_bindcmd_client(){}
+	virtual ~socks5_bindcmd_client(){}
+};
+
+template <>
+class socks5_bindcmd_client<uint16_t> : public tcp_client<uint16_t>
+{
+public:
+	// 设计考虑：其实外层也可以单独connect + bind进行组合操作，但是因为模板固话了多线程，所以一旦这么做则用户层需要将两个连接配对，这增加了管理和参数传递的麻烦，并且时序（先connect后bind）无法得到保证
+	socks5_bindcmd_client(uint16_t thread_num, const std::string& proxy_addr, const std::string& server_addr, const tcp_client_channel_factory_t& ctrl_channel_factory, const tcp_client_channel_factory_t& data_channel_factory,
+		const std::string& socks_user = "", const std::string& socks_psw = "",	// 如果账号为空，将忽略密码，认为是无需鉴权
+		std::chrono::seconds connect_timeout = std::chrono::seconds(0), std::chrono::seconds connect_retry_wait = std::chrono::seconds(-1),
+		const uint32_t self_read_size = DEFAULT_READ_BUFSIZE, const uint32_t self_write_size = DEFAULT_WRITE_BUFSIZE, const uint32_t sock_read_size = 0, const uint32_t sock_write_size = 0)
+		: _ctrl_channel_factory(ctrl_channel_factory), _data_channel_factory(data_channel_factory), _server_addr(_server_addr), _socks_user(socks_user), _socks_psw(socks_psw),
+		tcp_client(thread_num, proxy_addr, std::bind(&socks5_bindcmd_client::socks5_channel_factory, this), connect_timeout, connect_retry_wait, self_read_size, self_write_size, sock_read_size, sock_write_size)
+	{
+	}
+	virtual ~socks5_bindcmd_client()
+	{
+	}
+
+private:
+	std::shared_ptr<tcp_client_handler_base>	socks5_channel_factory()
+	{
+		std::shared_ptr<socks5_connectcmd_embedbind_client_channel>	channel = std::make_shared<socks5_connectcmd_embedbind_client_channel>(_server_addr, _socks_user, _socks_psw);
+		std::dynamic_pointer_cast<tcp_client_handler_base>(channel);
+	}
+	
+	std::string _server_addr;
+	std::string _socks_user;
+	std::string _socks_psw;
+	tcp_client_channel_factory_t _ctrl_channel_factory;	
+	tcp_client_channel_factory_t _data_channel_factory;
+};
+
+template <>
+class socks5_bindcmd_client<reactor_loop> : public tcp_client<reactor_loop>
+{
+public:
+	// addr格式ip:port
+	socks5_bindcmd_client(std::shared_ptr<reactor_loop> reactor, const std::string& proxy_addr, const std::string& server_addr, const tcp_client_channel_factory_t& ctrl_channel_factory, const tcp_client_channel_factory_t& data_channel_factory,
+		const std::string& socks_user = "", const std::string& socks_psw = "",	// 如果账号为空，将忽略密码，认为是无需鉴权
+		std::chrono::seconds connect_timeout = std::chrono::seconds(0), std::chrono::seconds connect_retry_wait = std::chrono::seconds(-1),
+		const uint32_t self_read_size = DEFAULT_READ_BUFSIZE, const uint32_t self_write_size = DEFAULT_WRITE_BUFSIZE, const uint32_t sock_read_size = 0, const uint32_t sock_write_size = 0)
+		: _ctrl_channel_factory(ctrl_channel_factory), _data_channel_factory(data_channel_factory), _server_addr(_server_addr), _socks_user(socks_user), _socks_psw(socks_psw), 
+		tcp_client(reactor, proxy_addr, std::bind(&socks5_bindcmd_client::socks5_channel_factory, this), connect_timeout, connect_retry_wait, self_read_size, self_write_size, sock_read_size, sock_write_size)
+	{
+	}
+
+	virtual ~socks5_bindcmd_client()
+	{
+	}
+
+private:
+	std::shared_ptr<tcp_client_handler_base>	socks5_channel_factory()
+	{
+		std::shared_ptr<socks5_connectcmd_embedbind_client_channel>	channel = std::make_shared<socks5_connectcmd_embedbind_client_channel>(_server_addr, _socks_user, _socks_psw);
+		std::dynamic_pointer_cast<tcp_client_handler_base>(channel);
+	}
+
+	std::string _server_addr;
+	std::string _socks_user;
+	std::string _socks_psw;
+	tcp_client_channel_factory_t _ctrl_channel_factory;
+	tcp_client_channel_factory_t _data_channel_factory;
+};
+
+///////////////////////////////////// assocate_cmd_mode
+
+template<typename T>
+class socks5_associatecmd_client
+{
+public:
+	socks5_associatecmd_client(){}
+	virtual ~socks5_associatecmd_client(){}
+};
+
+template <>
+class socks5_associatecmd_client<uint16_t> : public tcp_client<uint16_t>
+{
+public:
+	socks5_associatecmd_client(uint16_t thread_num, const std::string& proxy_addr, const std::string& server_addr, const udp_client_channel_factory_t& factory,
+		const std::string& socks_user = "", const std::string& socks_psw = "",	// 如果账号为空，将忽略密码，认为是无需鉴权
+		std::chrono::seconds connect_timeout = std::chrono::seconds(0), std::chrono::seconds connect_retry_wait = std::chrono::seconds(-1),
+		const uint32_t self_read_size = DEFAULT_READ_BUFSIZE, const uint32_t self_write_size = DEFAULT_WRITE_BUFSIZE, const uint32_t sock_read_size = 0, const uint32_t sock_write_size = 0)
+		: _server_addr(_server_addr), _socks_user(socks_user), _socks_psw(socks_psw), _udp_client_channel_factory(factory),
+		tcp_client(thread_num, proxy_addr, std::bind(&socks5_associatecmd_client::socks5_channel_factory, this), connect_timeout, connect_retry_wait, self_read_size, self_write_size, sock_read_size, sock_write_size)
+	{
+	}
+	virtual ~socks5_associatecmd_client()
+	{
+	}
+
+private:
+	std::shared_ptr<tcp_client_handler_base>	socks5_channel_factory()	//原生channel
+	{
+		std::shared_ptr<socks5_associatecmd_client_channel>	channel = std::make_shared<socks5_associatecmd_client_channel>(_server_addr, _socks_user, _socks_psw, _udp_client_channel_factory);
+		std::dynamic_pointer_cast<tcp_client_handler_base>(channel);
+	}
+	
+	std::string _server_addr;
+	std::string _socks_user;
+	std::string _socks_psw;
+	udp_client_channel_factory_t _udp_client_channel_factory;
+};
+
+template <>
+class socks5_associatecmd_client<reactor_loop> : public tcp_client<reactor_loop>
+{
+public:
+	// addr格式ip:port
+	socks5_associatecmd_client(std::shared_ptr<reactor_loop> reactor, const std::string& proxy_addr, const std::string& server_addr, const udp_client_channel_factory_t& factory,
+		const std::string& socks_user = "", const std::string& socks_psw = "",	// 如果账号为空，将忽略密码，认为是无需鉴权
+		std::chrono::seconds connect_timeout = std::chrono::seconds(0), std::chrono::seconds connect_retry_wait = std::chrono::seconds(-1),
+		const uint32_t self_read_size = DEFAULT_READ_BUFSIZE, const uint32_t self_write_size = DEFAULT_WRITE_BUFSIZE, const uint32_t sock_read_size = 0, const uint32_t sock_write_size = 0)
+		: _server_addr(_server_addr), _socks_user(socks_user), _socks_psw(socks_psw), _udp_client_channel_factory(factory),
+		tcp_client(reactor, proxy_addr, std::bind(&socks5_associatecmd_client::socks5_channel_factory, this), connect_timeout, connect_retry_wait, self_read_size, self_write_size, sock_read_size, sock_write_size)		
+	{
+	}
+
+	virtual ~socks5_associatecmd_client()
+	{
+	}
+
+private:
+	std::shared_ptr<tcp_client_handler_base>	socks5_channel_factory()	//原生channel
+	{
+		std::shared_ptr<socks5_associatecmd_client_channel>	channel = std::make_shared<socks5_associatecmd_client_channel>(_server_addr, _socks_user, _socks_psw, _udp_client_channel_factory);
+		std::dynamic_pointer_cast<tcp_client_handler_base>(channel);
+	}
+
+	std::string _server_addr;
+	std::string _socks_user;
+	std::string _socks_psw;
+	udp_client_channel_factory_t _udp_client_channel_factory;
+};

@@ -86,7 +86,7 @@ int main(int argc, char* argv[])
 	addr = std::string("127.0.0.1:") + argv[1];
 	thread_num = (uint16_t)atoi(argv[2]);
 		
-	socks5_tcp_client<uint16_t> client(thread_num, addr, channel_factory);
+	socks5_connectcmd_client<uint16_t> client(thread_num, addr, addr, channel_factory);
 	client.start();
 	for (;;)
 	{

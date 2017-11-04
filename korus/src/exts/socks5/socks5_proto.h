@@ -37,6 +37,14 @@ enum SOCKS_CLIENT_STATE
 	SCS_NORMAL = 7,
 };
 
+enum SOCKS_TUNNEL_TYPE
+{
+	STT_NONE = 0,
+	STT_CONNECT = 1,
+	STT_BIND = 2,	
+	STT_ASSOCATE = 3,
+};
+
 /* Socks5 version packet */
 typedef struct {
 	char ver;

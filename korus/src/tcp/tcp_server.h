@@ -39,8 +39,8 @@ public:
 				, _listen_thread(nullptr), _is_listen_init(false), _alone_listen(nullptr), _num_worker_ready(0)
 #endif
 	{
+		_tid = std::this_thread::get_id();
 		_factory_chain.push_back(factory);
-		inner_init();
 	}
 
 	virtual ~tcp_server()
@@ -58,7 +58,7 @@ public:
 		_thread_pool.clear();
 	}
 
-	void start()
+	virtual void start()
 	{
 		//必须同个线程，避免数据管理问题：构造/析构不与start不在一个线程将会使得问题复杂化：假设tcp_server是非引用计数的，生命期结束/析构时候同时又遇到了其他线程调用start
 		if (_tid != std::this_thread::get_id())
@@ -70,6 +70,8 @@ public:
 		if (!_start.test_and_set())
 		{
 			assert(_factory_chain.size());
+
+			inner_init();
 
 			assert(_thread_num);
 			int32_t cpu_num = sysconf(_SC_NPROCESSORS_CONF);
@@ -117,9 +119,10 @@ public:
 	}
 
 protected:
+	tcp_server_channel_factory_chain_t		_factory_chain;
+
 	void inner_init()
 	{
-		_tid = std::this_thread::get_id();
 		if (!_thread_num)
 		{
 			_thread_num = (uint16_t)sysconf(_SC_NPROCESSORS_CONF);
@@ -132,7 +135,6 @@ private:
 	uint16_t								_thread_num;
 	std::map<uint16_t, thread_object*>		_thread_pool;
 	std::atomic_flag						_start = ATOMIC_FLAG_INIT;
-	tcp_server_channel_factory_chain_t		_factory_chain;
 	std::string								_listen_addr;
 	uint32_t								_backlog;
 	uint32_t								_defer_accept;
@@ -242,10 +244,7 @@ public:
 	tcp_server(std::shared_ptr<reactor_loop> reactor, const std::string& listen_addr, const tcp_server_channel_factory_t& factory, uint32_t backlog = DEFAULT_LISTEN_BACKLOG, uint32_t defer_accept = DEFAULT_DEFER_ACCEPT,
 		const uint32_t self_read_size = DEFAULT_READ_BUFSIZE, const uint32_t self_write_size = DEFAULT_WRITE_BUFSIZE, const uint32_t sock_read_size = 0, const uint32_t sock_write_size = 0)
 	{
-		tcp_server_channel_factory_chain_t	factory_chain;
-		factory_chain.push_back(factory);
-
-		inner_init(reactor, listen_addr, factory_chain, backlog, defer_accept, self_read_size, self_write_size, sock_read_size, sock_write_size);
+		_factory_chain.push_back(factory);
 	}
 
 	virtual ~tcp_server()
@@ -253,18 +252,42 @@ public:
 		delete _listen;		
 		delete _creator;
 	}
-	
-protected:
-	void inner_init(std::shared_ptr<reactor_loop> reactor, const std::string& listen_addr, const tcp_server_channel_factory_chain_t& factory_chain, uint32_t backlog, uint32_t defer_accept,
-		const uint32_t self_read_size, const uint32_t self_write_size, const uint32_t sock_read_size, const uint32_t sock_write_size)
+
+	virtual void start()
 	{
-		_creator = new tcp_server_channel_creator(reactor, factory_chain, self_read_size, self_write_size, sock_read_size, sock_write_size);
-		_listen = new tcp_listen(reactor, listen_addr, backlog, defer_accept);
-		_listen->add_accept_handler(std::bind(&tcp_server_channel_creator::on_newfd, _creator, std::placeholders::_1, std::placeholders::_2)); //fd + sockaddr_in
-		_listen->start();
+		//必须同个线程，避免数据管理问题：构造/析构不与start不在一个线程将会使得问题复杂化：假设tcp_server是非引用计数的，生命期结束/析构时候同时又遇到了其他线程调用start
+		if (_tid != std::this_thread::get_id())
+		{
+			assert(false);
+			return;
+		}
+		//atomic::test_and_set检查flag是否被设置，若被设置直接返回true，若没有设置则设置flag为true后再返回false
+		if (!_start.test_and_set())
+		{
+			assert(_factory_chain.size());
+
+			_creator = new tcp_server_channel_creator(_reactor, _factory_chain, _self_read_size, _self_write_size, _sock_read_size, _sock_write_size);
+			_listen = new tcp_listen(_reactor, _listen_addr, _backlog, _defer_accept);
+			_listen->add_accept_handler(std::bind(&tcp_server_channel_creator::on_newfd, _creator, std::placeholders::_1, std::placeholders::_2)); //fd + sockaddr_in
+			_listen->start();
+		}
 	}
 
+protected:
+	tcp_server_channel_factory_chain_t		_factory_chain;
+	
 private:
+	std::shared_ptr<reactor_loop>			_reactor;
+	std::thread::id							_tid;
+	std::atomic_flag						_start = ATOMIC_FLAG_INIT;
+	std::string								_listen_addr;
+	uint32_t								_backlog;
+	uint32_t								_defer_accept;
+	uint32_t								_self_read_size;
+	uint32_t								_self_write_size;
+	uint32_t								_sock_read_size;
+	uint32_t								_sock_write_size;
+
 	tcp_listen*								_listen;
 	tcp_server_channel_creator*				_creator;
 };

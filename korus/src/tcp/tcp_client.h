@@ -36,8 +36,8 @@ public:
 		: _thread_num(thread_num), _server_addr(server_addr), _connect_timeout(connect_timeout), _connect_retry_wait(connect_retry_wait),
 		_self_read_size(self_read_size), _self_write_size(self_write_size), _sock_read_size(sock_read_size), _sock_write_size(sock_write_size)
 	{
+		_tid = std::this_thread::get_id();
 		_factory_chain.push_back(factory);
-		inner_init();
 	}
 
 	virtual ~tcp_client()
@@ -62,6 +62,7 @@ public:
 		if (!_start.test_and_set())
 		{
 			assert(_factory_chain.size());
+			inner_init();
 
 			assert(_thread_num);
 			int32_t cpu_num = sysconf(_SC_NPROCESSORS_CONF);
@@ -83,7 +84,6 @@ protected:
 	tcp_client_channel_factory_chain_t		_factory_chain;
 	void inner_init()
 	{
-		_tid = std::this_thread::get_id();
 		if (!_thread_num)
 		{
 			_thread_num = (uint16_t)sysconf(_SC_NPROCESSORS_CONF);
@@ -137,11 +137,11 @@ public:
 	tcp_client(std::shared_ptr<reactor_loop> reactor, const std::string& server_addr, const tcp_client_channel_factory_t& factory,
 		std::chrono::seconds connect_timeout = std::chrono::seconds(0), std::chrono::seconds connect_retry_wait = std::chrono::seconds(-1),
 		const uint32_t self_read_size = DEFAULT_READ_BUFSIZE, const uint32_t self_write_size = DEFAULT_WRITE_BUFSIZE, const uint32_t sock_read_size = 0, const uint32_t sock_write_size = 0)
+		: _reactor(reactor), _server_addr(server_addr), _connect_timeout(connect_timeout), _connect_retry_wait(connect_retry_wait),
+		_self_read_size(self_read_size), _self_write_size(self_write_size), _sock_read_size(sock_read_size), _sock_write_size(sock_write_size)
 	{
-		tcp_client_channel_factory_chain_t factory_chain;
-		factory_chain.push_back(factory);
-		
-		inner_init(reactor, server_addr, factory_chain,	connect_timeout, connect_retry_wait, self_read_size, self_write_size, sock_read_size, sock_write_size);
+		_tid = std::this_thread::get_id();
+		_factory_chain.push_back(factory);
 	}
 
 	virtual ~tcp_client()
@@ -154,16 +154,40 @@ public:
 		_channel = nullptr;
 	}
 	
-protected:
-	void inner_init(std::shared_ptr<reactor_loop> reactor, const std::string& server_addr, tcp_client_channel_factory_chain_t factory_chain,
-		std::chrono::seconds connect_timeout, std::chrono::seconds connect_retry_wait,
-		const uint32_t self_read_size, const uint32_t self_write_size, const uint32_t sock_read_size, const uint32_t sock_write_size)
+	virtual void start()
 	{
-		// 构造中执行::connect，无需外部手动调用
-		_channel = std::make_shared<tcp_client_channel>(server_addr, connect_timeout, connect_retry_wait, self_read_size, self_write_size, sock_read_size, sock_write_size);
-		build_chain(reactor, std::dynamic_pointer_cast<tcp_client_handler_base>(_channel), factory_chain);
-		_channel->connect();
+		//必须同个线程，避免数据管理问题：构造/析构不与start不在一个线程将会使得问题复杂化：假设tcp_server是非引用计数的，生命期结束/析构时候同时又遇到了其他线程调用start
+		if (_tid != std::this_thread::get_id())
+		{
+			assert(false);
+			return;
+		}
+		//atomic_flag::test_and_set检查flag是否被设置，若被设置直接返回true，若没有设置则设置flag为true后再返回false
+		if (!_start.test_and_set())
+		{
+			assert(_factory_chain.size());
+
+			// 构造中执行::connect，无需外部手动调用
+			_channel = std::make_shared<tcp_client_channel>(_server_addr, _connect_timeout, _connect_retry_wait, _self_read_size, _self_write_size, _sock_read_size, _sock_write_size);
+			build_chain(_reactor, std::dynamic_pointer_cast<tcp_client_handler_base>(_channel), _factory_chain);
+			_channel->connect();
+		}
 	}
+
+protected:
+	tcp_client_channel_factory_chain_t		_factory_chain;	
+
 private:
-	std::shared_ptr<tcp_client_channel>	_channel;
+	std::shared_ptr<reactor_loop>			_reactor;
+	std::thread::id							_tid;
+	std::atomic_flag						_start = ATOMIC_FLAG_INIT;
+	std::string								_server_addr;
+	std::chrono::seconds					_connect_timeout;
+	std::chrono::seconds					_connect_retry_wait;
+	uint32_t								_self_read_size;
+	uint32_t								_self_write_size;
+	uint32_t								_sock_read_size;
+	uint32_t								_sock_write_size;
+
+	std::shared_ptr<tcp_client_channel>		_channel;
 };

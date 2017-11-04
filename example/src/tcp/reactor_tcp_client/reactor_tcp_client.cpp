@@ -82,9 +82,8 @@ int main(int argc, char* argv[])
 	addr = std::string("127.0.0.1:") + argv[1];
 			
 	std::shared_ptr<reactor_loop> reactor = std::make_shared<reactor_loop>();
-
 	tcp_client<reactor_loop> client(reactor, addr, channel_factory);
-
+	client.start();
 	reactor->run();
 
 	return 0;

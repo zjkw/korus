@@ -81,9 +81,8 @@ int main(int argc, char* argv[])
 	server_addr = std::string("127.0.0.1:") + argv[1];
 			
 	std::shared_ptr<reactor_loop> reactor = std::make_shared<reactor_loop>();
-
 	udp_client<reactor_loop> client(reactor, channel_factory);
-
+	client.start();
 	reactor->run();
 
 	return 0;
