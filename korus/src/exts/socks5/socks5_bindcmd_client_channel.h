@@ -5,7 +5,7 @@
 class socks5_bindcmd_client_channel : public socks5_client_channel_base
 {
 public:
-	socks5_bindcmd_client_channel();
+	socks5_bindcmd_client_channel(const std::string& server_addr, const std::string& socks_user, const std::string& socks_psw);
 	virtual ~socks5_bindcmd_client_channel();
 
 	//override------------------

@@ -33,11 +33,10 @@ public:
 	tcp_client(uint16_t thread_num, const std::string& server_addr, const tcp_client_channel_factory_t& factory,
 		std::chrono::seconds connect_timeout = std::chrono::seconds(0), std::chrono::seconds connect_retry_wait = std::chrono::seconds(-1),
 		const uint32_t self_read_size = DEFAULT_READ_BUFSIZE, const uint32_t self_write_size = DEFAULT_WRITE_BUFSIZE, const uint32_t sock_read_size = 0, const uint32_t sock_write_size = 0)
-		: _thread_num(thread_num), _server_addr(server_addr), _connect_timeout(connect_timeout), _connect_retry_wait(connect_retry_wait),
+		: _thread_num(thread_num), _server_addr(server_addr), _factory(factory), _connect_timeout(connect_timeout), _connect_retry_wait(connect_retry_wait),
 		_self_read_size(self_read_size), _self_write_size(self_write_size), _sock_read_size(sock_read_size), _sock_write_size(sock_write_size)
 	{
 		_tid = std::this_thread::get_id();
-		_factory_chain.push_back(factory);
 	}
 
 	virtual ~tcp_client()
@@ -61,7 +60,6 @@ public:
 		//atomic_flag::test_and_set检查flag是否被设置，若被设置直接返回true，若没有设置则设置flag为true后再返回false
 		if (!_start.test_and_set())
 		{
-			assert(_factory_chain.size());
 			inner_init();
 
 			assert(_thread_num);
@@ -74,14 +72,13 @@ public:
 				thread_object*	thread_obj = new thread_object(abs((i + offset) % cpu_num));
 				_thread_pool[i] = thread_obj;
 
-				thread_obj->add_init_task(std::bind(&tcp_client::thread_init, this, thread_obj, _factory_chain));
+				thread_obj->add_init_task(std::bind(&tcp_client::thread_init, this, thread_obj));
 				thread_obj->start();
 			}
 		}
 	}
 
 protected:
-	tcp_client_channel_factory_chain_t		_factory_chain;
 	void inner_init()
 	{
 		if (!_thread_num)
@@ -90,13 +87,39 @@ protected:
 		}
 		srand(time(NULL));
 	}
+	std::shared_ptr<tcp_client_channel>			create_origin_channel(std::shared_ptr<reactor_loop> reactor)
+	{
+		std::shared_ptr<tcp_client_channel>			channel = std::make_shared<tcp_client_channel>(_server_addr, _connect_timeout, _connect_retry_wait, _self_read_size, _self_write_size, _sock_read_size, _sock_write_size);
+		return channel;
+	}
+	std::shared_ptr<tcp_client_handler_base>	create_terminal_channel(std::shared_ptr<reactor_loop> reactor)
+	{
+		if (!_factory)
+		{
+			return nullptr;
+		}
+		std::shared_ptr<tcp_client_handler_base>	channel = _factory();
+		return channel;
+	}
+	virtual bool build_channel_chain(std::shared_ptr<reactor_loop> reactor, std::list<std::shared_ptr<tcp_client_channel>>& origin_channel_list)	//存在一次性构建多个origin_channel
+	{
+		std::shared_ptr<tcp_client_channel>			origin_channel	=	create_origin_channel(reactor);
+		origin_channel_list.push_back(origin_channel);
+
+		std::shared_ptr<tcp_client_handler_base>	terminal_channel = create_terminal_channel(reactor);
+
+		build_channel_chain_helper(reactor, std::dynamic_pointer_cast<tcp_client_handler_base>(origin_channel), terminal_channel);
+
+		origin_channel->connect();
+		return true;
+	}
 
 private:
 	std::thread::id							_tid;
 	uint16_t								_thread_num;
 	std::map<uint16_t, thread_object*>		_thread_pool;
 	std::atomic_flag						_start = ATOMIC_FLAG_INIT;
-
+	tcp_client_channel_factory_t			_factory;
 	std::string								_server_addr;
 	std::chrono::seconds					_connect_timeout;
 	std::chrono::seconds					_connect_retry_wait;
@@ -104,26 +127,28 @@ private:
 	uint32_t								_self_write_size;
 	uint32_t								_sock_read_size;
 	uint32_t								_sock_write_size;
-
-	void thread_init(thread_object*	thread_obj, const tcp_client_channel_factory_chain_t& factory_chain)
+	
+	void thread_init(thread_object*	thread_obj)
 	{
 		std::shared_ptr<reactor_loop>		reactor = std::make_shared<reactor_loop>();
-		std::shared_ptr<tcp_client_channel>	channel = std::make_shared<tcp_client_channel>(_server_addr, _connect_timeout, _connect_retry_wait, _self_read_size, _self_write_size, _sock_read_size, _sock_write_size);
 
-		build_chain(reactor, std::dynamic_pointer_cast<tcp_client_handler_base>(channel), factory_chain);
-
-		thread_obj->add_exit_task(std::bind(&tcp_client::thread_exit, this, thread_obj, reactor, channel));
+		std::list<std::shared_ptr<tcp_client_channel>>	origin_channel_list;
+		build_channel_chain(reactor, origin_channel_list);
+		
+		thread_obj->add_exit_task(std::bind(&tcp_client::thread_exit, this, thread_obj, reactor, origin_channel_list));
 		thread_obj->add_resident_task(std::bind(&reactor_loop::run_once, reactor));
-
-		channel->connect();//tbd 返回值 log print
 	}
-	void thread_exit(thread_object*	thread_obj, std::shared_ptr<reactor_loop> reactor, std::shared_ptr<tcp_client_channel> channel)
+	void thread_exit(thread_object*	thread_obj, std::shared_ptr<reactor_loop> reactor, std::list<std::shared_ptr<tcp_client_channel>>&	origin_channel_list)
 	{
-		channel->set_release();	//可能上层还保持间接或直接引用，这里使其失效：“只管功能失效化，不管生命期释放”
-		if (!channel->can_delete(true, 1))
+		for (std::list<std::shared_ptr<tcp_client_channel>>::iterator it = origin_channel_list.begin(); it != origin_channel_list.end(); it++)
 		{
-			channel->inner_final();
+			(*it)->set_release();	//可能上层还保持间接或直接引用，这里使其失效：“只管功能失效化，不管生命期释放”
+			if (!(*it)->can_delete(true, 1))
+			{
+				(*it)->inner_final();
+			}
 		}
+
 		reactor->invalid();
 	}
 };
@@ -137,21 +162,22 @@ public:
 	tcp_client(std::shared_ptr<reactor_loop> reactor, const std::string& server_addr, const tcp_client_channel_factory_t& factory,
 		std::chrono::seconds connect_timeout = std::chrono::seconds(0), std::chrono::seconds connect_retry_wait = std::chrono::seconds(-1),
 		const uint32_t self_read_size = DEFAULT_READ_BUFSIZE, const uint32_t self_write_size = DEFAULT_WRITE_BUFSIZE, const uint32_t sock_read_size = 0, const uint32_t sock_write_size = 0)
-		: _reactor(reactor), _server_addr(server_addr), _connect_timeout(connect_timeout), _connect_retry_wait(connect_retry_wait),
+		: _reactor(reactor), _server_addr(server_addr), _factory(factory), _connect_timeout(connect_timeout), _connect_retry_wait(connect_retry_wait),
 		_self_read_size(self_read_size), _self_write_size(self_write_size), _sock_read_size(sock_read_size), _sock_write_size(sock_write_size)
 	{
 		_tid = std::this_thread::get_id();
-		_factory_chain.push_back(factory);
 	}
 
 	virtual ~tcp_client()
 	{
-		_channel->set_release();
-		if (!_channel->can_delete(true, 1))
+		for (std::list<std::shared_ptr<tcp_client_channel>>::iterator it = _channels.begin(); it != _channels.end(); it++)
 		{
-			_channel->inner_final();
+			(*it)->set_release();	//可能上层还保持间接或直接引用，这里使其失效：“只管功能失效化，不管生命期释放”
+			if (!(*it)->can_delete(true, 1))
+			{
+				(*it)->inner_final();
+			}
 		}
-		_channel = nullptr;
 	}
 	
 	virtual void start()
@@ -165,23 +191,45 @@ public:
 		//atomic_flag::test_and_set检查flag是否被设置，若被设置直接返回true，若没有设置则设置flag为true后再返回false
 		if (!_start.test_and_set())
 		{
-			assert(_factory_chain.size());
-
 			// 构造中执行::connect，无需外部手动调用
-			_channel = std::make_shared<tcp_client_channel>(_server_addr, _connect_timeout, _connect_retry_wait, _self_read_size, _self_write_size, _sock_read_size, _sock_write_size);
-			build_chain(_reactor, std::dynamic_pointer_cast<tcp_client_handler_base>(_channel), _factory_chain);
-			_channel->connect();
+			std::list<std::shared_ptr<tcp_client_channel>>	origin_channel_list;
+			build_channel_chain(_reactor, origin_channel_list);
 		}
 	}
 
 protected:
-	tcp_client_channel_factory_chain_t		_factory_chain;	
+	std::shared_ptr<tcp_client_channel>			create_origin_channel(std::shared_ptr<reactor_loop> reactor)
+	{
+		std::shared_ptr<tcp_client_channel>			channel = std::make_shared<tcp_client_channel>(_server_addr, _connect_timeout, _connect_retry_wait, _self_read_size, _self_write_size, _sock_read_size, _sock_write_size);
+		return channel;
+	}
+	std::shared_ptr<tcp_client_handler_base>	create_terminal_channel(std::shared_ptr<reactor_loop> reactor)
+	{
+		if (!_factory)
+		{
+			return nullptr;
+		}
+		std::shared_ptr<tcp_client_handler_base>	channel = _factory();
+		return channel;
+	}
+	virtual bool build_channel_chain(std::shared_ptr<reactor_loop> reactor, std::list<std::shared_ptr<tcp_client_channel>>& origin_channel_list)
+	{
+		std::shared_ptr<tcp_client_channel>			origin_channel = create_origin_channel(reactor);
+		origin_channel_list.push_back(origin_channel);
+
+		std::shared_ptr<tcp_client_handler_base>	terminal_channel = create_terminal_channel(reactor);
+		build_channel_chain_helper(reactor, std::dynamic_pointer_cast<tcp_client_handler_base>(origin_channel), terminal_channel);
+
+		origin_channel->connect();
+		return true;
+	}
 
 private:
 	std::shared_ptr<reactor_loop>			_reactor;
 	std::thread::id							_tid;
 	std::atomic_flag						_start = ATOMIC_FLAG_INIT;
 	std::string								_server_addr;
+	tcp_client_channel_factory_t			_factory;
 	std::chrono::seconds					_connect_timeout;
 	std::chrono::seconds					_connect_retry_wait;
 	uint32_t								_self_read_size;
@@ -189,5 +237,5 @@ private:
 	uint32_t								_sock_read_size;
 	uint32_t								_sock_write_size;
 
-	std::shared_ptr<tcp_client_channel>		_channel;
+	std::list<std::shared_ptr<tcp_client_channel>> _channels;
 };

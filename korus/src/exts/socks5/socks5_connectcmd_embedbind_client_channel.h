@@ -17,4 +17,9 @@ public:
 	virtual int32_t on_recv_split(const void* buf, const size_t len);
 	//这是一个待处理的完整包
 	virtual void	on_recv_pkg(const void* buf, const size_t len);
+
+private:
+	std::string _server_addr;
+	std::string _socks_user;
+	std::string _socks_psw;
 };

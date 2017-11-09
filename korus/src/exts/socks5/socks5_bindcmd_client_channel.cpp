@@ -1,7 +1,7 @@
 #include <assert.h>
 #include "socks5_bindcmd_client_channel.h"
 
-socks5_bindcmd_client_channel::socks5_bindcmd_client_channel()
+socks5_bindcmd_client_channel::socks5_bindcmd_client_channel(const std::string& server_addr, const std::string& socks_user, const std::string& socks_psw)
 {
 
 }

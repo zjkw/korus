@@ -91,3 +91,9 @@ bool build_chain(std::shared_ptr<reactor_loop> reactor, T tail, const std::list<
 
 	return true;
 }
+
+template<typename T, typename... Args>
+bool build_channel_chain_helper(std::shared_ptr<reactor_loop> reactor, T origin, Args... args)
+{
+	return true;
+}
