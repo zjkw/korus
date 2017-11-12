@@ -4,17 +4,22 @@
 #include <memory>
 #include <atomic>
 #include <chrono>
-#include <list>
 #include "korus/src/util/object_state.h"
+#include "korus/src/util/chain_sharedobj_base.h"
 #include "korus/src/reactor/timer_helper.h"
 #include "korus/src/reactor/sockio_helper.h"
 #include "korus/src/reactor/reactor_loop.h"
 #include "tcp_channel_base.h"
 
+//
+//			<---prev---			<---prev---
+// origin				....					terminal	
+//			----next-->			----next-->
+//
+
 class tcp_client_handler_base;
 
-using tcp_client_channel_factory_t = std::function<std::shared_ptr<tcp_client_handler_base>()>;
-using tcp_client_channel_factory_chain_t = std::list<tcp_client_channel_factory_t>;
+using tcp_client_channel_factory_t = std::function<std::shared_ptr<tcp_client_handler_base>(std::shared_ptr<reactor_loop>)>;
 
 enum TCP_CLTCONN_STATE
 {
@@ -30,15 +35,17 @@ enum TCP_CLTCONN_STATE
 
 // 可能处于多线程环境下
 // on_error不能纯虚 tbd，加上close默认处理
-class tcp_client_handler_base : public std::enable_shared_from_this<tcp_client_handler_base>
+class tcp_client_handler_base : public chain_sharedobj_base<tcp_client_handler_base>
 {
 public:
-	tcp_client_handler_base();
+	tcp_client_handler_base(std::shared_ptr<reactor_loop> reactor);
 	virtual ~tcp_client_handler_base();
 
 	//override------------------
-	virtual void	on_init();
-	virtual void	on_final();
+	virtual void	on_chain_init();
+	virtual void	on_chain_final();
+	virtual void	on_chain_zomby();
+
 	virtual void	on_connected();
 	virtual void	on_closed();
 	//参考CHANNEL_ERROR_CODE定义
@@ -54,17 +61,9 @@ public:
 	virtual void	connect();
 	virtual TCP_CLTCONN_STATE	state();
 	virtual std::shared_ptr<reactor_loop>	reactor();
-	virtual bool	can_delete(bool force, long call_ref_count);
-
+		
 private:
-	template<typename T> friend bool build_chain(std::shared_ptr<reactor_loop> reactor, T tail, const std::list<std::function<T()> >& chain);
-	template<typename T> friend class tcp_client;
-	void	inner_init(std::shared_ptr<reactor_loop> reactor, std::shared_ptr<tcp_client_handler_base> tunnel_prev, std::shared_ptr<tcp_client_handler_base> tunnel_next);
-	void	inner_final();
-
 	std::shared_ptr<reactor_loop>		_reactor;
-	std::shared_ptr<tcp_client_handler_base> _tunnel_prev;
-	std::shared_ptr<tcp_client_handler_base> _tunnel_next;
 };
 
 //外部最好确保tcp_client能包裹channel/handler生命期，这样能保证资源回收，否则互相引用的两端(channel和handler)没有可设计的角色来触发回收时机的函数调用check_detach_relation
@@ -74,7 +73,7 @@ private:
 class tcp_client_channel : public tcp_channel_base, public tcp_client_handler_base, public multiform_state
 {
 public:
-	tcp_client_channel(const std::string& server_addr, std::chrono::seconds connect_timeout, std::chrono::seconds connect_retry_wait,
+	tcp_client_channel(std::shared_ptr<reactor_loop> reactor, const std::string& server_addr, std::chrono::seconds connect_timeout, std::chrono::seconds connect_retry_wait,
 		const uint32_t self_read_size, const uint32_t self_write_size, const uint32_t sock_read_size, const uint32_t sock_write_size);
 	virtual ~tcp_client_channel();
 
@@ -107,7 +106,6 @@ private:
 	virtual void on_sockio_write(sockio_helper* sockio_id);
 	
 	virtual	int32_t	on_recv_buff(const void* buf, const size_t len, bool& left_partial_pkg);
-	virtual bool	can_delete(bool force, long call_ref_count);
 
 	void handle_close_strategy(CLOSE_MODE_STRATEGY cms);
 };

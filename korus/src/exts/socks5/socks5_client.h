@@ -39,10 +39,10 @@ private:
 		std::shared_ptr<tcp_client_channel>			origin_channel = create_origin_channel(reactor);
 		origin_channel_list.push_back(origin_channel);
 
-		std::shared_ptr<socks5_connectcmd_client_channel>	sock5_channel = std::make_shared<socks5_connectcmd_client_channel>(_server_addr, _socks_user, _socks_psw);
+		std::shared_ptr<socks5_connectcmd_client_channel>	sock5_channel = std::make_shared<socks5_connectcmd_client_channel>(reactor, _server_addr, _socks_user, _socks_psw);
 		std::shared_ptr<tcp_client_handler_base>	terminal_channel = create_terminal_channel(reactor);
 		
-		build_channel_chain_helper(reactor, std::dynamic_pointer_cast<tcp_client_handler_base>(origin_channel), std::dynamic_pointer_cast<tcp_client_handler_base>(sock5_channel), terminal_channel);
+//		build_channel_chain_helper(reactor, std::dynamic_pointer_cast<tcp_client_handler_base>(origin_channel), std::dynamic_pointer_cast<tcp_client_handler_base>(sock5_channel), terminal_channel);
 
 		origin_channel->connect();
 		return true;
@@ -77,10 +77,10 @@ private:
 		std::shared_ptr<tcp_client_channel>			origin_channel = create_origin_channel(reactor);
 		origin_channel_list.push_back(origin_channel);
 
-		std::shared_ptr<socks5_connectcmd_client_channel>	sock5_channel = std::make_shared<socks5_connectcmd_client_channel>(_server_addr, _socks_user, _socks_psw);
+		std::shared_ptr<socks5_connectcmd_client_channel>	sock5_channel = std::make_shared<socks5_connectcmd_client_channel>(reactor, _server_addr, _socks_user, _socks_psw);
 		std::shared_ptr<tcp_client_handler_base>	terminal_channel = create_terminal_channel(reactor);
 
-		build_channel_chain_helper(reactor, std::dynamic_pointer_cast<tcp_client_handler_base>(origin_channel), std::dynamic_pointer_cast<tcp_client_handler_base>(sock5_channel), terminal_channel);
+//		build_channel_chain_helper(reactor, std::dynamic_pointer_cast<tcp_client_handler_base>(origin_channel), std::dynamic_pointer_cast<tcp_client_handler_base>(sock5_channel), terminal_channel);
 
 		origin_channel->connect();
 		return true;
@@ -125,17 +125,17 @@ private:
 		// ctrl channel
 		std::shared_ptr<tcp_client_channel>			ctrl_origin_channel = create_origin_channel(reactor);
 		origin_channel_list.push_back(ctrl_origin_channel);
-		std::shared_ptr<socks5_connectcmd_embedbind_client_channel>	ctrl_socks_channel = std::make_shared<socks5_connectcmd_embedbind_client_channel>(_server_addr, _socks_user, _socks_psw);
-		build_channel_chain_helper(reactor, std::dynamic_pointer_cast<tcp_client_handler_base>(ctrl_origin_channel), ctrl_socks_channel);
+		std::shared_ptr<socks5_connectcmd_embedbind_client_channel>	ctrl_socks_channel = std::make_shared<socks5_connectcmd_embedbind_client_channel>(reactor, _server_addr, _socks_user, _socks_psw);
+//		build_channel_chain_helper(reactor, std::dynamic_pointer_cast<tcp_client_handler_base>(ctrl_origin_channel), std::dynamic_pointer_cast<tcp_client_handler_base>(ctrl_socks_channel));
 
 		// data channel
 		std::shared_ptr<tcp_client_channel>			data_origin_channel = create_origin_channel(reactor);
 		origin_channel_list.push_back(data_origin_channel);
-		std::shared_ptr<socks5_bindcmd_client_channel>	data_socks_channel = std::make_shared<socks5_bindcmd_client_channel>(_server_addr, _socks_user, _socks_psw);;
-		build_channel_chain_helper(reactor, std::dynamic_pointer_cast<tcp_client_handler_base>(data_origin_channel), data_socks_channel);
+		std::shared_ptr<socks5_bindcmd_client_channel>	data_socks_channel = std::make_shared<socks5_bindcmd_client_channel>(reactor, _server_addr, _socks_user, _socks_psw);;
+//		build_channel_chain_helper(reactor, std::dynamic_pointer_cast<tcp_client_handler_base>(data_origin_channel), std::dynamic_pointer_cast<tcp_client_handler_base>(data_socks_channel));
 
 		std::shared_ptr<socks5_bindcmd_integration_handler_base>	terminal_channel = std::make_shared<socks5_bindcmd_integration_handler_base>();
-		build_channel_chain_helper(ctrl_socks_channel, data_socks_channel, terminal_channel);
+//		build_channel_chain_helper(ctrl_socks_channel, data_socks_channel, terminal_channel);
 
 		ctrl_origin_channel->connect();
 		//data_origin_channel->connect();
@@ -173,17 +173,17 @@ private:
 		// ctrl channel
 		std::shared_ptr<tcp_client_channel>			ctrl_origin_channel = create_origin_channel(reactor);
 		origin_channel_list.push_back(ctrl_origin_channel);
-		std::shared_ptr<socks5_connectcmd_embedbind_client_channel>	ctrl_socks_channel = std::make_shared<socks5_connectcmd_embedbind_client_channel>(_server_addr, _socks_user, _socks_psw);
-		build_channel_chain_helper(reactor, std::dynamic_pointer_cast<tcp_client_handler_base>(ctrl_origin_channel), ctrl_socks_channel);
+		std::shared_ptr<socks5_connectcmd_embedbind_client_channel>	ctrl_socks_channel = std::make_shared<socks5_connectcmd_embedbind_client_channel>(reactor, _server_addr, _socks_user, _socks_psw);
+//		build_channel_chain_helper(reactor, std::dynamic_pointer_cast<tcp_client_handler_base>(ctrl_origin_channel), std::dynamic_pointer_cast<tcp_client_handler_base>(ctrl_socks_channel));
 
 		// data channel
 		std::shared_ptr<tcp_client_channel>			data_origin_channel = create_origin_channel(reactor);
 		origin_channel_list.push_back(data_origin_channel);
-		std::shared_ptr<socks5_bindcmd_client_channel>	data_socks_channel = std::make_shared<socks5_bindcmd_client_channel>(_server_addr, _socks_user, _socks_psw);;
-		build_channel_chain_helper(reactor, std::dynamic_pointer_cast<tcp_client_handler_base>(data_origin_channel), data_socks_channel);
+		std::shared_ptr<socks5_bindcmd_client_channel>	data_socks_channel = std::make_shared<socks5_bindcmd_client_channel>(reactor, _server_addr, _socks_user, _socks_psw);;
+	//	build_channel_chain_helper(reactor, std::dynamic_pointer_cast<tcp_client_handler_base>(data_origin_channel), std::dynamic_pointer_cast<tcp_client_handler_base>(data_socks_channel));
 
 		std::shared_ptr<socks5_bindcmd_integration_handler_base>	terminal_channel = std::make_shared<socks5_bindcmd_integration_handler_base>();
-		build_channel_chain_helper(ctrl_socks_channel, data_socks_channel, terminal_channel);
+//		build_channel_chain_helper(reactor, ctrl_socks_channel, data_socks_channel, terminal_channel);
 
 		ctrl_origin_channel->connect();
 		//data_origin_channel->connect();
@@ -227,7 +227,7 @@ public:
 private:
 	std::shared_ptr<tcp_client_handler_base>	socks5_channel_factory()	//原生channel
 	{
-		std::shared_ptr<socks5_associatecmd_client_channel>	channel = std::make_shared<socks5_associatecmd_client_channel>(_server_addr, _socks_user, _socks_psw, _udp_client_channel_factory);
+		std::shared_ptr<socks5_associatecmd_client_channel>	channel = std::make_shared<socks5_associatecmd_client_channel>(nullptr, _server_addr, _socks_user, _socks_psw, _udp_client_channel_factory);
 		std::dynamic_pointer_cast<tcp_client_handler_base>(channel);
 	}
 	virtual bool build_channel_chain(std::shared_ptr<reactor_loop> reactor, std::list<std::shared_ptr<tcp_client_channel>>& origin_channel_list)	//存在一次性构建多个origin_channel
@@ -236,7 +236,7 @@ private:
 		origin_channel_list.push_back(origin_channel);
 		std::shared_ptr<tcp_client_handler_base>	terminal_channel = create_terminal_channel(reactor);
 
-		build_channel_chain_helper(reactor, std::dynamic_pointer_cast<tcp_client_handler_base>(origin_channel), terminal_channel);
+//		build_channel_chain_helper(reactor, std::dynamic_pointer_cast<tcp_client_handler_base>(origin_channel), terminal_channel);
 
 		origin_channel->connect();
 		return true;
@@ -269,7 +269,7 @@ public:
 private:
 	std::shared_ptr<tcp_client_handler_base>	socks5_channel_factory()	//原生channel
 	{
-		std::shared_ptr<socks5_associatecmd_client_channel>	channel = std::make_shared<socks5_associatecmd_client_channel>(_server_addr, _socks_user, _socks_psw, _udp_client_channel_factory);
+		std::shared_ptr<socks5_associatecmd_client_channel>	channel = std::make_shared<socks5_associatecmd_client_channel>(nullptr, _server_addr, _socks_user, _socks_psw, _udp_client_channel_factory);
 		std::dynamic_pointer_cast<tcp_client_handler_base>(channel);
 	}
 	virtual bool build_channel_chain(std::shared_ptr<reactor_loop> reactor, std::list<std::shared_ptr<tcp_client_channel>>& origin_channel_list)	//存在一次性构建多个origin_channel
@@ -278,7 +278,7 @@ private:
 		origin_channel_list.push_back(origin_channel);
 		std::shared_ptr<tcp_client_handler_base>	terminal_channel = create_terminal_channel(reactor);
 
-		build_channel_chain_helper(reactor, std::dynamic_pointer_cast<tcp_client_handler_base>(origin_channel), terminal_channel);
+	//	build_channel_chain_helper(reactor, std::dynamic_pointer_cast<tcp_client_handler_base>(origin_channel), terminal_channel);
 
 		origin_channel->connect();
 		return true;

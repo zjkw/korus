@@ -2,75 +2,103 @@
 #include "tcp_server_channel.h"
 
 ///////////////////////////base
-tcp_server_handler_base::tcp_server_handler_base() 
-	: _reactor(nullptr), _tunnel_prev(nullptr), _tunnel_next(nullptr)
+tcp_server_handler_base::tcp_server_handler_base(std::shared_ptr<reactor_loop> reactor)
+	: _reactor(reactor)
 {
 }
 
 tcp_server_handler_base::~tcp_server_handler_base()
 {
-	// 必须执行inner_final
-	assert(!_tunnel_prev);
+	// 必须执行chain_final
 	assert(!_tunnel_next);
+	assert(!_tunnel_prev);
 }
 
 //override------------------
-void	tcp_server_handler_base::on_init()
+void	tcp_server_handler_base::on_chain_init()
 {
 }
 
-void	tcp_server_handler_base::on_final() 
+void	tcp_server_handler_base::on_chain_final() 
 {
+}
+
+void	tcp_server_handler_base::on_chain_zomby()
+{
+
 }
 
 void	tcp_server_handler_base::on_accept()	
 {
-	if (!_tunnel_prev)
+	if (!_tunnel_next)
 	{
 		assert(false);
 		return;
 	}
 
-	_tunnel_prev->on_accept();
+	_tunnel_next->on_accept();
 }
 
 void	tcp_server_handler_base::on_closed()
 {
-	if (!_tunnel_prev)
+	if (!_tunnel_next)
 	{
 		assert(false);
 		return;
 	}
 
-	_tunnel_prev->on_closed();
+	_tunnel_next->on_closed();
 }
 
 //参考CHANNEL_ERROR_CODE定义
 CLOSE_MODE_STRATEGY	tcp_server_handler_base::on_error(CHANNEL_ERROR_CODE code)	
 {
-	if (!_tunnel_prev)
+	if (!_tunnel_next)
 	{
 		assert(false);
 		return CMS_INNER_AUTO_CLOSE;
 	}
 
-	return _tunnel_prev->on_error(code);
+	return _tunnel_next->on_error(code);
 }
 
 //提取数据包：返回值 =0 表示包不完整； >0 完整的包(长)
 int32_t tcp_server_handler_base::on_recv_split(const void* buf, const size_t len)	
 {
-	if (!_tunnel_prev)
+	if (!_tunnel_next)
 	{
 		assert(false);
 		return CEC_SPLIT_FAILED;
 	}
 
-	return _tunnel_prev->on_recv_split(buf, len);
+	return _tunnel_next->on_recv_split(buf, len);
 }
 
 //这是一个待处理的完整包
 void	tcp_server_handler_base::on_recv_pkg(const void* buf, const size_t len)
+{
+	if (!_tunnel_next)
+	{
+		assert(false);
+		return;
+	}
+
+	return _tunnel_next->on_recv_pkg(buf, len);
+}
+
+
+int32_t	tcp_server_handler_base::send(const void* buf, const size_t len)	
+{
+	if (!_tunnel_prev)
+	{
+		assert(false);
+		return CEC_INVALID_SOCKET;
+	}
+
+	return _tunnel_prev->send(buf, len);
+}
+
+void	tcp_server_handler_base::close()								
 {
 	if (!_tunnel_prev)
 	{
@@ -78,41 +106,18 @@ void	tcp_server_handler_base::on_recv_pkg(const void* buf, const size_t len)
 		return;
 	}
 
-	return _tunnel_prev->on_recv_pkg(buf, len);
-}
-
-
-int32_t	tcp_server_handler_base::send(const void* buf, const size_t len)	
-{
-	if (!_tunnel_next)
-	{
-		assert(false);
-		return CEC_INVALID_SOCKET;
-	}
-
-	return _tunnel_next->send(buf, len);
-}
-
-void	tcp_server_handler_base::close()								
-{
-	if (!_tunnel_next)
-	{
-		assert(false);
-		return;
-	}
-
-	_tunnel_next->close();
+	_tunnel_prev->close();
 }
 
 void	tcp_server_handler_base::shutdown(int32_t howto)				
 {
-	if (!_tunnel_next)
+	if (!_tunnel_prev)
 	{
 		assert(false);
 		return;
 	}
 
-	_tunnel_next->shutdown(howto);
+	_tunnel_prev->shutdown(howto);
 }
 
 std::shared_ptr<reactor_loop>	tcp_server_handler_base::reactor()
@@ -120,57 +125,9 @@ std::shared_ptr<reactor_loop>	tcp_server_handler_base::reactor()
 	return _reactor;
 }
 
-bool	tcp_server_handler_base::can_delete(bool force, long call_ref_count)			//端头如果有别的对象引用此，需要重载
-{
-	long ref = 0;
-	if (_tunnel_prev)
-	{
-		ref++;
-	}
-	if (_tunnel_next)
-	{
-		ref++;
-	}
-	if (call_ref_count + ref + 1 == shared_from_this().use_count())
-	{
-		// 成立，尝试向上查询
-		if (_tunnel_prev)
-		{
-			return _tunnel_prev->can_delete(force, 0);
-		}
-		else
-		{
-			return true;
-		}
-	}
-
-	return false;
-}
-
-void	tcp_server_handler_base::inner_init(std::shared_ptr<reactor_loop> reactor, std::shared_ptr<tcp_server_handler_base> tunnel_prev, std::shared_ptr<tcp_server_handler_base> tunnel_next)
-{
-	_reactor = reactor;
-	_tunnel_prev = tunnel_prev;
-	_tunnel_next = tunnel_next;
-
-	on_init();
-}
-void	tcp_server_handler_base::inner_final()
-{
-	on_final();
-
-	if (_tunnel_prev)
-	{
-		_tunnel_prev->inner_final();
-	}
-	_reactor = nullptr;
-	_tunnel_prev = nullptr;
-	_tunnel_next = nullptr;
-}
-
 ///////////////////////////channel
-tcp_server_channel::tcp_server_channel(SOCKET fd, const uint32_t self_read_size, const uint32_t self_write_size, const uint32_t sock_read_size, const uint32_t sock_write_size)
-	: tcp_server_handler_base(), tcp_channel_base(fd, self_read_size, self_write_size, sock_read_size, sock_write_size)
+tcp_server_channel::tcp_server_channel(std::shared_ptr<reactor_loop> reactor, SOCKET fd, const uint32_t self_read_size, const uint32_t self_write_size, const uint32_t sock_read_size, const uint32_t sock_write_size)
+	: tcp_server_handler_base(reactor), tcp_channel_base(fd, self_read_size, self_write_size, sock_read_size, sock_write_size)
 										
 {
 	assert(INVALID_SOCKET != fd);
@@ -342,17 +299,3 @@ void tcp_server_channel::handle_close_strategy(CLOSE_MODE_STRATEGY cms)
 	}
 }
 
-bool	tcp_server_channel::can_delete(bool force, long call_ref_count)
-{
-	if (force)
-	{
-		return tcp_server_handler_base::can_delete(force, call_ref_count);
-	}
-
-	if (!is_release())
-	{
-		return tcp_server_handler_base::can_delete(force, call_ref_count);
-	}
-
-	return false;
-}

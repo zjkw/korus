@@ -60,7 +60,7 @@ public:
 		//atomic_flag::test_and_set检查flag是否被设置，若被设置直接返回true，若没有设置则设置flag为true后再返回false
 		if (!_start.test_and_set())
 		{
-			inner_init();
+			chain_init();
 
 			assert(_thread_num);
 			int32_t cpu_num = sysconf(_SC_NPROCESSORS_CONF);
@@ -79,7 +79,7 @@ public:
 	}
 
 protected:
-	void inner_init()
+	void chain_init()
 	{
 		if (!_thread_num)
 		{
@@ -89,7 +89,7 @@ protected:
 	}
 	std::shared_ptr<tcp_client_channel>			create_origin_channel(std::shared_ptr<reactor_loop> reactor)
 	{
-		std::shared_ptr<tcp_client_channel>			channel = std::make_shared<tcp_client_channel>(_server_addr, _connect_timeout, _connect_retry_wait, _self_read_size, _self_write_size, _sock_read_size, _sock_write_size);
+		std::shared_ptr<tcp_client_channel>			channel = std::make_shared<tcp_client_channel>(reactor, _server_addr, _connect_timeout, _connect_retry_wait, _self_read_size, _self_write_size, _sock_read_size, _sock_write_size);
 		return channel;
 	}
 	std::shared_ptr<tcp_client_handler_base>	create_terminal_channel(std::shared_ptr<reactor_loop> reactor)
@@ -98,7 +98,7 @@ protected:
 		{
 			return nullptr;
 		}
-		std::shared_ptr<tcp_client_handler_base>	channel = _factory();
+		std::shared_ptr<tcp_client_handler_base>	channel = _factory(reactor);
 		return channel;
 	}
 	virtual bool build_channel_chain(std::shared_ptr<reactor_loop> reactor, std::list<std::shared_ptr<tcp_client_channel>>& origin_channel_list)	//存在一次性构建多个origin_channel
@@ -108,7 +108,7 @@ protected:
 
 		std::shared_ptr<tcp_client_handler_base>	terminal_channel = create_terminal_channel(reactor);
 
-		build_channel_chain_helper(reactor, std::dynamic_pointer_cast<tcp_client_handler_base>(origin_channel), terminal_channel);
+		build_channel_chain_helper(std::dynamic_pointer_cast<tcp_client_handler_base>(origin_channel), terminal_channel);
 
 		origin_channel->connect();
 		return true;
@@ -142,11 +142,7 @@ private:
 	{
 		for (std::list<std::shared_ptr<tcp_client_channel>>::iterator it = origin_channel_list.begin(); it != origin_channel_list.end(); it++)
 		{
-			(*it)->set_release();	//可能上层还保持间接或直接引用，这里使其失效：“只管功能失效化，不管生命期释放”
-			if (!(*it)->can_delete(true, 1))
-			{
-				(*it)->inner_final();
-			}
+			try_chain_final(*it, 1);
 		}
 
 		reactor->invalid();
@@ -172,11 +168,7 @@ public:
 	{
 		for (std::list<std::shared_ptr<tcp_client_channel>>::iterator it = _channels.begin(); it != _channels.end(); it++)
 		{
-			(*it)->set_release();	//可能上层还保持间接或直接引用，这里使其失效：“只管功能失效化，不管生命期释放”
-			if (!(*it)->can_delete(true, 1))
-			{
-				(*it)->inner_final();
-			}
+			try_chain_final(*it, 1);
 		}
 	}
 	
@@ -200,7 +192,7 @@ public:
 protected:
 	std::shared_ptr<tcp_client_channel>			create_origin_channel(std::shared_ptr<reactor_loop> reactor)
 	{
-		std::shared_ptr<tcp_client_channel>			channel = std::make_shared<tcp_client_channel>(_server_addr, _connect_timeout, _connect_retry_wait, _self_read_size, _self_write_size, _sock_read_size, _sock_write_size);
+		std::shared_ptr<tcp_client_channel>			channel = std::make_shared<tcp_client_channel>(reactor, _server_addr, _connect_timeout, _connect_retry_wait, _self_read_size, _self_write_size, _sock_read_size, _sock_write_size);
 		return channel;
 	}
 	std::shared_ptr<tcp_client_handler_base>	create_terminal_channel(std::shared_ptr<reactor_loop> reactor)
@@ -209,7 +201,7 @@ protected:
 		{
 			return nullptr;
 		}
-		std::shared_ptr<tcp_client_handler_base>	channel = _factory();
+		std::shared_ptr<tcp_client_handler_base>	channel = _factory(reactor);
 		return channel;
 	}
 	virtual bool build_channel_chain(std::shared_ptr<reactor_loop> reactor, std::list<std::shared_ptr<tcp_client_channel>>& origin_channel_list)
@@ -218,7 +210,7 @@ protected:
 		origin_channel_list.push_back(origin_channel);
 
 		std::shared_ptr<tcp_client_handler_base>	terminal_channel = create_terminal_channel(reactor);
-		build_channel_chain_helper(reactor, std::dynamic_pointer_cast<tcp_client_handler_base>(origin_channel), terminal_channel);
+		build_channel_chain_helper(std::dynamic_pointer_cast<tcp_client_handler_base>(origin_channel), terminal_channel);
 
 		origin_channel->connect();
 		return true;

@@ -212,3 +212,4 @@ void reactor_loop::stop_sockio(sockio_helper* sockio_id, SOCKET fd)
 
 	_backend_poller->del_sock(sockio_id, fd);
 }
+

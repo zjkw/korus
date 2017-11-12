@@ -45,7 +45,7 @@ public:
 	virtual bool	is_dead();
 
 protected:
-	enum state
+	enum life_state
 	{
 		MSS_NONE = 0,
 		MSS_PREPARE = 1,	//“正在”准备资源
@@ -53,6 +53,6 @@ protected:
 		MSS_RELEASE = 3,	//“正在”清理资源
 		MSS_DEAD = 4,		//不可用
 	};
-	std::atomic<state>	_obj_state;
+	std::atomic<life_state>	_obj_state;
 };
 

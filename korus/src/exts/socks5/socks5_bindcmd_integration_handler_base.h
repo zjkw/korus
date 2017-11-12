@@ -3,6 +3,19 @@
 #include "socks5_bindcmd_client_channel.h"
 #include "socks5_connectcmd_embedbind_client_channel.h"
 
+class socks5_bindcmd_integration_handler_base;
+bool build_channel_chain_helper(std::shared_ptr<socks5_connectcmd_embedbind_client_channel> ctrl, std::shared_ptr<socks5_bindcmd_client_channel> data, std::shared_ptr<socks5_bindcmd_integration_handler_base> integration)
+{
+//	integration->chain_init(ctrl, data);
+//	ctrl->set_integration(integration);
+//	data->set_integration(integration);
+
+//	integration->on_chain_init();
+//	ctrl->on_chain_init();
+//	data->on_chain_init();
+	return true;
+}
+
 class socks5_bindcmd_integration_handler_base
 {
 public:
@@ -10,8 +23,8 @@ public:
 	virtual ~socks5_bindcmd_integration_handler_base();
 
 	//override------------------
-	virtual void	on_init();
-	virtual void	on_final();
+	virtual void	on_chain_init();
+	virtual void	on_chain_final();
 
 	//ctrl channel--------------
 	// 下面四个函数可能运行在多线程环境下	
@@ -22,7 +35,7 @@ public:
 	virtual TCP_CLTCONN_STATE	ctrl_state();
 	virtual void	on_ctrl_connected();
 	virtual void	on_ctrl_closed();	
-	virtual CLOSE_MODE_STRATEGY	on_ctrl_error(CHANNEL_ERROR_CODE code);		//参考CHANNEL_ERROR_CODE定义	
+	CLOSE_MODE_STRATEGY	on_ctrl_error(CHANNEL_ERROR_CODE code);				//参考CHANNEL_ERROR_CODE定义	
 	virtual int32_t on_ctrl_recv_split(const void* buf, const size_t len);	//提取数据包：返回值 =0 表示包不完整； >0 完整的包(长)	
 	virtual void	on_ctrl_recv_pkg(const void* buf, const size_t len);	//这是一个待处理的完整包
 
@@ -39,14 +52,16 @@ public:
 	virtual int32_t on_data_recv_split(const void* buf, const size_t len);	//提取数据包：返回值 =0 表示包不完整； >0 完整的包(长)
 	virtual void	on_data_recv_pkg(const void* buf, const size_t len);	//这是一个待处理的完整包
 
-private:
+	virtual long	chain_refcount();
+
+//private:		
+	void	chain_init(std::shared_ptr<socks5_connectcmd_embedbind_client_channel> ctrl_channel, std::shared_ptr<socks5_bindcmd_client_channel>	data_channel);
+	void	chain_final();
+
+	std::shared_ptr<reactor_loop>								_reactor;
 	std::shared_ptr<socks5_connectcmd_embedbind_client_channel>	_ctrl_channel;
 	std::shared_ptr<socks5_bindcmd_client_channel>				_data_channel;
 };
 
 using socks5_bindcmd_integration_handler_factory_t = std::function<std::shared_ptr<socks5_bindcmd_integration_handler_base>()>;
 
-bool build_channel_chain_helper(std::shared_ptr<tcp_client_handler_base> ctrl, std::shared_ptr<tcp_client_handler_base> data, std::shared_ptr<socks5_bindcmd_integration_handler_base> integration)
-{
-	return true;
-}

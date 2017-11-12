@@ -30,14 +30,13 @@ public:
 	// sock_write_size仅仅是写到套接口的UDP数据报的大小上限，无类似tcp含义	
 #ifndef REUSEPORT_OPTION
 	udp_server(const std::string& local_addr, const udp_server_channel_factory_t& factory, const uint32_t self_read_size = DEFAULT_READ_BUFSIZE, const uint32_t self_write_size = DEFAULT_WRITE_BUFSIZE, const uint32_t sock_read_size = 0, const uint32_t sock_write_size = 0)
-		:	_local_addr(local_addr), _self_read_size(self_read_size), _self_write_size(self_write_size), _sock_read_size(sock_read_size), _sock_write_size(sock_write_size)
+		: _local_addr(local_addr), _factory(factory), _self_read_size(self_read_size), _self_write_size(self_write_size), _sock_read_size(sock_read_size), _sock_write_size(sock_write_size)
 #else
 	udp_server(uint16_t thread_num, const std::string& local_addr, const udp_server_channel_factory_t& factory, const uint32_t self_read_size = DEFAULT_READ_BUFSIZE, const uint32_t self_write_size = DEFAULT_WRITE_BUFSIZE, const uint32_t sock_read_size = 0, const uint32_t sock_write_size = 0)
 		: _thread_num(thread_num), _local_addr(local_addr), _self_read_size(self_read_size), _self_write_size(self_write_size), _sock_read_size(sock_read_size), _sock_write_size(sock_write_size)
 #endif
 	{
 		_tid = std::this_thread::get_id();
-		_factory_chain.push_back(factory);
 	}
 
 	virtual ~udp_server()
@@ -61,8 +60,8 @@ public:
 		//atomic::test_and_set检查flag是否被设置，若被设置直接返回true，若没有设置则设置flag为true后再返回false
 		if (!_start.test_and_set())
 		{
-			inner_init();
-			assert(_factory_chain.size());
+			chain_init();
+			assert(_factory);
 
 			int32_t cpu_num = sysconf(_SC_NPROCESSORS_CONF);
 			assert(cpu_num);
@@ -79,14 +78,14 @@ public:
 				thread_object*	thread_obj = new thread_object(abs((i + offset) % cpu_num));
 				_thread_pool[i] = thread_obj;
 
-				thread_obj->add_init_task(std::bind(&udp_server::common_thread_init, this, thread_obj, _factory_chain));
+				thread_obj->add_init_task(std::bind(&udp_server::common_thread_init, this, thread_obj, _factory));
 				thread_obj->start();
 			}
 		}
 	}
 
 protected:
-	void inner_init()
+	void chain_init()
 	{
 #ifdef REUSEPORT_OPTION
 		if (!_thread_num)
@@ -104,20 +103,20 @@ private:
 #endif
 	std::map<uint16_t, thread_object*>		_thread_pool;
 	std::atomic_flag						_start = ATOMIC_FLAG_INIT;
-	udp_server_channel_factory_chain_t		_factory_chain;
+	udp_server_channel_factory_t			_factory;
 	std::string								_local_addr;
 	uint32_t								_self_read_size;
 	uint32_t								_self_write_size;
 	uint32_t								_sock_read_size;
 	uint32_t								_sock_write_size;
 
-	void common_thread_init(thread_object*	thread_obj, const udp_server_channel_factory_chain_t& factory_chain)
+	void common_thread_init(thread_object*	thread_obj, const udp_server_channel_factory_t& factory)
 	{
 		std::shared_ptr<reactor_loop>		reactor = std::make_shared<reactor_loop>();
-		std::shared_ptr<udp_server_channel>	channel = std::make_shared<udp_server_channel>(_local_addr, _self_read_size, _self_write_size, _sock_read_size, _sock_write_size);
-
-		build_chain(reactor, std::dynamic_pointer_cast<udp_server_handler_base>(channel), factory_chain);
-		
+		std::shared_ptr<udp_server_channel>	channel = std::make_shared<udp_server_channel>(reactor, _local_addr, _self_read_size, _self_write_size, _sock_read_size, _sock_write_size);
+		std::shared_ptr<udp_server_handler_base>	base = factory(reactor);
+		build_channel_chain_helper(std::dynamic_pointer_cast<udp_server_handler_base>(channel), base);
+	
 		thread_obj->add_exit_task(std::bind(&udp_server::common_thread_exit, this, thread_obj, reactor, channel));
 		thread_obj->add_resident_task(std::bind(&reactor_loop::run_once, reactor));
 
@@ -125,11 +124,7 @@ private:
 	}
 	void common_thread_exit(thread_object*	thread_obj, std::shared_ptr<reactor_loop> reactor, std::shared_ptr<udp_server_channel>	channel)
 	{
-		channel->set_release();
-		if (!channel->can_delete(true, 1))
-		{
-			channel->inner_final();
-		}
+		try_chain_final(channel, 1);
 		reactor->invalid();	//可能上层还保持间接或直接引用，这里使其失效：“只管功能失效化，不管生命期释放”
 	}
 };
@@ -142,19 +137,14 @@ public:
 	// addr格式ip:port
 	udp_server(std::shared_ptr<reactor_loop> reactor, const std::string& local_addr, const udp_server_channel_factory_t& factory, 
 				const uint32_t self_read_size = DEFAULT_READ_BUFSIZE, const uint32_t self_write_size = DEFAULT_WRITE_BUFSIZE, const uint32_t sock_read_size = 0, const uint32_t sock_write_size = 0)
-				: _reactor(reactor), _local_addr(local_addr), _self_read_size(self_read_size), _self_write_size(self_write_size), _sock_read_size(sock_read_size), _sock_write_size(sock_write_size)
+				: _reactor(reactor), _local_addr(local_addr), _factory(factory), _self_read_size(self_read_size), _self_write_size(self_write_size), _sock_read_size(sock_read_size), _sock_write_size(sock_write_size)
 	{
 		_tid = std::this_thread::get_id();
-		_factory_chain.push_back(factory);
 	}
 
 	virtual ~udp_server()
 	{
-		_channel->set_release();
-		if (!_channel->can_delete(true, 1))
-		{
-			_channel->inner_final();
-		}
+		try_chain_final(_channel, 1);
 	}
 	virtual void start()
 	{
@@ -167,16 +157,17 @@ public:
 		//atomic::test_and_set检查flag是否被设置，若被设置直接返回true，若没有设置则设置flag为true后再返回false
 		if (!_start.test_and_set())
 		{
-			assert(_factory_chain.size());
+			assert(_factory);
 
-			_channel = std::make_shared<udp_server_channel>(_local_addr, _self_read_size, _self_write_size, _sock_read_size, _sock_write_size);
-			build_chain(_reactor, std::dynamic_pointer_cast<udp_server_handler_base>(_channel), _factory_chain);
+			_channel = std::make_shared<udp_server_channel>(_reactor, _local_addr, _self_read_size, _self_write_size, _sock_read_size, _sock_write_size);
+			std::shared_ptr<udp_server_handler_base>	base = _factory(_reactor);
+			build_channel_chain_helper(std::dynamic_pointer_cast<udp_server_handler_base>(_channel), base);
 			_channel->start();
 		}
 	}
 	
 protected:
-	udp_server_channel_factory_chain_t		_factory_chain;
+	udp_server_channel_factory_t		_factory;
 
 private:
 	std::thread::id							_tid;

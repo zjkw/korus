@@ -5,9 +5,9 @@
 
 #define SCAN_STEP_ONCE	(1)
 
-tcp_server_channel_creator::tcp_server_channel_creator(std::shared_ptr<reactor_loop> reactor, const tcp_server_channel_factory_chain_t& factory_chain,
+tcp_server_channel_creator::tcp_server_channel_creator(std::shared_ptr<reactor_loop> reactor, const tcp_server_channel_factory_t& factory,
 		const uint32_t self_read_size, const uint32_t self_write_size, const uint32_t sock_read_size, const uint32_t sock_write_size)
-		: _reactor(reactor), _factory_chain(factory_chain), _idle_helper(reactor.get()), _last_recover_scan_fd(0),
+		: _reactor(reactor), _factory(factory), _idle_helper(reactor.get()), _last_recover_scan_fd(0),
 		_self_read_size(self_read_size), _self_write_size(self_write_size), _sock_read_size(sock_read_size), _sock_write_size(sock_write_size)
 {
 	_idle_helper.bind(std::bind(&tcp_server_channel_creator::on_idle_recover, this, std::placeholders::_1));
@@ -19,11 +19,7 @@ tcp_server_channel_creator::~tcp_server_channel_creator()
 	_idle_helper.stop();
 	for (std::map<SOCKET, std::shared_ptr<tcp_server_channel>>::iterator it = _channel_list.begin(); it != _channel_list.end(); it++)
 	{
-		it->second->set_release();
-		if (!it->second->can_delete(true, 1))
-		{
-			it->second->inner_final();
-		}
+		try_chain_final(it->second, 1);
 	}
 	_channel_list.clear();
 }
@@ -43,10 +39,10 @@ void tcp_server_channel_creator::on_newfd(const SOCKET fd, const struct sockaddr
 			::close(fd);
 		}
 		else
-		{
-			std::shared_ptr<tcp_server_handler_base> cb = _factory_chain.front()();
-			std::shared_ptr<tcp_server_channel>	channel = std::make_shared<tcp_server_channel>(fd, _self_read_size, _self_write_size, _sock_read_size, _sock_write_size);
-			build_chain(_reactor, std::dynamic_pointer_cast<tcp_server_handler_base>(channel), _factory_chain);
+		{			
+			std::shared_ptr<tcp_server_channel>			channel	=	std::make_shared<tcp_server_channel>(_reactor, fd, _self_read_size, _self_write_size, _sock_read_size, _sock_write_size);
+			std::shared_ptr<tcp_server_handler_base>	base	=	_factory(_reactor);
+			build_channel_chain_helper(std::dynamic_pointer_cast<tcp_server_handler_base>(channel), base);
 			_channel_list[fd] = channel;
 			channel->start();
 			channel->on_accept();
@@ -73,10 +69,9 @@ void tcp_server_channel_creator::on_idle_recover(idle_helper* idle_id)
 	for (size_t i = 0; i < SCAN_STEP_ONCE && it != _channel_list.end(); i++)
 	{
 		// 无效才可剔除，引用为1表示仅仅tcp_server_channel_creator引用这个channel，而channel是这个对象创建（同线程）
-		if (!it->second->can_delete(false, 1))
+		if (it->second->is_release())	//origin_channel_list + terminal
 		{
-			it->second->inner_final();
-			_channel_list.erase(it++);
+			try_chain_final(it->second, 1);
 		}
 		else
 		{

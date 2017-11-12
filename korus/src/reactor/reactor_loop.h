@@ -56,44 +56,84 @@ private:
 	void run_once_inner();
 };
 
-// 增加tail是因为tail需要更多与框架交互，而这要求更多的个性化派生类而非base基类接口
 template<typename T>
-bool build_chain(std::shared_ptr<reactor_loop> reactor, T tail, const std::list<std::function<T()> >& chain)
+bool build_channel_chain_helper_inner(std::shared_ptr<reactor_loop> reactor, std::vector<T>& objs)
 {
-	if (!tail)
-	{
-		return false;
-	}
-	std::vector<T> objs;
-	typedef typename std::list<std::function<T()> >::const_iterator list_iterator;
-	for (list_iterator it = chain.begin(); it != chain.end(); it++)
-	{
-		T t = (*it)();
-		if (!t)
-		{
-			return false;
-		}
-
-		objs.push_back(t);
-	}
-	if (!objs.size())
-	{
-		return false;
-	}
-	objs.push_back(tail);
-
 	for (size_t i = 0; i < objs.size(); i++)
 	{
 		T prev = i > 0 ? objs[i - 1] : nullptr;
 		T next = i + 1 < objs.size() ? objs[i + 1] : nullptr;
-		objs[i]->inner_init(reactor, prev, next);
+		objs[i]->chain_init(reactor, prev, next);
 	}
 
 	return true;
 }
 
-template<typename T, typename... Args>
-bool build_channel_chain_helper(std::shared_ptr<reactor_loop> reactor, T origin, Args... args)
+template<typename T>
+bool build_channel_chain_helper(std::shared_ptr<reactor_loop> reactor, T first, T second)
 {
+	std::vector<T> objs;
+	objs.push_back(first);
+	objs.push_back(second);
+	return build_channel_chain_helper_inner(reactor, objs);
+}
+
+template<typename T>
+bool build_channel_chain_helper(std::shared_ptr<reactor_loop> reactor, T first, T second, T third)
+{
+	std::vector<T> objs;
+	objs.push_back(first);
+	objs.push_back(second);
+	objs.push_back(third);
+	return build_channel_chain_helper_inner(reactor, objs);
+}
+
+
+///////////////
+template<typename T>
+bool build_channel_chain_helper_inner(std::vector<T>& objs)
+{
+	for (size_t i = 0; i < objs.size(); i++)
+	{
+		T prev = i > 0 ? objs[i - 1] : nullptr;
+		T next = i + 1 < objs.size() ? objs[i + 1] : nullptr;
+		objs[i]->chain_init(prev, next);
+	}
+
 	return true;
+}
+
+template<typename T>
+bool build_channel_chain_helper(T first, T second)
+{
+	std::vector<T> objs;
+	objs.push_back(first);
+	objs.push_back(second);
+	return build_channel_chain_helper_inner(objs);
+}
+
+template<typename T>
+bool build_channel_chain_helper(T first, T second, T third)
+{
+	std::vector<T> objs;
+	objs.push_back(first);
+	objs.push_back(second);
+	objs.push_back(third);
+	return build_channel_chain_helper_inner(objs);
+}
+
+template<typename T>
+void try_chain_final(T t, long out_refcount)
+{
+	if (!t)
+	{
+		return;
+	}
+
+	auto terminal = t->chain_terminal();
+	terminal->chain_zomby();						//可能上层还保持间接或直接引用，这里使其失效：“只管功能失效化，不管生命期释放”
+	if (terminal->chain_refcount() == out_refcount + 1 + 1)	//terminal + auto
+	{
+		terminal->chain_final();
+	}
 }

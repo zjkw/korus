@@ -2,93 +2,95 @@
 #include "udp_server_channel.h"
 
 //////////////////////////////////base
-udp_server_handler_base::udp_server_handler_base() 
-	: _reactor(nullptr), _tunnel_prev(nullptr), _tunnel_next(nullptr)
+udp_server_handler_base::udp_server_handler_base(std::shared_ptr<reactor_loop> reactor)
+	: _reactor(reactor)
 {
 }
 
 udp_server_handler_base::~udp_server_handler_base()
 { 
-	// 必须执行inner_final
-	assert(!_tunnel_prev); 
-	assert(!_tunnel_next); 
 }	
 
 //override------------------
-void	udp_server_handler_base::on_init()
+void	udp_server_handler_base::on_chain_init()
 {
 }
 
-void	udp_server_handler_base::on_final()
+void	udp_server_handler_base::on_chain_final()
 {
+}
+
+void	udp_server_handler_base::on_chain_zomby()
+{
+
 }
 
 void	udp_server_handler_base::on_ready()
 { 
-	if (!_tunnel_prev)
+	if (!_tunnel_next)
 	{
 		assert(false);
 		return;
 	}
 
-	_tunnel_prev->on_ready(); 
+	_tunnel_next->on_ready(); 
 }
 
 void	udp_server_handler_base::on_closed()
 { 
-	if (!_tunnel_prev)
+	if (!_tunnel_next)
 	{
 		assert(false);
 		return;
 	}
 
-	_tunnel_prev->on_closed(); 
+	_tunnel_next->on_closed(); 
 }
 
 //参考CHANNEL_ERROR_CODE定义
 CLOSE_MODE_STRATEGY	udp_server_handler_base::on_error(CHANNEL_ERROR_CODE code)
 { 
-	if (!_tunnel_prev)
+	if (!_tunnel_next)
 	{
 		assert(false);
 		return CMS_INNER_AUTO_CLOSE;
 	}
 
-	return _tunnel_prev->on_error(code);
+	return _tunnel_next->on_error(code);
 }
 
 //这是一个待处理的完整包
 void	udp_server_handler_base::on_recv_pkg(const void* buf, const size_t len, const sockaddr_in& peer_addr)
+{ 
+	if (!_tunnel_next)
+	{
+		assert(false);
+		return;
+	}
+
+	_tunnel_next->on_recv_pkg(buf, len, peer_addr);
+}
+
+int32_t	udp_server_handler_base::send(const void* buf, const size_t len, const sockaddr_in& peer_addr)	
+{ 
+	if (!_tunnel_prev)
+	{
+		assert(false);
+		return CEC_INVALID_SOCKET;
+	}
+	
+	return _tunnel_prev->send(buf, len, peer_addr);
+}
+
+void	udp_server_handler_base::close()
 { 
 	if (!_tunnel_prev)
 	{
 		assert(false);
 		return;
 	}
-
-	_tunnel_prev->on_recv_pkg(buf, len, peer_addr);
-}
-
-int32_t	udp_server_handler_base::send(const void* buf, const size_t len, const sockaddr_in& peer_addr)	
-{ 
-	if (!_tunnel_next)
-	{
-		assert(false);
-		return CEC_INVALID_SOCKET;
-	}
 	
-	return _tunnel_next->send(buf, len, peer_addr);
-}
-
-void	udp_server_handler_base::close()
-{ 
-	if (!_tunnel_next)
-	{
-		assert(false);
-		return;
-	}
-	
-	_tunnel_next->close();
+	_tunnel_prev->close();
 }
 
 std::shared_ptr<reactor_loop>	udp_server_handler_base::reactor()		
@@ -96,58 +98,10 @@ std::shared_ptr<reactor_loop>	udp_server_handler_base::reactor()
 	return _reactor; 
 }
 
-bool	udp_server_handler_base::can_delete(bool force, long call_ref_count)			//端头如果有别的对象引用此，需要重载
-{
-	long ref = 0;
-	if (_tunnel_prev)
-	{
-		ref++;
-	}
-	if (_tunnel_next)
-	{
-		ref++;
-	}
-	if (call_ref_count + ref + 1 == shared_from_this().use_count())
-	{
-		// 成立，尝试向上查询
-		if (_tunnel_prev)
-		{
-			return _tunnel_prev->can_delete(force, 0);
-		}
-		else
-		{
-			return true;
-		}
-	}
-
-	return false;
-}
-
-void	udp_server_handler_base::inner_init(std::shared_ptr<reactor_loop> reactor, std::shared_ptr<udp_server_handler_base> tunnel_prev, std::shared_ptr<udp_server_handler_base> tunnel_next)
-{
-	_reactor = reactor;
-	_tunnel_prev = tunnel_prev;
-	_tunnel_next = tunnel_next;
-
-	on_init();
-}
-void	udp_server_handler_base::inner_final()
-{
-	on_final();
-
-	// 无需前置is_release判断，相信调用者
-	if (_tunnel_prev)
-	{
-		_tunnel_prev->inner_final();
-	}
-	_reactor = nullptr;
-	_tunnel_prev = nullptr;
-	_tunnel_next = nullptr;
-}
-
 //////////////////////////////////channel
-udp_server_channel::udp_server_channel(const std::string& local_addr, const uint32_t self_read_size, const uint32_t self_write_size, const uint32_t sock_read_size, const uint32_t sock_write_size)
-										: udp_channel_base(local_addr, self_read_size, self_write_size, sock_read_size, sock_write_size)
+udp_server_channel::udp_server_channel(std::shared_ptr<reactor_loop> reactor, const std::string& local_addr, const uint32_t self_read_size, const uint32_t self_write_size, const uint32_t sock_read_size, const uint32_t sock_write_size)
+	: udp_server_handler_base(reactor), 
+	udp_channel_base(local_addr, self_read_size, self_write_size, sock_read_size, sock_write_size)
 										
 {
 	_sockio_helper.bind(std::bind(&udp_server_channel::on_sockio_read, this, std::placeholders::_1), nullptr);
@@ -274,19 +228,4 @@ void udp_server_channel::handle_close_strategy(CLOSE_MODE_STRATEGY cms)
 	{
 		close();	//内部会自动检查有效性
 	}
-}
-
-bool	udp_server_channel::can_delete(bool force, long call_ref_count)
-{
-	if (force)
-	{
-		return udp_server_handler_base::can_delete(force, call_ref_count);
-	}
-
-	if (!is_release())
-	{
-		return udp_server_handler_base::can_delete(force, call_ref_count);
-	}
-
-	return false;
 }

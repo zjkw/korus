@@ -2,7 +2,7 @@
 #include <string.h>
 #include "socks5_client_channel_base.h"
 
-socks5_client_channel_base::socks5_client_channel_base()
+socks5_client_channel_base::socks5_client_channel_base(std::shared_ptr<reactor_loop> reactor) : tcp_client_handler_base(reactor)
 {
 
 }
@@ -12,11 +12,11 @@ socks5_client_channel_base::~socks5_client_channel_base()
 }
 
 //override------------------
-void	socks5_client_channel_base::on_init()
+void	socks5_client_channel_base::on_chain_init()
 {
 }
 
-void	socks5_client_channel_base::on_final()
+void	socks5_client_channel_base::on_chain_final()
 {
 }
 

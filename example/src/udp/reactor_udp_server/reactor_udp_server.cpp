@@ -11,20 +11,23 @@
 class udp_server_handler : public udp_server_handler_base
 {
 public:
-	udp_server_handler(){}
+	udp_server_handler(std::shared_ptr<reactor_loop> reactor) : udp_server_handler_base(reactor){}
 	virtual ~udp_server_handler(){}
 
 	//override------------------
-	virtual void	on_init()
+	virtual void	on_chain_init()
 	{
 	}
-	virtual void	on_final()
+	virtual void	on_chain_final()
 	{
 	}
-	virtual bool	can_delete(bool force, long call_ref_count)//force为真表示强制查询，比如母体退出
+	virtual void	on_chain_zomby()
 	{
-		// 因为没有被其他对象引用，本对象可在框架要求下退出,如force为真，可以主动与消去外界引用
-		return true;
+		// 因为没有被其他对象引用，本对象可在框架要求下退出，可以主动与消去外界引用
+	}
+	virtual long	chain_refcount()
+	{
+		return udp_server_handler_base::chain_refcount();
 	}
 	virtual void	on_ready()	
 	{
@@ -55,9 +58,9 @@ public:
 	}
 };
 
-std::shared_ptr<udp_server_handler_base> channel_factory()
+std::shared_ptr<udp_server_handler_base> channel_factory(std::shared_ptr<reactor_loop> reactor)
 {
-	std::shared_ptr<udp_server_handler> handler = std::make_shared<udp_server_handler>();
+	std::shared_ptr<udp_server_handler> handler = std::make_shared<udp_server_handler>(reactor);
 	std::shared_ptr<udp_server_handler_base> cb = std::dynamic_pointer_cast<udp_server_handler_base>(handler);
 	return cb;
 }
