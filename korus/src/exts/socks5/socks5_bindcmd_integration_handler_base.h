@@ -1,22 +1,11 @@
 #pragma once
 
+#include <functional>
+#include "korus/src/util/chain_sharedobj_base.h"
 #include "socks5_bindcmd_client_channel.h"
 #include "socks5_connectcmd_embedbind_client_channel.h"
 
-class socks5_bindcmd_integration_handler_base;
-bool build_channel_chain_helper(std::shared_ptr<socks5_connectcmd_embedbind_client_channel> ctrl, std::shared_ptr<socks5_bindcmd_client_channel> data, std::shared_ptr<socks5_bindcmd_integration_handler_base> integration)
-{
-//	integration->chain_init(ctrl, data);
-//	ctrl->set_integration(integration);
-//	data->set_integration(integration);
-
-//	integration->on_chain_init();
-//	ctrl->on_chain_init();
-//	data->on_chain_init();
-	return true;
-}
-
-class socks5_bindcmd_integration_handler_base
+class socks5_bindcmd_integration_handler_base : public chain_sharedobj_base<socks5_bindcmd_integration_handler_base>
 {
 public:
 	socks5_bindcmd_integration_handler_base();
@@ -25,9 +14,15 @@ public:
 	//override------------------
 	virtual void	on_chain_init();
 	virtual void	on_chain_final();
+	virtual void	on_chain_zomby();
+	virtual long	chain_refcount();
+	virtual void	chain_init(std::shared_ptr<socks5_connectcmd_embedbind_client_channel> ctrl_channel, std::shared_ptr<socks5_bindcmd_client_channel> data_channel);
+	virtual void	chain_final();	
+	virtual void	chain_zomby();
+	std::shared_ptr<chain_sharedobj_base<socks5_bindcmd_integration_handler_base>> chain_terminal();
 
 	//ctrl channel--------------
-	// 下面四个函数可能运行在多线程环境下	
+	// 下面五个函数可能运行在多线程环境下	
 	virtual int32_t	ctrl_send(const void* buf, const size_t len);			// 保证原子, 认为是整包，返回值若<0参考CHANNEL_ERROR_CODE
 	virtual void	ctrl_close();
 	virtual void	ctrl_shutdown(int32_t howto);							// 参数参考全局函数 ::shutdown
@@ -40,7 +35,7 @@ public:
 	virtual void	on_ctrl_recv_pkg(const void* buf, const size_t len);	//这是一个待处理的完整包
 
 	//data channel--------------
-	// 下面四个函数可能运行在多线程环境下	
+	// 下面五个函数可能运行在多线程环境下	
 	virtual int32_t	data_send(const void* buf, const size_t len);			// 保证原子, 认为是整包，返回值若<0参考CHANNEL_ERROR_CODE
 	virtual void	data_close();
 	virtual void	data_shutdown(int32_t howto);							// 参数参考全局函数 ::shutdown
@@ -52,16 +47,13 @@ public:
 	virtual int32_t on_data_recv_split(const void* buf, const size_t len);	//提取数据包：返回值 =0 表示包不完整； >0 完整的包(长)
 	virtual void	on_data_recv_pkg(const void* buf, const size_t len);	//这是一个待处理的完整包
 
-	virtual long	chain_refcount();
-
-//private:		
-	void	chain_init(std::shared_ptr<socks5_connectcmd_embedbind_client_channel> ctrl_channel, std::shared_ptr<socks5_bindcmd_client_channel>	data_channel);
-	void	chain_final();
-
+private:		
 	std::shared_ptr<reactor_loop>								_reactor;
 	std::shared_ptr<socks5_connectcmd_embedbind_client_channel>	_ctrl_channel;
 	std::shared_ptr<socks5_bindcmd_client_channel>				_data_channel;
 };
 
 using socks5_bindcmd_integration_handler_factory_t = std::function<std::shared_ptr<socks5_bindcmd_integration_handler_base>()>;
+
+bool build_relation(std::shared_ptr<socks5_connectcmd_embedbind_client_channel> ctrl, std::shared_ptr<socks5_bindcmd_client_channel> data, std::shared_ptr<socks5_bindcmd_integration_handler_base> integration);
 

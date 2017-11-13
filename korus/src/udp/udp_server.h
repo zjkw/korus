@@ -60,7 +60,7 @@ public:
 		//atomic::test_and_set检查flag是否被设置，若被设置直接返回true，若没有设置则设置flag为true后再返回false
 		if (!_start.test_and_set())
 		{
-			chain_init();
+			inner_init();
 			assert(_factory);
 
 			int32_t cpu_num = sysconf(_SC_NPROCESSORS_CONF);
@@ -85,7 +85,7 @@ public:
 	}
 
 protected:
-	void chain_init()
+	void inner_init()
 	{
 #ifdef REUSEPORT_OPTION
 		if (!_thread_num)
@@ -113,14 +113,14 @@ private:
 	void common_thread_init(thread_object*	thread_obj, const udp_server_channel_factory_t& factory)
 	{
 		std::shared_ptr<reactor_loop>		reactor = std::make_shared<reactor_loop>();
-		std::shared_ptr<udp_server_channel>	channel = std::make_shared<udp_server_channel>(reactor, _local_addr, _self_read_size, _self_write_size, _sock_read_size, _sock_write_size);
-		std::shared_ptr<udp_server_handler_base>	base = factory(reactor);
-		build_channel_chain_helper(std::dynamic_pointer_cast<udp_server_handler_base>(channel), base);
+		std::shared_ptr<udp_server_channel>	origin_channel = std::make_shared<udp_server_channel>(reactor, _local_addr, _self_read_size, _self_write_size, _sock_read_size, _sock_write_size);
+		std::shared_ptr<udp_server_handler_base>	terminal_channel = factory(reactor);
+		build_channel_chain_helper(std::dynamic_pointer_cast<udp_server_handler_base>(origin_channel), terminal_channel);
 	
-		thread_obj->add_exit_task(std::bind(&udp_server::common_thread_exit, this, thread_obj, reactor, channel));
+		thread_obj->add_exit_task(std::bind(&udp_server::common_thread_exit, this, thread_obj, reactor, origin_channel));
 		thread_obj->add_resident_task(std::bind(&reactor_loop::run_once, reactor));
 
-		channel->start();
+		origin_channel->start();
 	}
 	void common_thread_exit(thread_object*	thread_obj, std::shared_ptr<reactor_loop> reactor, std::shared_ptr<udp_server_channel>	channel)
 	{
@@ -160,14 +160,14 @@ public:
 			assert(_factory);
 
 			_channel = std::make_shared<udp_server_channel>(_reactor, _local_addr, _self_read_size, _self_write_size, _sock_read_size, _sock_write_size);
-			std::shared_ptr<udp_server_handler_base>	base = _factory(_reactor);
-			build_channel_chain_helper(std::dynamic_pointer_cast<udp_server_handler_base>(_channel), base);
+			std::shared_ptr<udp_server_handler_base>	terminal_channel = _factory(_reactor);
+			build_channel_chain_helper(std::dynamic_pointer_cast<udp_server_handler_base>(_channel), terminal_channel);
 			_channel->start();
 		}
 	}
 	
 protected:
-	udp_server_channel_factory_t		_factory;
+	udp_server_channel_factory_t			_factory;
 
 private:
 	std::thread::id							_tid;

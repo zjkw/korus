@@ -3,6 +3,7 @@
 #include <map>
 #include <memory>
 #include <thread>
+#include <list>
 #include "korus/src/thread/thread_object.h"
 #include "korus/src/reactor/reactor_loop.h"
 #include "tcp_client_channel.h"
@@ -60,7 +61,7 @@ public:
 		//atomic_flag::test_and_set检查flag是否被设置，若被设置直接返回true，若没有设置则设置flag为true后再返回false
 		if (!_start.test_and_set())
 		{
-			chain_init();
+			inner_init();
 
 			assert(_thread_num);
 			int32_t cpu_num = sysconf(_SC_NPROCESSORS_CONF);
@@ -79,7 +80,7 @@ public:
 	}
 
 protected:
-	void chain_init()
+	void inner_init()
 	{
 		if (!_thread_num)
 		{

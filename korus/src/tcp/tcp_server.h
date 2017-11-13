@@ -70,7 +70,7 @@ public:
 		{
 			assert(_factory);
 
-			chain_init();
+			inner_init();
 
 			assert(_thread_num);
 			int32_t cpu_num = sysconf(_SC_NPROCESSORS_CONF);
@@ -120,7 +120,7 @@ public:
 protected:
 	tcp_server_channel_factory_t			_factory;
 
-	void chain_init()
+	void inner_init()
 	{
 		if (!_thread_num)
 		{

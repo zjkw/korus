@@ -14,10 +14,77 @@ socks5_bindcmd_integration_handler_base::~socks5_bindcmd_integration_handler_bas
 //override------------------
 void	socks5_bindcmd_integration_handler_base::on_chain_init()
 {
+
 }
 
 void	socks5_bindcmd_integration_handler_base::on_chain_final()
 {
+
+}
+
+void	socks5_bindcmd_integration_handler_base::on_chain_zomby()
+{
+
+}
+
+long	socks5_bindcmd_integration_handler_base::chain_refcount()
+{
+	long ref = 0;
+	if (_ctrl_channel)
+	{
+		ref += 1 + _ctrl_channel->chain_refcount();
+	}
+	if (_data_channel)
+	{
+		ref += 1 + _data_channel->chain_refcount();
+	}
+
+	return ref + chain_sharedobj_base<socks5_bindcmd_integration_handler_base>::chain_refcount();
+}
+
+void	socks5_bindcmd_integration_handler_base::chain_init(std::shared_ptr<socks5_connectcmd_embedbind_client_channel> ctrl_channel, std::shared_ptr<socks5_bindcmd_client_channel> data_channel)
+{
+	_ctrl_channel = ctrl_channel;
+	_data_channel = data_channel;
+}
+
+void	socks5_bindcmd_integration_handler_base::chain_final()
+{
+	on_chain_final();
+
+	// 无需前置is_release判断，相信调用者
+	std::shared_ptr<socks5_connectcmd_embedbind_client_channel> ctrl_channel = _ctrl_channel;
+	std::shared_ptr<socks5_bindcmd_client_channel> data_channel = _data_channel;
+	_ctrl_channel = nullptr;
+	_data_channel = nullptr;
+
+	if (ctrl_channel)
+	{
+		ctrl_channel->chain_final();
+	}
+	if (data_channel)
+	{
+		data_channel->chain_final();
+	}
+}
+
+void	socks5_bindcmd_integration_handler_base::chain_zomby()
+{
+	on_chain_zomby();
+
+	if (_ctrl_channel)
+	{
+		_ctrl_channel->chain_zomby();
+	}
+	if (_data_channel)
+	{
+		_data_channel->chain_zomby();
+	}
+}
+
+std::shared_ptr<chain_sharedobj_base<socks5_bindcmd_integration_handler_base>> socks5_bindcmd_integration_handler_base::chain_terminal()
+{
+	return this->shared_from_this();
 }
 
 //ctrl channel--------------
@@ -163,7 +230,6 @@ void	socks5_bindcmd_integration_handler_base::on_data_closed()
 CLOSE_MODE_STRATEGY	socks5_bindcmd_integration_handler_base::on_data_error(CHANNEL_ERROR_CODE code)		//参考CHANNEL_ERROR_CODE定义
 {
 	return CMS_INNER_AUTO_CLOSE;
-
 }
 
 int32_t socks5_bindcmd_integration_handler_base::on_data_recv_split(const void* buf, const size_t len)	//提取数据包：返回值 =0 表示包不完整； >0 完整的包(长)
@@ -176,12 +242,10 @@ void	socks5_bindcmd_integration_handler_base::on_data_recv_pkg(const void* buf, 
 
 }
 
-void	socks5_bindcmd_integration_handler_base::chain_init(std::shared_ptr<socks5_connectcmd_embedbind_client_channel> ctrl_channel, std::shared_ptr<socks5_bindcmd_client_channel>	_data_channel)
+bool build_relation(std::shared_ptr<socks5_connectcmd_embedbind_client_channel> ctrl, std::shared_ptr<socks5_bindcmd_client_channel> data, std::shared_ptr<socks5_bindcmd_integration_handler_base> integration)
 {
-
-}
-
-void	socks5_bindcmd_integration_handler_base::chain_final()
-{
-
+	integration->chain_init(ctrl, data);
+	ctrl->set_integration(integration);
+	data->set_integration(integration);
+	return true;
 }

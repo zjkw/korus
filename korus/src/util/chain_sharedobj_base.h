@@ -43,16 +43,12 @@ public:
 
 		return ref + 1 - this->shared_from_this().use_count();
 	}
-		
-//protected:
-//	template<typename S> friend void try_chain_final(S t, long out_refcount);
-//	template<typename S> bool build_channel_chain_helper_inner(std::vector<T>& objs);
-	void	chain_init(std::shared_ptr<T> tunnel_prev, std::shared_ptr<T> tunnel_next)
+	virtual void	chain_init(std::shared_ptr<T> tunnel_prev, std::shared_ptr<T> tunnel_next)
 	{
 		_tunnel_prev = tunnel_prev;
 		_tunnel_next = tunnel_next;
 	}
-	void	chain_final()
+	virtual void	chain_final()
 	{
 		on_chain_final();
 
@@ -66,7 +62,7 @@ public:
 			tunnel_prev->chain_final();
 		}
 	}
-	void	chain_zomby()
+	virtual void	chain_zomby()
 	{
 		on_chain_zomby();
 
@@ -75,7 +71,7 @@ public:
 			_tunnel_prev->chain_zomby();
 		}
 	}
-	std::shared_ptr<chain_sharedobj_base<T>> chain_terminal()
+	virtual std::shared_ptr<chain_sharedobj_base<T>> chain_terminal()
 	{
 		if (_tunnel_next)
 		{
@@ -85,6 +81,57 @@ public:
 		return this->shared_from_this();
 	}
 
+protected:
 	std::shared_ptr<T> _tunnel_prev;
 	std::shared_ptr<T> _tunnel_next;
 };
+
+
+///////////////
+template<typename T>
+bool build_channel_chain_helper_inner(std::vector<T>& objs)
+{
+	for (size_t i = 0; i < objs.size(); i++)
+	{
+		T prev = i > 0 ? objs[i - 1] : nullptr;
+		T next = i + 1 < objs.size() ? objs[i + 1] : nullptr;
+		objs[i]->chain_init(prev, next);
+	}
+
+	return true;
+}
+
+template<typename T>
+bool build_channel_chain_helper(T first, T second)
+{
+	std::vector<T> objs;
+	objs.push_back(first);
+	objs.push_back(second);
+	return build_channel_chain_helper_inner(objs);
+}
+
+template<typename T>
+bool build_channel_chain_helper(T first, T second, T third)
+{
+	std::vector<T> objs;
+	objs.push_back(first);
+	objs.push_back(second);
+	objs.push_back(third);
+	return build_channel_chain_helper_inner(objs);
+}
+
+template<typename T>
+void try_chain_final(T t, long out_refcount)
+{
+	if (!t)
+	{
+		return;
+	}
+
+	auto terminal = t->chain_terminal();
+	terminal->chain_zomby();						//可能上层还保持间接或直接引用，这里使其失效：“只管功能失效化，不管生命期释放”
+	if (terminal->chain_refcount() == out_refcount + 1 + 1)	//terminal + auto
+	{
+		terminal->chain_final();
+	}
+}
