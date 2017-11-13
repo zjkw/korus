@@ -69,3 +69,14 @@ void	socks5_connectcmd_embedbind_client_channel::on_recv_pkg(const void* buf, co
 
 	_integration->on_data_recv_pkg(buf, len);
 }
+
+std::shared_ptr<chain_sharedobj_interface> socks5_connectcmd_embedbind_client_channel::chain_terminal()
+{
+	if (!_integration)
+	{
+		assert(false);
+		return nullptr;
+	}
+
+	return _integration->chain_terminal();
+}

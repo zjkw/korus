@@ -82,11 +82,6 @@ void	socks5_bindcmd_integration_handler_base::chain_zomby()
 	}
 }
 
-std::shared_ptr<chain_sharedobj_base<socks5_bindcmd_integration_handler_base>> socks5_bindcmd_integration_handler_base::chain_terminal()
-{
-	return this->shared_from_this();
-}
-
 //ctrl channel--------------
 // 下面四个函数可能运行在多线程环境下	
 int32_t	socks5_bindcmd_integration_handler_base::ctrl_send(const void* buf, const size_t len)			// 保证原子, 认为是整包，返回值若<0参考CHANNEL_ERROR_CODE

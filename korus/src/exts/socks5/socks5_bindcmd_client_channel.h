@@ -26,4 +26,6 @@ public:
 
 private:
 	std::shared_ptr<socks5_bindcmd_integration_handler_base> _integration;
+
+	virtual std::shared_ptr<chain_sharedobj_interface> chain_terminal();
 };

@@ -88,3 +88,14 @@ long	socks5_bindcmd_client_channel::chain_refcount()
 
 	return ref + socks5_client_channel_base::chain_refcount();
 }
+
+std::shared_ptr<chain_sharedobj_interface> socks5_bindcmd_client_channel::chain_terminal()
+{
+	if (!_integration)
+	{
+		assert(false);
+		return nullptr;
+	}
+
+	return _integration->chain_terminal();
+}

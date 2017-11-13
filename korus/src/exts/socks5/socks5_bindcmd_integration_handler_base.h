@@ -19,7 +19,6 @@ public:
 	virtual void	chain_init(std::shared_ptr<socks5_connectcmd_embedbind_client_channel> ctrl_channel, std::shared_ptr<socks5_bindcmd_client_channel> data_channel);
 	virtual void	chain_final();	
 	virtual void	chain_zomby();
-	std::shared_ptr<chain_sharedobj_base<socks5_bindcmd_integration_handler_base>> chain_terminal();
 
 	//ctrl channel--------------
 	// 下面五个函数可能运行在多线程环境下	

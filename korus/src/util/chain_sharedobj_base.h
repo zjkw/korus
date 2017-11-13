@@ -10,9 +10,29 @@
 //			----next-->			----next-->
 //
 
+class chain_sharedobj_interface : public std::enable_shared_from_this<chain_sharedobj_interface>
+{
+public:
+	chain_sharedobj_interface()
+	{
+	}
+	virtual ~chain_sharedobj_interface()
+	{
+	}
+
+	//override------------------
+	virtual void	on_chain_init() = 0;
+	virtual void	on_chain_final() = 0;
+	virtual void	on_chain_zomby() = 0;
+	virtual long	chain_refcount() = 0;
+	virtual void	chain_final() = 0;
+	virtual void	chain_zomby() = 0;
+	virtual std::shared_ptr<chain_sharedobj_interface> chain_terminal() = 0;
+};
+
 // 可能处于多线程环境下
 template<typename T>
-class chain_sharedobj_base : public std::enable_shared_from_this<chain_sharedobj_base<T>>
+class chain_sharedobj_base : public chain_sharedobj_interface
 {
 public:
 	chain_sharedobj_base()
@@ -26,9 +46,6 @@ public:
 	}
 
 	//override------------------
-	virtual void	on_chain_init() = 0;
-	virtual void	on_chain_final() = 0;
-	virtual void	on_chain_zomby() = 0;
 	virtual long	chain_refcount()
 	{
 		long ref = 0;
@@ -71,7 +88,7 @@ public:
 			_tunnel_prev->chain_zomby();
 		}
 	}
-	virtual std::shared_ptr<chain_sharedobj_base<T>> chain_terminal()
+	virtual std::shared_ptr<chain_sharedobj_interface> chain_terminal()
 	{
 		if (_tunnel_next)
 		{
