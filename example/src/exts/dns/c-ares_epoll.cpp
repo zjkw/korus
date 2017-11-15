@@ -14,7 +14,6 @@
 static void
 callback(void *arg, int status, int timeouts, struct hostent *host)
 {
-
 	if (!host || status != ARES_SUCCESS) {
 		printf("Failed to lookup %s\n", ares_strerror(status));
 		return;
@@ -33,18 +32,7 @@ callback(void *arg, int status, int timeouts, struct hostent *host)
 static void wait_ares(ares_channel channel)
 {
 	int 	_fd = epoll_create1(EPOLL_CLOEXEC);	//tbd Òì³£´¦Àí
-	struct epoll_event	ev[2];
-
-//	fd_set read_fds, write_fds;
-
-//	                FD_ZERO(&read_fds);
-//			                FD_ZERO(&write_fds);
-
-//	int nfds = ares_fds(channel, &read_fds, &write_fds);
-//	if (nfds == 0) {
-//		printf("ares_fds failed\n");
-//		return;
-//	}
+	struct epoll_event	ev[ARES_GETSOCK_MAXNUM];
 
 	int fds[ARES_GETSOCK_MAXNUM];
 	int fd_num = ares_getsock(channel, fds, ARES_GETSOCK_MAXNUM);
@@ -65,8 +53,7 @@ static void wait_ares(ares_channel channel)
 			 printf("epoll_ctl failed\n");
 		}
 	}
-
-
+	
 	int count = 0;
 	for (;;) 
 	{
@@ -96,48 +83,47 @@ static void wait_ares(ares_channel channel)
 				}
 				if(j >= fd_num2)
 				{
-					 struct epoll_event ev_x;
-			                 memset(&ev_x, 0, sizeof(ev_x));
-			                 ev_x.events = EPOLLIN | EPOLLOUT;
-			                 ev_x.data.fd = fds2[j];
-			                 int32_t ret = epoll_ctl(_fd, EPOLL_CTL_ADD, fds2[j], &ev_x);
-			                 if(ret < 0)
-			                 {
-			                          printf("epoll_ctl failed\n");
-	 		                 }
+					struct epoll_event ev_x;
+			        memset(&ev_x, 0, sizeof(ev_x));
+			        ev_x.events = EPOLLIN | EPOLLOUT;
+			        ev_x.data.fd = fds2[j];
+			        int32_t ret = epoll_ctl(_fd, EPOLL_CTL_ADD, fds2[j], &ev_x);
+			        if(ret < 0)
+			        {
+			                printf("epoll_ctl failed\n");
+	 		        }
 				}
 			}
 			for (int32_t j = 0; j < fd_num2; ++j)
 			{
-				 int32_t i = 0;
-                                 for (; i < fd_num; ++i)             
-                                 {
-                                         if(fds[i] == fds2[j])
-                                         {
-																										                                                 break;
-																										                                         }
-                                 }
-				 if(i >= fd_num)
-                                 {
-                                         struct epoll_event ev_x;
-                                         memset(&ev_x, 0, sizeof(ev_x));
-                                         ev_x.events = EPOLLIN | EPOLLOUT;
-                                         ev_x.data.fd = fds[i]; 
-	                                 int32_t ret = epoll_ctl(_fd, EPOLL_CTL_DEL, fds[i], &ev_x); 
-	                                 if(ret < 0)
-	                                 {       
-	                                        printf("epoll_ctl failed\n");
-	                                 }
-	                         }
+				int32_t i = 0;
+				for (; i < fd_num; ++i)             
+				{
+					if(fds[i] == fds2[j])
+					{
+						break;
+					}
+				}
+				if(i >= fd_num)
+				{
+					struct epoll_event ev_x;
+					memset(&ev_x, 0, sizeof(ev_x));
+					ev_x.events = EPOLLIN | EPOLLOUT;
+					ev_x.data.fd = fds[i]; 
+					int32_t ret = epoll_ctl(_fd, EPOLL_CTL_DEL, fds[i], &ev_x); 
+					if(ret < 0)
+					{       
+						printf("epoll_ctl failed\n");
+					}
+				}
 			}
-
 		}
 		// tbd fd clean up 
 
 		struct timeval *tvp, tv;
 		tvp = ares_timeout(channel, NULL, &tv);
 
-		int32_t ret = epoll_wait(_fd, &ev[0], 2, tvp ? (tvp->tv_sec * 1000 + tvp->tv_usec / 1000) : 0);
+		int32_t ret = epoll_wait(_fd, &ev[0], ARES_GETSOCK_MAXNUM, tvp ? (tvp->tv_sec * 1000 + tvp->tv_usec / 1000) : 0);
 		for (int32_t i = 0; i < ret; ++i)
 		{
 			for (int32_t j = 0; j < fd_num; ++j)
@@ -152,11 +138,11 @@ static void wait_ares(ares_channel channel)
 					int w = ARES_SOCKET_BAD, r = ARES_SOCKET_BAD;
 					if (ev[i].events & (EPOLLERR | EPOLLIN))
 					{
-						w = fds[j];
+						r = fds[j];
 					}
 					if (ev[i].events &  EPOLLOUT)
 					{
-						r = fds[j];
+						w = fds[j];
 					}
 
 					ares_process_fd(channel, r, w);

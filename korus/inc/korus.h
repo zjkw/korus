@@ -21,7 +21,8 @@
 //#include "korus/src/exts/socks5/socks5_client_channel.h"
 #include "korus/src/exts/socks5/socks5_client.h"
 
-
+#include "ares.h"
+ 
 
 
 
