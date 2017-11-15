@@ -9,6 +9,7 @@ ADD_SUBDIRECTORY(udp/reactor_udp_server)
 ADD_SUBDIRECTORY(udp/reactor_udp_client)
 
 ADD_SUBDIRECTORY(exts/socks5)
+ADD_SUBDIRECTORY(exts/dns)
 
 
 

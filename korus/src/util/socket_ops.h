@@ -17,4 +17,15 @@ bool bind_sock(SOCKET fd, const struct sockaddr_in& addr);
 
 bool sockaddr_from_string(const std::string& address, struct sockaddr_in& si);
 
+enum SOCK_ADDR_TYPE
+{
+	SAT_NONE = 0,
+	SAT_IPV4 = 1,
+	SAT_IPV6 = 2,
+	SAT_DOMAIN = 3,
+};
+
+//address可能包括端口
+SOCK_ADDR_TYPE	socktype_from_string(const std::string& address);	//  if (inet_aton (*str, &addr.sin_addr) != 0) {
+
 

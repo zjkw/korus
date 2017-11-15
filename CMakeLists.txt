@@ -25,6 +25,7 @@ ENDIF()
 
 INCLUDE_DIRECTORIES(
   ${PROJECT_SOURCE_DIR}/korus/inc
+  ${PROJECT_SOURCE_DIR}/thirdparty/c-ares-master
   ${PROJECT_SOURCE_DIR}
   /usr/local/include
   /usr/include
@@ -33,6 +34,7 @@ INCLUDE_DIRECTORIES(
 # lib directories
 LINK_DIRECTORIES(
   ${PROJECT_SOURCE_DIR}/korus/lib
+  ${PROJECT_SOURCE_DIR}/thirdparty/c-ares-master/.libs
   /usr/local/lib
   /use/lib
 )
