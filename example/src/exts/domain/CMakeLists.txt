@@ -1,0 +1,10 @@
+add_executable(cares_epoll c-ares_epoll.cpp)
+target_link_libraries(cares_epoll pthread)
+target_link_libraries(cares_epoll cares)
+install (TARGETS cares_epoll DESTINATION bin)
+
+add_executable(rector_hostbyname rector_hostbyname.cpp)
+target_link_libraries(rector_hostbyname pthread)
+target_link_libraries(rector_hostbyname korus)
+target_link_libraries(rector_hostbyname cares)
+install (TARGETS rector_hostbyname DESTINATION bin)

@@ -151,3 +151,8 @@ void	sockio_helper::action()
 		break;
 	}
 }
+
+SOCKET	sockio_helper::fd() 
+{ 
+	return _fd; 
+}

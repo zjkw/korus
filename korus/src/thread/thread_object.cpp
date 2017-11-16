@@ -103,3 +103,9 @@ void	thread_object::clear()
 		_thread_ptr = nullptr;
 	}
 }
+
+void thread_object::set_exit_flag()
+{
+	std::unique_lock <std::mutex> lck(_mutex_taskempty);
+	_is_quit = true;
+}

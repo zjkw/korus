@@ -32,6 +32,7 @@ public:
 	void	stop();
 	bool	exist();
 	void	action();
+	SOCKET	fd();
 
 private:
 	reactor_loop*				_reactor;

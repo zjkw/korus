@@ -1,0 +1,29 @@
+add_executable(multithread_tcp_client multithread_tcp_client.cpp)
+target_link_libraries(multithread_tcp_client korus)
+target_link_libraries(multithread_tcp_client pthread)
+install (TARGETS multithread_tcp_client DESTINATION bin)
+
+add_executable(multithread_tcp_server multithread_tcp_server.cpp)
+target_link_libraries(multithread_tcp_server korus)
+target_link_libraries(multithread_tcp_server pthread)
+install (TARGETS multithread_tcp_server DESTINATION bin)
+
+add_executable(reactor_tcp_client reactor_tcp_client.cpp)
+target_link_libraries(reactor_tcp_client korus)
+target_link_libraries(reactor_tcp_client pthread)
+install (TARGETS reactor_tcp_client DESTINATION bin)
+
+add_executable(reactor_tcp_server reactor_tcp_server.cpp)
+target_link_libraries(reactor_tcp_server korus)
+target_link_libraries(reactor_tcp_server pthread)
+install (TARGETS reactor_tcp_server DESTINATION bin)
+
+add_executable(multithread_tcp_client_domain multithread_tcp_client_domain.cpp)
+target_link_libraries(multithread_tcp_client_domain korus)
+target_link_libraries(multithread_tcp_client_domain pthread)
+target_link_libraries(multithread_tcp_client_domain cares)
+install (TARGETS multithread_tcp_client_domain DESTINATION bin)
+
+
+
+

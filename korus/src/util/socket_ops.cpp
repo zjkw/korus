@@ -131,3 +131,35 @@ bool bind_sock(SOCKET fd, const struct sockaddr_in& addr)
 {
 	return !bind(fd, (struct sockaddr *)&addr, sizeof(struct sockaddr));
 }
+
+bool sockaddr_from_string(const std::string& address, std::string& host, std::string& port)
+{
+	uint16_t port_digit;
+	bool ret = split_hostport(address, host, port_digit);
+	char port_str[16];
+	snprintf(port_str, sizeof(port_str), "%d", port_digit);
+	port = port_str;
+	return ret;
+}
+
+//address可能包括端口
+SOCK_ADDR_TYPE	socktype_from_string(const std::string& host)	//  if (inet_aton (*str, &addr.sin_addr) != 0) {
+{
+	struct sockaddr_in adr_inet; 
+	if (!sockaddr_from_string(host, adr_inet))
+	{
+		return SAT_DOMAIN;
+	}
+	if (AF_INET6 == adr_inet.sin_family)
+	{
+		return SAT_IPV6;
+	}
+	else if (AF_INET == adr_inet.sin_family)
+	{
+		return SAT_IPV4;
+	}
+	else
+	{
+		return SAT_NONE;
+	}
+}

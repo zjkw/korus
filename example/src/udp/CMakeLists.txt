@@ -1,0 +1,24 @@
+add_executable(multithread_udp_client multithread_udp_client.cpp)
+target_link_libraries(multithread_udp_client korus)
+target_link_libraries(multithread_udp_client pthread)
+install (TARGETS multithread_udp_client DESTINATION bin)
+
+add_executable(multithread_udp_server multithread_udp_server.cpp)
+target_link_libraries(multithread_udp_server korus)
+target_link_libraries(multithread_udp_server pthread)
+install (TARGETS multithread_udp_server DESTINATION bin)
+
+add_executable(reactor_udp_client reactor_udp_client.cpp)
+target_link_libraries(reactor_udp_client korus)
+target_link_libraries(reactor_udp_client pthread)
+install (TARGETS reactor_udp_client DESTINATION bin)
+
+add_executable(reactor_udp_server reactor_udp_server.cpp)
+target_link_libraries(reactor_udp_server korus)
+target_link_libraries(reactor_udp_server pthread)
+install (TARGETS reactor_udp_server DESTINATION bin)
+
+
+
+
+

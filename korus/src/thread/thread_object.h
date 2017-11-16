@@ -37,6 +37,7 @@ public:
 		add_task_helper(&_exit_task_queue, task, false);
 	}
 	void start();
+	void set_exit_flag();
 	
 private:
 	uint16_t						_thread_index;

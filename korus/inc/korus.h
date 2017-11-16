@@ -21,7 +21,9 @@
 //#include "korus/src/exts/socks5/socks5_client_channel.h"
 #include "korus/src/exts/socks5/socks5_client.h"
 
-#include "ares.h"
+#include "korus/src/exts/domain/domain_async_resolve_helper.h"
+#include "korus/src/exts/domain/domain_cache_mgr.h"
+#include "korus/src/exts/domain/tcp_client_domain.h"
  
 
 

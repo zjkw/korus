@@ -11,8 +11,8 @@
 #include <unistd.h>
 
 #include <sys/epoll.h>
-static void
-callback(void *arg, int status, int timeouts, struct hostent *host)
+
+static void callback(void *arg, int status, int timeouts, struct hostent *host)
 {
 	if (!host || status != ARES_SUCCESS) {
 		printf("Failed to lookup %s\n", ares_strerror(status));
@@ -134,7 +134,7 @@ static void wait_ares(ares_channel channel)
 					{
 						ev[i].events |= EPOLLIN | EPOLLOUT;
 					}
-
+					
 					int w = ARES_SOCKET_BAD, r = ARES_SOCKET_BAD;
 					if (ev[i].events & (EPOLLERR | EPOLLIN))
 					{
