@@ -184,7 +184,7 @@ template <>
 class tcp_client_domain<reactor_loop>
 {
 public:
-	// addr格式ip:port
+	// addr格式ip:port 或 domain:port
 	tcp_client_domain(std::shared_ptr<reactor_loop> reactor, const std::string& server_addr, const tcp_client_channel_factory_t& factory,
 		std::chrono::seconds connect_timeout = std::chrono::seconds(0), std::chrono::seconds connect_retry_wait = std::chrono::seconds(-1),
 		const uint32_t self_read_size = DEFAULT_READ_BUFSIZE, const uint32_t self_write_size = DEFAULT_WRITE_BUFSIZE, const uint32_t sock_read_size = 0, const uint32_t sock_write_size = 0)

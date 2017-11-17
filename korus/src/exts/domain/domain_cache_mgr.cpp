@@ -3,6 +3,7 @@
 #include "korus/src/util/singleton.h"
 #include "domain_cache_mgr.h"
 
+const std::chrono::hours	RECORD_TIMEOUT = std::chrono::hours(2);			//2Сʱ
 
 std::mutex	_mutex;
 
@@ -28,7 +29,13 @@ bool domain_cache_mgr::ip_by_domain(const std::string& domain, std::string& ip)
 		return false;
 	}
 
-	ip = it->second.iplist[(it->second.last_pos + 1) % it->second.iplist.size()];
+	if (it->second.update_time + RECORD_TIMEOUT > std::chrono::system_clock::now())
+	{
+		_domain_list.erase(it);
+		return false;
+	}
+
+	ip = it->second.iplist[(++it->second.last_pos) % it->second.iplist.size()];
 
 	return true;
 }
@@ -43,6 +50,7 @@ void domain_cache_mgr::update_cache(const std::string& domain, const std::vector
 	domain_data	data;
 	data.last_pos = rand();
 	data.iplist = iplist;
+	data.update_time = std::chrono::system_clock::now();
 
 	_domain_list[domain] = data;
 }

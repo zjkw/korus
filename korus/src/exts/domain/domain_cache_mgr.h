@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include <strings.h>
 #include <string>
+#include <chrono>
 #include <vector>
 #include <map>
 
@@ -30,6 +31,7 @@ private:
 	{
 		std::vector<std::string>	iplist;
 		size_t						last_pos;
+		std::chrono::system_clock::time_point update_time;
 	};
 
 	std::map<std::string, domain_data, strcompr>	_domain_list;
