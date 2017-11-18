@@ -29,7 +29,7 @@ bool domain_cache_mgr::ip_by_domain(const std::string& domain, std::string& ip)
 		return false;
 	}
 
-	if (it->second.update_time + RECORD_TIMEOUT > std::chrono::system_clock::now())
+	if (it->second.update_time + RECORD_TIMEOUT < std::chrono::system_clock::now())
 	{
 		_domain_list.erase(it);
 		return false;

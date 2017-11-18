@@ -87,6 +87,7 @@ void	thread_object::clear()
 		_cond_taskempty.notify_one();
 	}
 
+	std::unique_lock <std::mutex> lck(_mutex_start);
 	if (_thread_ptr)
 	{
 		if (_thread_ptr->joinable())
@@ -106,6 +107,15 @@ void	thread_object::clear()
 
 void thread_object::set_exit_flag()
 {
-	std::unique_lock <std::mutex> lck(_mutex_taskempty);
-	_is_quit = true;
+	{
+		std::unique_lock <std::mutex> lck2(_mutex_start);
+		if (_is_start)
+		{
+			_thread_ptr = nullptr;
+		}
+	}
+	{
+		std::unique_lock <std::mutex> lck(_mutex_taskempty);
+		_is_quit = true;
+	}
 }
