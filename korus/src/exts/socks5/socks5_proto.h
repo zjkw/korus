@@ -14,15 +14,6 @@ enum SOCKS_METHOD_TYPE
 	SMT_USERPSW = 3,
 };
 
-enum SOCKS_CLIENT_STATE
-{
-	SCS_NONE = 0,
-	SCS_METHOD = 1,		//等待服务器回应METHOD==
-	SCS_AUTH = 2,		
-	SCS_TUNNEL = 3,
-	SCS_NORMAL = 4,
-};
-
 //
 //	客户端	<--->	代理服务器	<--->	目标服务器
 //
