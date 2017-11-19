@@ -160,10 +160,6 @@ DOMAIN_RESOLVE_STATE	domain_async_resolve_helper::start(const std::string& domai
 	ares_gethostbyname(_channel, domain.c_str(), AF_INET, resolve_callback, this);
 	
 	//3, 更新监听事件
-	if (!_idle_helper.exist())
-	{
-		_idle_helper.start();
-	}
 	on_idle_cmp(&_idle_helper);
 
 	return DRS_PENDING;
@@ -253,6 +249,21 @@ void	domain_async_resolve_helper::on_idle_cmp(idle_helper* idle_id)
 				}
 			}
 			assert(k < ARES_GETSOCK_MAXNUM);
+		}
+	}
+
+	if (_fds_num)
+	{
+		if (!_idle_helper.exist())
+		{
+			_idle_helper.start();
+		}
+	}
+	else
+	{
+		if (_idle_helper.exist())
+		{
+			_idle_helper.stop();
 		}
 	}
 }

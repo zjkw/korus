@@ -114,17 +114,20 @@ protected:
 		resolve->bind(std::bind(&tcp_client_domain::on_resolve_result, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 
 		thread_obj->add_exit_task(std::bind(&tcp_client_domain::tcp_client_domain::thread_exit, this, thread_obj, reactor, resolve));
-		thread_obj->add_resident_task(std::bind(&reactor_loop::run_once, reactor));
-
+		
 		std::string ip;
 		DOMAIN_RESOLVE_STATE state = resolve->start(host, ip);	//无视成功，强制更新
 		if (DRS_SUCCESS == state)
 		{
 			create_native_tcp_client(ip + ":" + port);
 		}
-		else if (DRS_PENDING != state)
+		else if (DRS_PENDING == state)
 		{
-			thread_obj->set_exit_flag();
+			thread_obj->add_resident_task(std::bind(&reactor_loop::run_once, reactor));
+		}
+		else
+		{
+			thread_obj->clear_regual_task();
 		}
 	}
 	void thread_exit(thread_object*	thread_obj, std::shared_ptr<reactor_loop> reactor, domain_async_resolve_helper*	resolve)
@@ -136,6 +139,8 @@ protected:
 
 	void	on_resolve_result(DOMAIN_RESOLVE_STATE result, const std::string& domain, const std::string& ip)
 	{
+		_thread_obj->clear_regual_task();
+
 		if (result == DRS_SUCCESS)
 		{
 			std::string host, port;

@@ -37,7 +37,7 @@ public:
 		add_task_helper(&_exit_task_queue, task, false);
 	}
 	void start();
-	void set_exit_flag();
+	void clear_regual_task();
 	
 private:
 	uint16_t						_thread_index;
@@ -47,7 +47,8 @@ private:
 	std::mutex						_mutex_start;
 
 	bool							_is_quit;				//由join阻塞等待
-			
+	bool							_is_main_loop_exit;		//退出主循环，主要是线程内部登记/设置
+
 	bool							_is_taskempty;
 	std::condition_variable			_cond_taskempty;		//无任务时候工作线程阻塞等待
 	std::mutex						_mutex_taskempty;
