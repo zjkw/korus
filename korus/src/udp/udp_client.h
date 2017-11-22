@@ -30,11 +30,11 @@ public:
 	// sock_write_size仅仅是写到套接口的UDP数据报的大小上限，无类似tcp含义	
 	// 在使用reuseport情况下，注意服务器是否也开启了这个选项，因为5元组才能确定一条"连接"
 #ifndef REUSEPORT_OPTION
-	udp_client(const udp_client_channel_factory_t& factory, const uint32_t self_read_size = DEFAULT_READ_BUFSIZE, const uint32_t self_write_size = DEFAULT_WRITE_BUFSIZE, const uint32_t sock_read_size = 0, const uint32_t sock_write_size = 0)
-		: _self_read_size(self_read_size), _self_write_size(self_write_size), _sock_read_size(sock_read_size), _sock_write_size(sock_write_size)
+	udp_client(const udp_client_channel_factory_t& factory, const std::string& bind_addr = "", const uint32_t self_read_size = DEFAULT_READ_BUFSIZE, const uint32_t self_write_size = DEFAULT_WRITE_BUFSIZE, const uint32_t sock_read_size = 0, const uint32_t sock_write_size = 0)
+		: _bind_addr(bind_addr), _self_read_size(self_read_size), _self_write_size(self_write_size), _sock_read_size(sock_read_size), _sock_write_size(sock_write_size)
 #else
-	udp_client(uint16_t thread_num, const udp_client_channel_factory_t& factory, const uint32_t self_read_size = DEFAULT_READ_BUFSIZE, const uint32_t self_write_size = DEFAULT_WRITE_BUFSIZE, const uint32_t sock_read_size = 0, const uint32_t sock_write_size = 0)
-		: _thread_num(thread_num), _factory(factory), _self_read_size(self_read_size), _self_write_size(self_write_size), _sock_read_size(sock_read_size), _sock_write_size(sock_write_size)
+	udp_client(uint16_t thread_num, const udp_client_channel_factory_t& factory, const std::string& bind_addr = "", const uint32_t self_read_size = DEFAULT_READ_BUFSIZE, const uint32_t self_write_size = DEFAULT_WRITE_BUFSIZE, const uint32_t sock_read_size = 0, const uint32_t sock_write_size = 0)
+		: _thread_num(thread_num), _factory(factory), _bind_addr(bind_addr), _self_read_size(self_read_size), _self_write_size(self_write_size), _sock_read_size(sock_read_size), _sock_write_size(sock_write_size)
 #endif
 	{
 		_tid = std::this_thread::get_id();
@@ -105,6 +105,7 @@ private:
 #endif
 	std::map<uint16_t, thread_object*>		_thread_pool;
 	std::atomic_flag						_start = ATOMIC_FLAG_INIT;
+	std::string								_bind_addr;
 	uint32_t								_self_read_size;
 	uint32_t								_self_write_size;
 	uint32_t								_sock_read_size;
@@ -113,7 +114,7 @@ private:
 	void common_thread_init(thread_object*	thread_obj, const udp_client_channel_factory_t& factory)
 	{
 		std::shared_ptr<reactor_loop>		reactor = std::make_shared<reactor_loop>();
-		std::shared_ptr<udp_client_channel>	origin_channel = std::make_shared<udp_client_channel>(reactor, _self_read_size, _self_write_size, _sock_read_size, _sock_write_size);
+		std::shared_ptr<udp_client_channel>	origin_channel = std::make_shared<udp_client_channel>(reactor, _bind_addr, _self_read_size, _self_write_size, _sock_read_size, _sock_write_size);
 		std::shared_ptr<udp_client_handler_base>	terminal_channel = factory(reactor);
 		build_channel_chain_helper(std::dynamic_pointer_cast<udp_client_handler_base>(origin_channel), terminal_channel);
 
@@ -135,9 +136,9 @@ class udp_client<reactor_loop>
 {
 public:
 	// addr格式ip:port
-	udp_client(std::shared_ptr<reactor_loop> reactor, const udp_client_channel_factory_t& factory, const uint32_t self_read_size = DEFAULT_READ_BUFSIZE, const uint32_t self_write_size = DEFAULT_WRITE_BUFSIZE,
+	udp_client(std::shared_ptr<reactor_loop> reactor, const udp_client_channel_factory_t& factory, const std::string& bind_addr = "", const uint32_t self_read_size = DEFAULT_READ_BUFSIZE, const uint32_t self_write_size = DEFAULT_WRITE_BUFSIZE,
 		const uint32_t sock_read_size = 0, const uint32_t sock_write_size = 0)
-		: _reactor(reactor), _self_read_size(self_read_size), _self_write_size(self_write_size), _sock_read_size(sock_read_size), _sock_write_size(sock_write_size)
+		: _reactor(reactor), _bind_addr(bind_addr), _self_read_size(self_read_size), _self_write_size(self_write_size), _sock_read_size(sock_read_size), _sock_write_size(sock_write_size)
 	{
 		_tid = std::this_thread::get_id();
 
@@ -160,7 +161,7 @@ public:
 		{
 			assert(_factory);
 
-			_channel = std::make_shared<udp_client_channel>(_reactor, _self_read_size, _self_write_size, _sock_read_size, _sock_write_size);
+			_channel = std::make_shared<udp_client_channel>(_reactor, _bind_addr, _self_read_size, _self_write_size, _sock_read_size, _sock_write_size);
 			std::shared_ptr<udp_client_handler_base>	terminal_channel = _factory(_reactor);
 			build_channel_chain_helper(std::dynamic_pointer_cast<udp_client_handler_base>(_channel), terminal_channel);
 			_channel->start();
@@ -174,6 +175,7 @@ private:
 	std::thread::id							_tid;
 	std::shared_ptr<reactor_loop>			_reactor;
 	std::atomic_flag						_start = ATOMIC_FLAG_INIT;
+	std::string								_bind_addr;
 	uint32_t								_self_read_size;
 	uint32_t								_self_write_size;
 	uint32_t								_sock_read_size;

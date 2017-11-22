@@ -16,8 +16,10 @@ bool set_socket_recvbuflen(SOCKET fd, uint32_t buf_size);
 bool bind_sock(SOCKET fd, const struct sockaddr_in& addr);
 
 bool sockaddr_from_string(const std::string& address, struct sockaddr_in& si);
+bool sockaddr_from_string(const std::string& ip, const uint16_t port, struct sockaddr_in& si);	//port为host字节序
 
 bool sockaddr_from_string(const std::string& address, std::string& host, std::string& port);
+
 enum SOCK_ADDR_TYPE
 {
 	SAT_NONE = 0,
@@ -26,7 +28,7 @@ enum SOCK_ADDR_TYPE
 	SAT_DOMAIN = 3,
 };
 //address可能包括端口
-SOCK_ADDR_TYPE	socktype_from_string(const std::string& host);	//  if (inet_aton (*str, &addr.sin_addr) != 0) {
+SOCK_ADDR_TYPE	addrtype_from_string(const std::string& host);	//  if (inet_aton (*str, &addr.sin_addr) != 0) {
 
 
 

@@ -11,15 +11,10 @@ public:
 	//override------------------
 	virtual void	on_chain_init();
 	virtual void	on_chain_final();
-	virtual void	on_connected();
-	virtual void	on_closed();
-	//提取数据包：返回值 =0 表示包不完整； >0 完整的包(长)
-	virtual int32_t on_recv_split(const void* buf, const size_t len);
-	//这是一个待处理的完整包
-	virtual void	on_recv_pkg(const void* buf, const size_t len);
 
 private:
 	std::string _server_addr;
-	std::string _socks_user;
-	std::string _socks_psw;
+
+	virtual int32_t	make_tunnel_pkg(void* buf, const uint16_t size);
+	virtual void	on_tunnel_pkg(const void* buf, const uint16_t size);
 };

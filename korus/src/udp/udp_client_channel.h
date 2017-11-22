@@ -54,11 +54,13 @@ private:
 class udp_client_channel : public udp_channel_base, public udp_client_handler_base, public multiform_state
 {
 public:
-	udp_client_channel(std::shared_ptr<reactor_loop> reactor, const uint32_t self_read_size, const uint32_t self_write_size, const uint32_t sock_read_size, const uint32_t sock_write_size);
+	udp_client_channel(std::shared_ptr<reactor_loop> reactor, const std::string& bind_addr = "", const uint32_t self_read_size = DEFAULT_READ_BUFSIZE, const uint32_t self_write_size = DEFAULT_WRITE_BUFSIZE, const uint32_t sock_read_size = 0, const uint32_t sock_write_size = 0);
 	virtual ~udp_client_channel();
 
 	// 下面四个函数可能运行在多线程环境下	
-	virtual int32_t		send(const void* buf, const size_t len, const sockaddr_in& peer_addr);// 保证原子, 认为是整包，返回值若<0参考CHANNEL_ERROR_CODE
+	virtual int32_t		send(const void* buf, const size_t len, const sockaddr_in& peer_addr);	// 保证原子, 认为是整包，返回值若<0参考CHANNEL_ERROR_CODE
+	virtual int32_t		connect(const sockaddr_in& server_addr);								// 保证原子, 返回值若<0参考CHANNEL_ERROR_CODE
+	virtual int32_t		send(const void* buf, const size_t len);								// 保证原子, 认为是整包，返回值若<0参考CHANNEL_ERROR_CODE
 	virtual void		close();
 	bool				start();
 

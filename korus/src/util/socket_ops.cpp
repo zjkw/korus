@@ -84,6 +84,15 @@ bool sockaddr_from_string(const std::string& address, struct sockaddr_in& si)
 	return true;
 }
 
+bool sockaddr_from_string(const std::string& ip, const uint16_t port, struct sockaddr_in& si)
+{
+	si.sin_family = AF_INET;
+	si.sin_port = htons(port);
+	inet_aton(ip.c_str(), &si.sin_addr);
+
+	return true;
+}
+
 bool set_reuse_addr_sock(SOCKET fd, int reuse)
 {
 	int val = reuse > 0 ? 1 : 0;
@@ -143,7 +152,7 @@ bool sockaddr_from_string(const std::string& address, std::string& host, std::st
 }
 
 //address可能包括端口
-SOCK_ADDR_TYPE	socktype_from_string(const std::string& host)	//  if (inet_aton (*str, &addr.sin_addr) != 0) {
+SOCK_ADDR_TYPE	addrtype_from_string(const std::string& host)	//  if (inet_aton (*str, &addr.sin_addr) != 0) {
 {
 	struct sockaddr_in adr_inet; 
 	if (!sockaddr_from_string(host, adr_inet))

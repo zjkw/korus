@@ -7,7 +7,11 @@ host_serialize::host_serialize() :_is_valid(false), _data(NULL), _size(0), _read
 { 
 }
 
-host_serialize::host_serialize(void* data, uint32_t size) : _is_valid(true), _data(data), _size(size), _read_pos(0), _write_pos(0)
+host_serialize::host_serialize(const void* data, const uint32_t size) : _is_valid(true), _data((void*)data), _size(size), _read_pos(0), _write_pos(0)
+{
+}
+
+host_serialize::host_serialize(void* data, const uint32_t size) : _is_valid(true), _data(data), _size(size), _read_pos(0), _write_pos(0)
 {
 }
 
@@ -17,7 +21,12 @@ host_serialize::~host_serialize()
 }
 
 // global
-void host_serialize::attach(void* data, uint32_t size)
+void host_serialize::attach(const void* data, const uint32_t size)
+{
+	attach((void*)data, size);
+}
+
+void host_serialize::attach(void* data, const uint32_t size)
 {
 	reset();
 

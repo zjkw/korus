@@ -12,7 +12,9 @@ public:
 	virtual ~udp_channel_base();
 
 	// 下面两个函数可能运行在多线程环境下	
-	virtual	int32_t		send(const void* buf, const size_t len, const sockaddr_in& peer_addr);// 外部数据发送
+	virtual	int32_t		send(const void* buf, const size_t len, const sockaddr_in& peer_addr);	// 外部数据发送
+	virtual int32_t		connect(const sockaddr_in& server_addr);								
+	virtual int32_t		send(const void* buf, const size_t len);								// 外部数据发送
 	virtual	void		close();
 	virtual	int32_t		on_recv_buff(const void* buf, const size_t len, const sockaddr_in& peer_addr) = 0;
 protected:
@@ -33,6 +35,7 @@ private:
 	uint32_t			_sock_write_size;
 
 	int32_t				do_send_inlock(const void* buf, uint32_t len, const sockaddr_in& peer_addr);
+	int32_t				do_send_inlock(const void* buf, uint32_t len);
 	int32_t				do_recv_nolock();
 	
 };

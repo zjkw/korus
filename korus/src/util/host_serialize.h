@@ -7,11 +7,13 @@ class host_serialize
 {
 public:
 	host_serialize();
-	host_serialize(void* data, uint32_t size);
+	host_serialize(const void* data, const uint32_t size);
+	host_serialize(void* data, const uint32_t size);
 	virtual ~host_serialize();
 
 	// global
-	void attach(void* data, uint32_t size);
+	void attach(const void* data, const uint32_t size);
+	void attach(void* data, const uint32_t size);
 	void detach(void*& data, uint32_t& size);
 	void reset();
 	operator bool() const;

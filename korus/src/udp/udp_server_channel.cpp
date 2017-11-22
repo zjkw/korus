@@ -129,7 +129,7 @@ bool	udp_server_channel::start()
 	//线程调度，对于服务端的链接而言，close即意味着死亡，不存在重新连接的可能性
 	if (!reactor()->is_current_thread())
 	{
-		// udp_client_channel生命期一般比reactor短，所以加上引用计数
+		// udp_server_channel生命期一般比reactor短，所以加上引用计数
 		reactor()->start_async_task(std::bind(&udp_server_channel::start, this), this);
 		return true;
 	}

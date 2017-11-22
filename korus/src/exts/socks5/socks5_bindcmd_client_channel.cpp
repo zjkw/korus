@@ -1,9 +1,10 @@
 #include <assert.h>
 #include "socks5_bindcmd_integration_handler_base.h"
+#include "korus/src/util/net_serialize.h"
 #include "socks5_bindcmd_client_channel.h"
 
 socks5_bindcmd_client_channel::socks5_bindcmd_client_channel(std::shared_ptr<reactor_loop> reactor, const std::string& server_addr, const std::string& socks_user, const std::string& socks_psw)
-	: socks5_client_channel_base(reactor)
+	: socks5_client_channel_base(reactor, socks_user, socks_psw)
 {
 
 }
@@ -54,18 +55,6 @@ CLOSE_MODE_STRATEGY	socks5_bindcmd_client_channel::on_error(CHANNEL_ERROR_CODE c
 	return _integration->on_ctrl_error(code);
 }
 
-//提取数据包：返回值 =0 表示包不完整； >0 完整的包(长)
-int32_t socks5_bindcmd_client_channel::on_recv_split(const void* buf, const size_t len)
-{
-	if (!_integration)
-	{
-		assert(false);
-		return 0;
-	}
-
-	return _integration->on_ctrl_recv_split(buf, len);
-}
-
 //这是一个待处理的完整包
 void	socks5_bindcmd_client_channel::on_recv_pkg(const void* buf, const size_t len)
 {
@@ -98,4 +87,14 @@ std::shared_ptr<chain_sharedobj_interface> socks5_bindcmd_client_channel::chain_
 	}
 
 	return _integration->chain_terminal();
+}
+
+int32_t	socks5_bindcmd_client_channel::make_tunnel_pkg(void* buf, const uint16_t size)
+{
+	return 0;
+}
+
+void	socks5_bindcmd_client_channel::on_tunnel_pkg(const void* buf, const uint16_t size)
+{
+
 }

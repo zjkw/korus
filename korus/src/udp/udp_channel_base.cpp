@@ -96,11 +96,73 @@ int32_t		udp_channel_base::send(const void* buf, const size_t len, const sockadd
 	return do_send_inlock(buf, len, peer_addr);
 }
 
+int32_t		udp_channel_base::connect(const sockaddr_in& server_addr)
+{
+	std::unique_lock <std::mutex> lck(_mutex_write);
+	if (INVALID_SOCKET == _fd)
+	{
+		return (int32_t)CEC_INVALID_SOCKET;
+	}
+
+	int32_t ret = ::connect(_fd, (struct sockaddr *)&server_addr, sizeof(server_addr));
+	if (ret)
+	{
+		return (int32_t)CEC_INVALID_SOCKET;
+	}
+	else
+	{
+		return 0;
+	}
+}
+
+int32_t		udp_channel_base::send(const void* buf, const size_t len)
+{
+	std::unique_lock <std::mutex> lck(_mutex_write);
+	if (INVALID_SOCKET == _fd)
+	{
+		return (int32_t)CEC_INVALID_SOCKET;
+	}
+
+	return do_send_inlock(buf, len);
+}
+
 int32_t		udp_channel_base::do_send_inlock(const void* buf, uint32_t	len, const sockaddr_in& peer_addr)
 {
 	while (1)
 	{
 		int32_t ret = ::sendto(_fd, (const char*)buf, len, 0, (struct sockaddr *)&peer_addr, sizeof(peer_addr));
+		if (ret < 0)
+		{
+			if (errno == EINTR)
+			{
+				continue;
+			}
+#if 0
+#if EAGAIN == EWOULDBLOCK
+			else if (errno == EAGAIN)
+#else
+			else if (errno == EAGAIN || errno == EWOULDBLOCK)
+#endif
+			{
+				break;
+			}
+#endif
+			return (int32_t)CEC_WRITE_FAILED;
+		}
+		else
+		{
+			break;
+		}
+	}
+	return len;
+}
+
+// tbd check udp_bind mode
+int32_t		udp_channel_base::do_send_inlock(const void* buf, uint32_t	len)
+{
+	while (1)
+	{
+		int32_t ret = ::send(_fd, (const char*)buf, len, MSG_NOSIGNAL);
 		if (ret < 0)
 		{
 			if (errno == EINTR)

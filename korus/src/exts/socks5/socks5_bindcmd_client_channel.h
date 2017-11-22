@@ -28,4 +28,7 @@ private:
 	std::shared_ptr<socks5_bindcmd_integration_handler_base> _integration;
 
 	virtual std::shared_ptr<chain_sharedobj_interface> chain_terminal();
+
+	virtual int32_t	make_tunnel_pkg(void* buf, const uint16_t size);
+	virtual void	on_tunnel_pkg(const void* buf, const uint16_t size);
 };

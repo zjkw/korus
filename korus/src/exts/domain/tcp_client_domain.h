@@ -60,7 +60,7 @@ public:
 			return;
 		}
 
-		SOCK_ADDR_TYPE	sat = socktype_from_string(host);
+		SOCK_ADDR_TYPE	sat = addrtype_from_string(host);
 		if (sat == SAT_DOMAIN)
 		{
 			std::string ip;
@@ -221,7 +221,7 @@ public:
 			return;
 		}
 
-		SOCK_ADDR_TYPE	sat = socktype_from_string(host);
+		SOCK_ADDR_TYPE	sat = addrtype_from_string(host);
 		if (sat == SAT_DOMAIN)
 		{
 			std::string ip;

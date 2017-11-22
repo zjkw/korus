@@ -99,10 +99,9 @@ std::shared_ptr<reactor_loop>	udp_client_handler_base::reactor()
 }
 
 ////////////////////////channel
-
-udp_client_channel::udp_client_channel(std::shared_ptr<reactor_loop> reactor, const uint32_t self_read_size, const uint32_t self_write_size, const uint32_t sock_read_size, const uint32_t sock_write_size)
-	: udp_client_handler_base(reactor), 
-	udp_channel_base("", self_read_size, self_write_size, sock_read_size, sock_write_size)
+udp_client_channel::udp_client_channel(std::shared_ptr<reactor_loop> reactor, const std::string& bind_addr/* = ""*/, const uint32_t self_read_size/* = DEFAULT_READ_BUFSIZE*/, const uint32_t self_write_size/* = DEFAULT_WRITE_BUFSIZE*/, const uint32_t sock_read_size/* = 0*/, const uint32_t sock_write_size/* = 0*/)
+	: udp_client_handler_base(reactor),
+	udp_channel_base(bind_addr, self_read_size, self_write_size, sock_read_size, sock_write_size)
 
 {
 	_sockio_helper.bind(std::bind(&udp_client_channel::on_sockio_read, this, std::placeholders::_1), nullptr);
@@ -158,6 +157,30 @@ int32_t	udp_client_channel::send(const void* buf, const size_t len, const sockad
 	}
 
 	int32_t ret = udp_channel_base::send(buf, len, peer_addr);
+	return ret;
+}
+
+int32_t	udp_client_channel::connect(const sockaddr_in& server_addr)								// 保证原子, 返回值若<0参考CHANNEL_ERROR_CODE
+{
+	if (!is_normal())
+	{
+		assert(false);
+		return CEC_INVALID_SOCKET;
+	}
+
+	int32_t ret = udp_channel_base::connect(server_addr);
+	return ret;
+}
+
+int32_t	udp_client_channel::send(const void* buf, const size_t len)								// 保证原子, 认为是整包，返回值若<0参考CHANNEL_ERROR_CODE
+{
+	if (!is_normal())
+	{
+		assert(false);
+		return CEC_INVALID_SOCKET;
+	}
+
+	int32_t ret = udp_channel_base::send(buf, len);
 	return ret;
 }
 

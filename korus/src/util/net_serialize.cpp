@@ -9,19 +9,23 @@ uint32_t net_serialize::INVALID_SIZE = (uint32_t)-1;
 
 uint64_t htonl64(uint64_t val)
 {
-	return (__BYTE_ORDER == __BIG_ENDIAN) ? return (val) : __bswap_64(val);
+	return (__BYTE_ORDER == __BIG_ENDIAN) ? val : __bswap_64(val);
 }
 
 uint64_t ntohl64(uint64_t val)
 {
-	return (__BYTE_ORDER == __BIG_ENDIAN) ? return (val) : __bswap_64(val);
+	return (__BYTE_ORDER == __BIG_ENDIAN) ? val : __bswap_64(val);
 }
 
 net_serialize::net_serialize() :_is_valid(false), _data(NULL), _size(0), _read_pos(0), _write_pos(0)
 {
 }
 
-net_serialize::net_serialize(void* data, uint32_t size) : _is_valid(true), _data(data), _size(size), _read_pos(0), _write_pos(0)
+net_serialize::net_serialize(const void* data, const uint32_t size) : _is_valid(true), _data((void*)data), _size(size), _read_pos(0), _write_pos(0)
+{
+}
+
+net_serialize::net_serialize(void* data, const uint32_t size) : _is_valid(true), _data(data), _size(size), _read_pos(0), _write_pos(0)
 {
 }
 
@@ -31,7 +35,12 @@ net_serialize::~net_serialize()
 }
 
 // global
-void net_serialize::attach(void* data, uint32_t size)
+void net_serialize::attach(const void* data, const uint32_t size)
+{
+	attach((void*)data, size);
+}
+
+void net_serialize::attach(void* data, const uint32_t size)
 {
 	reset();
 
@@ -282,7 +291,10 @@ net_serialize& net_serialize::buildin_write(const T& t)
 				_is_valid = false;
 				break;
 			}
-			_write_pos += sizeof(T);
+			if (_is_valid)
+			{
+				_write_pos += sizeof(T);
+			}
 		}
 	}
 	return *this;
@@ -318,7 +330,10 @@ net_serialize& net_serialize::buildin_read(T& t)
 				_is_valid = false;
 				break;
 			}
-			_read_pos += sizeof(T);
+			if (_is_valid)
+			{
+				_read_pos += sizeof(T);
+			}
 		}
 	}
 	return *this;

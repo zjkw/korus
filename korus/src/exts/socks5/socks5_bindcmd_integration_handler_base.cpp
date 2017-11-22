@@ -150,11 +150,6 @@ CLOSE_MODE_STRATEGY	socks5_bindcmd_integration_handler_base::on_ctrl_error(CHANN
 
 }
 
-int32_t socks5_bindcmd_integration_handler_base::on_ctrl_recv_split(const void* buf, const size_t len)	//提取数据包：返回值 =0 表示包不完整； >0 完整的包(长)	
-{
-	return 0;
-}
-
 void	socks5_bindcmd_integration_handler_base::on_ctrl_recv_pkg(const void* buf, const size_t len)	//这是一个待处理的完整包
 {
 
@@ -225,11 +220,6 @@ void	socks5_bindcmd_integration_handler_base::on_data_closed()
 CLOSE_MODE_STRATEGY	socks5_bindcmd_integration_handler_base::on_data_error(CHANNEL_ERROR_CODE code)		//参考CHANNEL_ERROR_CODE定义
 {
 	return CMS_INNER_AUTO_CLOSE;
-}
-
-int32_t socks5_bindcmd_integration_handler_base::on_data_recv_split(const void* buf, const size_t len)	//提取数据包：返回值 =0 表示包不完整； >0 完整的包(长)
-{
-	return 0;
 }
 
 void	socks5_bindcmd_integration_handler_base::on_data_recv_pkg(const void* buf, const size_t len)	//这是一个待处理的完整包

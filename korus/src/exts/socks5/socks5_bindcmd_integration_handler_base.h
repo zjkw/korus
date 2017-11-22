@@ -30,7 +30,6 @@ public:
 	virtual void	on_ctrl_connected();
 	virtual void	on_ctrl_closed();	
 	CLOSE_MODE_STRATEGY	on_ctrl_error(CHANNEL_ERROR_CODE code);				//参考CHANNEL_ERROR_CODE定义	
-	virtual int32_t on_ctrl_recv_split(const void* buf, const size_t len);	//提取数据包：返回值 =0 表示包不完整； >0 完整的包(长)	
 	virtual void	on_ctrl_recv_pkg(const void* buf, const size_t len);	//这是一个待处理的完整包
 
 	//data channel--------------
@@ -43,7 +42,6 @@ public:
 	virtual void	on_data_connected();
 	virtual void	on_data_closed();
 	virtual CLOSE_MODE_STRATEGY	on_data_error(CHANNEL_ERROR_CODE code);		//参考CHANNEL_ERROR_CODE定义
-	virtual int32_t on_data_recv_split(const void* buf, const size_t len);	//提取数据包：返回值 =0 表示包不完整； >0 完整的包(长)
 	virtual void	on_data_recv_pkg(const void* buf, const size_t len);	//这是一个待处理的完整包
 
 private:		

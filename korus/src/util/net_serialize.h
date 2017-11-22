@@ -2,16 +2,18 @@
 
 #include <stdint.h>
 
-// 本机native字节序
+// 网络字节序
 class net_serialize
 {
 public:
 	net_serialize();
-	net_serialize(void* data, uint32_t size);
+	net_serialize(const void* data, const uint32_t size);
+	net_serialize(void* data, const uint32_t size);
 	virtual ~net_serialize();
 
 	// global
-	void attach(void* data, uint32_t size);
+	void attach(const void* data, const uint32_t size);
+	void attach(void* data, const uint32_t size);
 	void detach(void*& data, uint32_t& size);
 	void reset();
 	operator bool() const;

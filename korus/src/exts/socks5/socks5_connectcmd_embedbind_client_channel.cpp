@@ -46,18 +46,6 @@ CLOSE_MODE_STRATEGY	socks5_connectcmd_embedbind_client_channel::on_error(CHANNEL
 	return _integration->on_data_error(code);
 }
 
-//提取数据包：返回值 =0 表示包不完整； >0 完整的包(长)
-int32_t socks5_connectcmd_embedbind_client_channel::on_recv_split(const void* buf, const size_t len)
-{
-	if (!_integration)
-	{
-		assert(false);
-		return 0;
-	}
-
-	return _integration->on_data_recv_split(buf, len);
-}
-
 //这是一个待处理的完整包
 void	socks5_connectcmd_embedbind_client_channel::on_recv_pkg(const void* buf, const size_t len)
 {

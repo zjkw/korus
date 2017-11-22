@@ -16,8 +16,6 @@ public:
 	virtual void	on_connected();
 	virtual void	on_closed();
 	CLOSE_MODE_STRATEGY	on_error(CHANNEL_ERROR_CODE code);		//参考CHANNEL_ERROR_CODE定义	
-	//提取数据包：返回值 =0 表示包不完整； >0 完整的包(长)
-	virtual int32_t on_recv_split(const void* buf, const size_t len);
 	//这是一个待处理的完整包
 	virtual void	on_recv_pkg(const void* buf, const size_t len);
 
