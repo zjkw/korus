@@ -2,6 +2,7 @@
 
 #include <functional>
 #include <chrono>
+#include "korus/src/util/object_state.h"
 
 class timer_helper;
 using reactor_timer_callback_t = std::function<void(timer_helper*)>;

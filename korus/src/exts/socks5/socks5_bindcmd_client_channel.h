@@ -13,22 +13,18 @@ public:
 	//override------------------
 	virtual void	on_chain_init();
 	virtual void	on_chain_final();
-	virtual void	on_connected();
-	virtual void	on_closed();
-	virtual CLOSE_MODE_STRATEGY	on_error(CHANNEL_ERROR_CODE code);		//参考CHANNEL_ERROR_CODE定义	
-	//提取数据包：返回值 =0 表示包不完整； >0 完整的包(长)
-	virtual int32_t on_recv_split(const void* buf, const size_t len);
-	//这是一个待处理的完整包
-	virtual void	on_recv_pkg(const void* buf, const size_t len);
 	virtual long	chain_refcount();
-
+	virtual std::shared_ptr<chain_sharedobj_interface> chain_terminal();
 	void set_integration(std::shared_ptr<socks5_bindcmd_integration_handler_base> integration) { _integration = integration; }
 
+	virtual void	on_connected();
+	virtual void	on_closed();
+	virtual CLOSE_MODE_STRATEGY	on_error(CHANNEL_ERROR_CODE code);
+
 private:
+	std::string _server_addr;
 	std::shared_ptr<socks5_bindcmd_integration_handler_base> _integration;
-
-	virtual std::shared_ptr<chain_sharedobj_interface> chain_terminal();
-
+	
 	virtual int32_t	make_tunnel_pkg(void* buf, const uint16_t size);
 	virtual void	on_tunnel_pkg(const void* buf, const uint16_t size);
 };

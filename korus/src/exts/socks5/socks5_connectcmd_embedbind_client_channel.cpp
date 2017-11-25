@@ -13,49 +13,15 @@ socks5_connectcmd_embedbind_client_channel::~socks5_connectcmd_embedbind_client_
 }
 
 //override------------------
-void	socks5_connectcmd_embedbind_client_channel::on_connected()
+long	socks5_connectcmd_embedbind_client_channel::chain_refcount()
 {
-	if (!_integration)
+	long ref = 0;
+	if (_integration)
 	{
-		assert(false);
-		return;
+		ref++;
 	}
 
-	_integration->on_data_connected();
-}
-
-void	socks5_connectcmd_embedbind_client_channel::on_closed()
-{
-	if (!_integration)
-	{
-		assert(false);
-		return;
-	}
-
-	_integration->on_data_closed();
-}
-
-CLOSE_MODE_STRATEGY	socks5_connectcmd_embedbind_client_channel::on_error(CHANNEL_ERROR_CODE code)		//参考CHANNEL_ERROR_CODE定义	
-{
-	if (!_integration)
-	{
-		assert(false);
-		return CMS_INNER_AUTO_CLOSE;
-	}
-
-	return _integration->on_data_error(code);
-}
-
-//这是一个待处理的完整包
-void	socks5_connectcmd_embedbind_client_channel::on_recv_pkg(const void* buf, const size_t len)
-{
-	if (!_integration)
-	{
-		assert(false);
-		return;
-	}
-
-	_integration->on_data_recv_pkg(buf, len);
+	return ref + socks5_connectcmd_client_channel::chain_refcount();
 }
 
 std::shared_ptr<chain_sharedobj_interface> socks5_connectcmd_embedbind_client_channel::chain_terminal()
@@ -67,4 +33,49 @@ std::shared_ptr<chain_sharedobj_interface> socks5_connectcmd_embedbind_client_ch
 	}
 
 	return _integration->chain_terminal();
+}
+
+void	socks5_connectcmd_embedbind_client_channel::on_connected()
+{
+	if (!_integration)
+	{
+		assert(false);
+		return;
+	}
+
+	_integration->on_ctrl_connected();
+}
+
+void	socks5_connectcmd_embedbind_client_channel::on_closed()
+{
+	if (!_integration)
+	{
+		assert(false);
+		return;
+	}
+
+	_integration->on_ctrl_closed();
+}
+
+CLOSE_MODE_STRATEGY	socks5_connectcmd_embedbind_client_channel::on_error(CHANNEL_ERROR_CODE code)
+{
+	if (!_integration)
+	{
+		assert(false);
+		return CMS_INNER_AUTO_CLOSE;
+	}
+
+	return _integration->on_ctrl_error(code);
+}
+
+void	socks5_connectcmd_embedbind_client_channel::on_shakehandler_result(CHANNEL_ERROR_CODE code, const std::string& proxy_listen_target_addr)
+{
+	if (!_integration)
+	{
+		assert(false);
+		return;
+	}
+
+	_integration->on_data_proxy_listen_target_result(code, proxy_listen_target_addr);
+
 }

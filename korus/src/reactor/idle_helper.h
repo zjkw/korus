@@ -1,13 +1,14 @@
 #pragma once
 
 #include <functional>
+#include "korus/src/util/object_state.h"
 
 class idle_helper;
 using reactor_idle_callback_t = std::function<void(idle_helper*)>;
 
 class reactor_loop;
 //¾¡Á¿ÇáµÄ¸ºÔØ
-class idle_helper
+class idle_helper : public noncopyable
 {
 public:
 	idle_helper();

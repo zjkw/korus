@@ -17,4 +17,6 @@ private:
 
 	virtual int32_t	make_tunnel_pkg(void* buf, const uint16_t size);
 	virtual void	on_tunnel_pkg(const void* buf, const uint16_t size);
+
+	virtual void	on_shakehandler_result(CHANNEL_ERROR_CODE code, const std::string& proxy_listen_target_addr);
 };

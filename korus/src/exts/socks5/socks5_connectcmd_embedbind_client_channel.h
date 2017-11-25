@@ -13,18 +13,16 @@ public:
 	//override------------------
 	virtual void	on_chain_init();
 	virtual void	on_chain_final();
+	virtual long	chain_refcount();
+	virtual std::shared_ptr<chain_sharedobj_interface> chain_terminal();
+	void set_integration(std::shared_ptr<socks5_bindcmd_integration_handler_base> integration) { _integration = integration; }
+
 	virtual void	on_connected();
 	virtual void	on_closed();
-	CLOSE_MODE_STRATEGY	on_error(CHANNEL_ERROR_CODE code);		//参考CHANNEL_ERROR_CODE定义	
-	//这是一个待处理的完整包
-	virtual void	on_recv_pkg(const void* buf, const size_t len);
-
-	virtual long	chain_refcount();
-
-	void set_integration(std::shared_ptr<socks5_bindcmd_integration_handler_base> integration) { _integration = integration; }
+	virtual CLOSE_MODE_STRATEGY	on_error(CHANNEL_ERROR_CODE code);
 
 private:
 	std::shared_ptr<socks5_bindcmd_integration_handler_base> _integration;
-
-	virtual std::shared_ptr<chain_sharedobj_interface> chain_terminal();
+	
+	virtual void	on_shakehandler_result(CHANNEL_ERROR_CODE code, const std::string& proxy_listen_target_addr);
 };

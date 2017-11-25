@@ -19,7 +19,7 @@ enum DOMAIN_RESOLVE_STATE
 };
 using domain_async_resolve_callback_t = std::function<void(DOMAIN_RESOLVE_STATE result, const std::string& domain, const std::string& ip)>;
 
-class domain_async_resolve_helper
+class domain_async_resolve_helper : public noncopyable
 {
 public:
 	// addr∏Ò Ωip:port

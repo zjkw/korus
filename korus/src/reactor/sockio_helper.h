@@ -2,6 +2,7 @@
 
 #include <functional>
 #include "korus/src/util/basic_defines.h"
+#include "korus/src/util/object_state.h"
 
 class sockio_helper;
 using reactor_sockio_callback_t = std::function<void(sockio_helper*)>;
@@ -17,7 +18,7 @@ enum SOCKIO_TYPE
 class reactor_loop;
 
 // 非线程安全，用户不得直接使用
-class sockio_helper
+class sockio_helper : public noncopyable
 {
 public:
 	sockio_helper();

@@ -5,6 +5,12 @@
 #include "socks5_bindcmd_client_channel.h"
 #include "socks5_connectcmd_embedbind_client_channel.h"
 
+// 逻辑时序
+// 1，socks5_connectcmd_embedbind_client_channel 向代理服务器执行connect_cmd操作，连接目标服务器
+// 2，socks5_bindcmd_client_channel 向代理服务器请求bind操作，返回代理监听（目标服务器的请求）的ip和端口 X
+// 3，向socks5_connectcmd_embedbind_client_channel发送请求，要求目标服务器连接 X
+// 4，代理服务器返回 目标服务器连接的ip和端口
+
 class socks5_bindcmd_integration_handler_base : public chain_sharedobj_base<socks5_bindcmd_integration_handler_base>
 {
 public:
@@ -43,6 +49,8 @@ public:
 	virtual void	on_data_closed();
 	virtual CLOSE_MODE_STRATEGY	on_data_error(CHANNEL_ERROR_CODE code);		//参考CHANNEL_ERROR_CODE定义
 	virtual void	on_data_recv_pkg(const void* buf, const size_t len);	//这是一个待处理的完整包
+
+	void			on_data_proxy_listen_target_result(CHANNEL_ERROR_CODE code, const std::string& proxy_listen_target_addr);		//代理服务器用于监听“目标服务器过来的连接”地址
 
 private:		
 	std::shared_ptr<reactor_loop>								_reactor;
