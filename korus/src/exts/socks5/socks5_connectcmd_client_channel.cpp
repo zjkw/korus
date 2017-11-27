@@ -148,7 +148,7 @@ void	socks5_connectcmd_client_channel::on_tunnel_pkg(const void* buf, const uint
 	on_shakehandler_result(CEC_NONE, proxy_listen_target_addr);
 }
 
-void	socks5_connectcmd_client_channel::on_shakehandler_result(CHANNEL_ERROR_CODE code, const std::string& proxy_listen_target_addr)
+void	socks5_connectcmd_client_channel::on_shakehandler_result(const CHANNEL_ERROR_CODE code, const std::string& proxy_listen_target_addr)
 {
 	if (CEC_NONE == code)
 	{

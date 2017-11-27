@@ -83,6 +83,7 @@ public:
 	virtual void		shutdown(int32_t howto);// 参数参考全局函数 ::shutdown
 	virtual void		connect();
 	virtual TCP_CLTCONN_STATE	state()	{ return _conn_state; }
+	virtual bool		server_addr(const std::string& server_addr);
 
 private:
 	SOCKET									_conn_fd;

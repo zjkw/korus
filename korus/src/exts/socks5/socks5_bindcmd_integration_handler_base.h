@@ -50,7 +50,7 @@ public:
 	virtual CLOSE_MODE_STRATEGY	on_data_error(CHANNEL_ERROR_CODE code);		//参考CHANNEL_ERROR_CODE定义
 	virtual void	on_data_recv_pkg(const void* buf, const size_t len);	//这是一个待处理的完整包
 
-	void			on_data_proxy_listen_target_result(CHANNEL_ERROR_CODE code, const std::string& proxy_listen_target_addr);		//代理服务器用于监听“目标服务器过来的连接”地址
+	void			on_data_proxy_listen_target_result(const CHANNEL_ERROR_CODE code, const std::string& proxy_listen_target_addr);		//代理服务器用于监听“目标服务器过来的连接”地址
 
 private:		
 	std::shared_ptr<reactor_loop>								_reactor;

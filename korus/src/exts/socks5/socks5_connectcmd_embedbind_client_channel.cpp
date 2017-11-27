@@ -68,7 +68,7 @@ CLOSE_MODE_STRATEGY	socks5_connectcmd_embedbind_client_channel::on_error(CHANNEL
 	return _integration->on_ctrl_error(code);
 }
 
-void	socks5_connectcmd_embedbind_client_channel::on_shakehandler_result(CHANNEL_ERROR_CODE code, const std::string& proxy_listen_target_addr)
+void	socks5_connectcmd_embedbind_client_channel::on_shakehandler_result(const CHANNEL_ERROR_CODE code, const std::string& proxy_listen_target_addr)
 {
 	if (!_integration)
 	{

@@ -24,5 +24,5 @@ public:
 private:
 	std::shared_ptr<socks5_bindcmd_integration_handler_base> _integration;
 	
-	virtual void	on_shakehandler_result(CHANNEL_ERROR_CODE code, const std::string& proxy_listen_target_addr);
+	virtual void	on_shakehandler_result(const CHANNEL_ERROR_CODE code, const std::string& proxy_listen_target_addr);
 };

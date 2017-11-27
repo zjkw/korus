@@ -240,6 +240,17 @@ void	tcp_client_channel::shutdown(int32_t howto)
 	tcp_channel_base::shutdown(howto);
 }
 
+bool	tcp_client_channel::server_addr(const std::string& server_addr)
+{
+	if (CNS_CLOSED != _conn_state)
+	{
+		return false;
+	}
+
+	_server_addr = server_addr;
+	return true;
+}
+
 void	tcp_client_channel::connect()
 {
 	if (!is_prepare())

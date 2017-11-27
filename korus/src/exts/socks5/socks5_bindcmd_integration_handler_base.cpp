@@ -227,6 +227,12 @@ void	socks5_bindcmd_integration_handler_base::on_data_recv_pkg(const void* buf, 
 
 }
 
+void	socks5_bindcmd_integration_handler_base::on_data_proxy_listen_target_result(const CHANNEL_ERROR_CODE code, const std::string& proxy_listen_target_addr)		//代理服务器用于监听“目标服务器过来的连接”地址
+{
+//	_data_channel->server_addr(proxy_listen_target_addr);
+	_data_channel->connect();
+}
+
 bool build_relation(std::shared_ptr<socks5_connectcmd_embedbind_client_channel> ctrl, std::shared_ptr<socks5_bindcmd_client_channel> data, std::shared_ptr<socks5_bindcmd_integration_handler_base> integration)
 {
 	integration->chain_init(ctrl, data);
