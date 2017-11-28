@@ -4,7 +4,7 @@
 #include "korus/src/tcp/tcp_client.h"
 #include "korus/src/udp/udp_client.h"
 #include "socks5_connectcmd_client_channel.h"
-#include "socks5_bindcmd_integration_handler_base.h"	//取代bindcmd作为入口
+#include "socks5_bindcmd_client_channel.h"	//取代bindcmd作为入口
 #include "socks5_associatecmd_client_channel.h"
 /////////////////////////////////////// connect_cmd_mode
 
@@ -130,9 +130,9 @@ private:
 		// data channel
 		std::shared_ptr<tcp_client_channel>			data_origin_channel = create_origin_channel(reactor);
 		origin_channel_list.push_back(data_origin_channel);
-		std::shared_ptr<socks5_bindcmd_client_channel>	data_socks_channel = std::make_shared<socks5_bindcmd_client_channel>(reactor, _server_addr, _socks_user, _socks_psw);;
+		std::shared_ptr<socks5_bindcmd_originalbind_client_channel>	data_socks_channel = std::make_shared<socks5_bindcmd_originalbind_client_channel>(reactor, _server_addr, _socks_user, _socks_psw);;
 		
-		std::shared_ptr<socks5_bindcmd_integration_handler_base>	terminal_channel = std::make_shared<socks5_bindcmd_integration_handler_base>();
+		std::shared_ptr<socks5_bindcmd_client_channel>	terminal_channel = std::make_shared<socks5_bindcmd_client_channel>();
 
 		build_relation(ctrl_socks_channel, data_socks_channel, terminal_channel);
 		build_channel_chain_helper(std::dynamic_pointer_cast<tcp_client_handler_base>(ctrl_origin_channel), std::dynamic_pointer_cast<tcp_client_handler_base>(ctrl_socks_channel));
@@ -181,9 +181,9 @@ private:
 		// data channel
 		std::shared_ptr<tcp_client_channel>			data_origin_channel = create_origin_channel(reactor);
 		origin_channel_list.push_back(data_origin_channel);
-		std::shared_ptr<socks5_bindcmd_client_channel>	data_socks_channel = std::make_shared<socks5_bindcmd_client_channel>(reactor, _server_addr, _socks_user, _socks_psw);;
+		std::shared_ptr<socks5_bindcmd_originalbind_client_channel>	data_socks_channel = std::make_shared<socks5_bindcmd_originalbind_client_channel>(reactor, _server_addr, _socks_user, _socks_psw);;
 
-		std::shared_ptr<socks5_bindcmd_integration_handler_base>	terminal_channel = std::make_shared<socks5_bindcmd_integration_handler_base>();
+		std::shared_ptr<socks5_bindcmd_client_channel>	terminal_channel = std::make_shared<socks5_bindcmd_client_channel>();
 
 		build_relation(ctrl_socks_channel, data_socks_channel, terminal_channel);
 		build_channel_chain_helper(std::dynamic_pointer_cast<tcp_client_handler_base>(ctrl_origin_channel), std::dynamic_pointer_cast<tcp_client_handler_base>(ctrl_socks_channel));

@@ -1,5 +1,5 @@
 #include <assert.h>
-#include "socks5_bindcmd_integration_handler_base.h"
+#include "socks5_bindcmd_client_channel.h"
 #include "socks5_connectcmd_embedbind_client_channel.h"
 
 socks5_connectcmd_embedbind_client_channel::socks5_connectcmd_embedbind_client_channel(std::shared_ptr<reactor_loop> reactor, const std::string& server_addr, const std::string& socks_user, const std::string& socks_psw)

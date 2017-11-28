@@ -1,11 +1,8 @@
 #include <assert.h>
-#include "socks5_bindcmd_integration_handler_base.h"
-#include "korus/src/util/socket_ops.h"
-#include "korus/src/util/net_serialize.h"
+#include "korus/src/tcp/tcp_client_channel.h"
 #include "socks5_bindcmd_client_channel.h"
 
-socks5_bindcmd_client_channel::socks5_bindcmd_client_channel(std::shared_ptr<reactor_loop> reactor, const std::string& server_addr, const std::string& socks_user, const std::string& socks_psw)
-	: _server_addr(server_addr), socks5_client_channel_base(reactor, socks_user, socks_psw)
+socks5_bindcmd_client_channel::socks5_bindcmd_client_channel()
 {
 
 }
@@ -17,191 +14,229 @@ socks5_bindcmd_client_channel::~socks5_bindcmd_client_channel()
 //override------------------
 void	socks5_bindcmd_client_channel::on_chain_init()
 {
+
 }
 
 void	socks5_bindcmd_client_channel::on_chain_final()
 {
+
+}
+
+void	socks5_bindcmd_client_channel::on_chain_zomby()
+{
+
 }
 
 long	socks5_bindcmd_client_channel::chain_refcount()
 {
 	long ref = 0;
-	if (_integration)
+	if (_ctrl_channel)
 	{
-		ref++;
+		ref += 1 + _ctrl_channel->chain_refcount();
+	}
+	if (_data_channel)
+	{
+		ref += 1 + _data_channel->chain_refcount();
 	}
 
-	return ref + socks5_client_channel_base::chain_refcount();
+	return ref + chain_sharedobj_base<socks5_bindcmd_client_channel>::chain_refcount();
 }
 
-std::shared_ptr<chain_sharedobj_interface> socks5_bindcmd_client_channel::chain_terminal()
+void	socks5_bindcmd_client_channel::chain_init(std::shared_ptr<socks5_connectcmd_embedbind_client_channel> ctrl_channel, std::shared_ptr<socks5_bindcmd_originalbind_client_channel> data_channel)
 {
-	if (!_integration)
+	_ctrl_channel = ctrl_channel;
+	_data_channel = data_channel;
+}
+
+void	socks5_bindcmd_client_channel::chain_final()
+{
+	on_chain_final();
+
+	// 无需前置is_release判断，相信调用者
+	std::shared_ptr<socks5_connectcmd_embedbind_client_channel> ctrl_channel = _ctrl_channel;
+	std::shared_ptr<socks5_bindcmd_originalbind_client_channel> data_channel = _data_channel;
+	_ctrl_channel = nullptr;
+	_data_channel = nullptr;
+
+	if (ctrl_channel)
+	{
+		ctrl_channel->chain_final();
+	}
+	if (data_channel)
+	{
+		data_channel->chain_final();
+	}
+}
+
+void	socks5_bindcmd_client_channel::chain_zomby()
+{
+	on_chain_zomby();
+
+	if (_ctrl_channel)
+	{
+		_ctrl_channel->chain_zomby();
+	}
+	if (_data_channel)
+	{
+		_data_channel->chain_zomby();
+	}
+}
+
+//ctrl channel--------------
+// 下面四个函数可能运行在多线程环境下	
+int32_t	socks5_bindcmd_client_channel::ctrl_send(const void* buf, const size_t len)			// 保证原子, 认为是整包，返回值若<0参考CHANNEL_ERROR_CODE
+{
+	if (!_ctrl_channel)
 	{
 		assert(false);
-		return nullptr;
+		return 0;
 	}
-
-	return _integration->chain_terminal();
+	return _ctrl_channel->send(buf, len);
 }
 
-void	socks5_bindcmd_client_channel::on_connected()
+void	socks5_bindcmd_client_channel::ctrl_close()
 {
-	if (!_integration)
+	if (!_ctrl_channel)
 	{
 		assert(false);
 		return;
 	}
-
-	_integration->on_data_connected();
+	_ctrl_channel->close();
 }
 
-void	socks5_bindcmd_client_channel::on_closed()
+void	socks5_bindcmd_client_channel::ctrl_shutdown(int32_t howto)							// 参数参考全局函数 ::shutdown
 {
-	if (!_integration)
+	if (!_ctrl_channel)
 	{
 		assert(false);
 		return;
 	}
-
-	_integration->on_data_closed();
+	_ctrl_channel->shutdown(howto);
 }
 
-CLOSE_MODE_STRATEGY	socks5_bindcmd_client_channel::on_error(CHANNEL_ERROR_CODE code)
+void	socks5_bindcmd_client_channel::ctrl_connect()
 {
-	if (!_integration)
+	if (!_ctrl_channel)
 	{
 		assert(false);
-		return CMS_INNER_AUTO_CLOSE;
+		return;
 	}
-
-	return _integration->on_data_error(code);
+	_ctrl_channel->connect();
 }
 
-int32_t	socks5_bindcmd_client_channel::make_tunnel_pkg(void* buf, const uint16_t size)
+TCP_CLTCONN_STATE	socks5_bindcmd_client_channel::ctrl_state()
 {
-	net_serialize	codec(buf, size);
-
-	codec << static_cast<uint8_t>(SOCKS5_V);
-	codec << static_cast<uint8_t>(0x02);
-	codec << static_cast<uint8_t>(0x00);
-
-	std::string host, port;
-	if (!sockaddr_from_string(_server_addr, host, port))
+	if (!_ctrl_channel)
 	{
 		assert(false);
-		return -1;
+		return CNS_CLOSED;
 	}
-	SOCK_ADDR_TYPE	sat = addrtype_from_string(host);
-	if (sat == SAT_DOMAIN)
-	{
-		codec << static_cast<uint8_t>(0x03);
-		codec << static_cast<uint8_t>(host.size());
-		codec.write(host.data(), host.size());
-	}
-	else if (sat == SAT_IPV4)
-	{
-		struct in_addr ia;
-		inet_aton(host.c_str(), &ia);
-
-		codec << static_cast<uint8_t>(0x01);
-		codec << static_cast<uint32_t>(ntohl(ia.s_addr));
-	}
-	else
-	{
-		assert(false);
-		return -1;
-	}
-
-	return (int32_t)codec.wpos();
+	return _ctrl_channel->state();
 }
 
-void	socks5_bindcmd_client_channel::on_tunnel_pkg(const void* buf, const uint16_t size)
+void	socks5_bindcmd_client_channel::on_ctrl_connected()
 {
-	net_serialize	decodec(buf, size);
 
-	uint8_t	u8ver = 0;
-	uint8_t	u8rep = 0;
-	uint8_t	u8rsv = 0;
-	uint8_t	u8atyp = 0;
-	decodec >> u8ver >> u8rep >> u8rsv >> u8atyp;
+}
 
-	if (!decodec)
+void	socks5_bindcmd_client_channel::on_ctrl_closed()
+{
+
+}
+
+CLOSE_MODE_STRATEGY	socks5_bindcmd_client_channel::on_ctrl_error(CHANNEL_ERROR_CODE code)		//参考CHANNEL_ERROR_CODE定义	
+{
+	return CMS_INNER_AUTO_CLOSE;
+
+}
+
+void	socks5_bindcmd_client_channel::on_ctrl_recv_pkg(const void* buf, const size_t len)	//这是一个待处理的完整包
+{
+
+}
+
+//data channel--------------
+// 下面四个函数可能运行在多线程环境下	
+int32_t	socks5_bindcmd_client_channel::data_send(const void* buf, const size_t len)			// 保证原子, 认为是整包，返回值若<0参考CHANNEL_ERROR_CODE
+{
+	if (!_data_channel)
 	{
-		close();
+		assert(false);
+		return 0;
+	}
+	return _data_channel->send(buf, len);
+}
+
+void	socks5_bindcmd_client_channel::data_close()
+{
+	if (!_data_channel)
+	{
+		assert(false);
 		return;
 	}
+	_data_channel->close();
+}
 
-	if (SOCKS5_V != u8ver)
+void	socks5_bindcmd_client_channel::data_shutdown(int32_t howto)							// 参数参考全局函数 ::shutdown
+{
+	if (!_data_channel)
 	{
-		close();
+		assert(false);
 		return;
 	}
+	_data_channel->shutdown(howto);
+}
 
-	if (u8rep)
+void	socks5_bindcmd_client_channel::data_connect()
+{
+	if (!_data_channel)
 	{
-		CHANNEL_ERROR_CODE code = convert_error_code(u8rep);
-		if (CMS_INNER_AUTO_CLOSE == on_error(code))
-		{
-			close();
-		}
+		assert(false);
 		return;
 	}
+	_data_channel->connect();
+}
 
-	// strict check ?
-	switch (u8atyp)
+TCP_CLTCONN_STATE	socks5_bindcmd_client_channel::data_state()
+{
+	if (!_data_channel)
 	{
-	case 0x01:
-	{
-		uint32_t	u32ip = 0;
-		decodec >> u32ip;
-		if (!decodec)
-		{
-			close();
-			return;
-		}
-
-		struct in_addr si;
-		si.s_addr = u32ip;
-		char str[16];
-		if (!inet_ntop(AF_INET, &si, str, sizeof(str)))
-		{
-			close();
-			return;
-		}
-
-		printf("socks5 ipv4: %s\n", str);
+		assert(false);
+		return CNS_CLOSED;
 	}
-	break;
-	case 0x03:
-	{
-		uint8_t	u8domainlen = 0;
-		decodec >> u8domainlen;
-		char    szdomain[257];
-		decodec.read(szdomain, u8domainlen);
-		if (!decodec)
-		{
-			close();
-			return;
-		}
-		szdomain[u8domainlen] = 0;
+	return _data_channel->state();
+}
 
-		printf("socks5 domain: %s\n", szdomain);
-	}
-	break;
-	case 0x04:
-	{
-		close();
-		return;
-	}
-	break;
-	default:
-		break;
-	}
-	//
+void	socks5_bindcmd_client_channel::on_data_connected()
+{
 
-	_shakehand_state = SCS_NORMAL;
+}
 
-	//通知外层
-	tcp_client_handler_base::on_connected();
+void	socks5_bindcmd_client_channel::on_data_closed()
+{
+
+}
+
+CLOSE_MODE_STRATEGY	socks5_bindcmd_client_channel::on_data_error(CHANNEL_ERROR_CODE code)		//参考CHANNEL_ERROR_CODE定义
+{
+	return CMS_INNER_AUTO_CLOSE;
+}
+
+void	socks5_bindcmd_client_channel::on_data_recv_pkg(const void* buf, const size_t len)	//这是一个待处理的完整包
+{
+
+}
+
+void	socks5_bindcmd_client_channel::on_data_proxy_listen_target_result(const CHANNEL_ERROR_CODE code, const std::string& proxy_listen_target_addr)		//代理服务器用于监听“目标服务器过来的连接”地址
+{
+//	_data_channel->server_addr(proxy_listen_target_addr);
+	_data_channel->connect();
+}
+
+bool build_relation(std::shared_ptr<socks5_connectcmd_embedbind_client_channel> ctrl, std::shared_ptr<socks5_bindcmd_originalbind_client_channel> data, std::shared_ptr<socks5_bindcmd_client_channel> integration)
+{
+	integration->chain_init(ctrl, data);
+	ctrl->set_integration(integration);
+	data->set_integration(integration);
+	return true;
 }
