@@ -107,7 +107,7 @@ class socks5_bindcmd_client<uint16_t> : public tcp_client<uint16_t>
 {
 public:
 	// 设计考虑：其实外层也可以单独connect + bind进行组合操作，但是因为模板固话了多线程，所以一旦这么做则用户层需要将两个连接配对，这增加了管理和参数传递的麻烦，并且时序（先connect后bind）无法得到保证
-	socks5_bindcmd_client(uint16_t thread_num, const std::string& proxy_addr, const std::string& server_addr, const socks5_bindcmd_integration_handler_factory_t& factory,
+	socks5_bindcmd_client(uint16_t thread_num, const std::string& proxy_addr, const std::string& server_addr, const socks5_bindcmd_client_channel_factory_t& factory,
 		const std::string& socks_user = "", const std::string& socks_psw = "",	// 如果账号为空，将忽略密码，认为是无需鉴权
 		std::chrono::seconds connect_timeout = std::chrono::seconds(0), std::chrono::seconds connect_retry_wait = std::chrono::seconds(-1),
 		const uint32_t self_read_size = DEFAULT_READ_BUFSIZE, const uint32_t self_write_size = DEFAULT_WRITE_BUFSIZE, const uint32_t sock_read_size = 0, const uint32_t sock_write_size = 0)
@@ -149,7 +149,7 @@ private:
 	std::string _server_addr;
 	std::string _socks_user;
 	std::string _socks_psw;
-	socks5_bindcmd_integration_handler_factory_t _factory;
+	socks5_bindcmd_client_channel_factory_t _factory;
 };
 
 template <>

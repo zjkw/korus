@@ -6,9 +6,9 @@
 #include "socks5_connectcmd_embedbind_client_channel.h"
 
 // 逻辑时序
-// 1，socks5_connectcmd_embedbind_client_channel 向代理服务器执行connect_cmd操作，连接目标服务器
-// 2，socks5_bindcmd_originalbind_client_channel 向代理服务器请求bind操作，返回代理监听（目标服务器的请求）的ip和端口 X
-// 3，向socks5_connectcmd_embedbind_client_channel发送请求，要求目标服务器连接 X
+// 1，socks5_connectcmd_embedbind_client_channel 向代理服务器执行connect_cmd操作，tcp连接目标服务器
+// 2，socks5_bindcmd_originalbind_client_channel 向代理服务器请求bind操作，返回代理监听（目标服务器的connect）的ip和端口 X
+// 3，socks5_connectcmd_embedbind_client_channel 发送请求，要求目标服务器连接 X
 // 4，代理服务器返回 目标服务器连接的ip和端口
 
 class socks5_bindcmd_client_channel : public chain_sharedobj_base<socks5_bindcmd_client_channel>
@@ -58,7 +58,7 @@ private:
 	std::shared_ptr<socks5_bindcmd_originalbind_client_channel>				_data_channel;
 };
 
-using socks5_bindcmd_integration_handler_factory_t = std::function<std::shared_ptr<socks5_bindcmd_client_channel>()>;
+using socks5_bindcmd_client_channel_factory_t = std::function<std::shared_ptr<socks5_bindcmd_client_channel>()>;
 
 bool build_relation(std::shared_ptr<socks5_connectcmd_embedbind_client_channel> ctrl, std::shared_ptr<socks5_bindcmd_originalbind_client_channel> data, std::shared_ptr<socks5_bindcmd_client_channel> integration);
 

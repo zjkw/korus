@@ -36,7 +36,7 @@ enum SOCKS_METHOD_TYPE
 //	4,	auth_ack:	u8ver + u8status													代理服务器回应是否认证成功
 //						u8status:
 //							0x00		成功
-//							其他			失败		
+//							其他		失败		
 //
 
 //	5,	tunnel_req:	u8ver + u8cmd + u8rsv + u8atyp + vdst_addr + u16dst_port			客户端请求代理服务打通代理通道
@@ -56,7 +56,7 @@ enum SOCKS_METHOD_TYPE
 //							0x01		IPV4,	vdst_addr = u32ip
 //							0x03		域名,	vdst_addr = u8len * u8domain
 //							0x04		IPV6,	vdst_addr = u128ip
-//
+// 
 //	6,	tunnel_ack:	u8ver + u8rep + u8rsv + u8atyp + vdst_addr + u16dst_port			代理服务返回打通结果，特别对于BIND模式存在一个请求两个回应
 //						rep:
 //							0x00		成功
@@ -70,18 +70,18 @@ enum SOCKS_METHOD_TYPE
 //							0x08		不支持的地址类型
 //							0x09–0xFF	未定义
 //
-//							CONNECT模式:
-//								vdst_addr	目标服务地址
-//								u16dst_port	目标服务端口
-//							BIND模式第一次回应:
-//								vdst_addr	代理服务监听目标服务请求的监听地址
-//								u16dst_port	代理服务监听目标服务请求的监听端口
-//							BIND模式第二次回应:
-//								vdst_addr	目标服务连接到代理服务器的连接地址
-//								u16dst_port	目标服务连接到代理服务器的连接端口
-//							UDP ASSOCIATE模式下，此时：
-//								vdst_addr	代理服务器udp监听地址
-//								u16dst_port	代理服务器udp监听端口
+//						CONNECT模式:
+//							vdst_addr	目标服务地址
+//							u16dst_port	目标服务端口
+//						BIND模式第一次回应:
+//							vdst_addr	代理服务监听目标服务请求的监听地址
+//							u16dst_port	代理服务监听目标服务请求的监听端口
+//						BIND模式第二次回应:
+//							vdst_addr	目标服务连接到代理服务器的连接地址
+//							u16dst_port	目标服务连接到代理服务器的连接端口
+//						UDP ASSOCIATE模式下，此时：
+//							vdst_addr	代理服务器udp监听地址
+//							u16dst_port	代理服务器udp监听端口
 
 //	7,	udp_associate_req:	u16rsv + u8flag + u8atyp + vdst_addr + u16dst_port + vdata	客户端向代理服务器发udp数据包，让其转发/拆解到目标服务器
 //						u16rsv = 0x0000
