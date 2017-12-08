@@ -3,6 +3,8 @@
 #include <vector>
 #include "backend_poller.h"
 
+// tbd tcp/udp流控，recv受限于send等，并模拟边沿触发------
+
 class epoll_imp : public backend_poller
 {
 public:

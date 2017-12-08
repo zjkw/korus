@@ -436,8 +436,11 @@ void	tcp_client_channel::on_sockio_read(sockio_helper* sockio_id)
 	int32_t ret = tcp_channel_base::do_recv();
 	if (ret < 0)
 	{
-		CLOSE_MODE_STRATEGY cms = on_error((CHANNEL_ERROR_CODE)ret);
-		handle_close_strategy(cms);
+		if (is_normal())
+		{
+			CLOSE_MODE_STRATEGY cms = on_error((CHANNEL_ERROR_CODE)ret);
+			handle_close_strategy(cms);
+		}
 	}
 }
 
@@ -476,6 +479,10 @@ int32_t	tcp_client_channel::on_recv_buff(const void* buf, const size_t len, bool
 	while (len > size)
 	{
 		int32_t ret = on_recv_split((uint8_t*)buf + size, len - size);
+		if (!is_normal())
+		{
+			return CEC_INVALID_SOCKET;
+		}
 		if (ret == 0)
 		{
 			left_partial_pkg = true;	//剩下的不是一个完整的包
@@ -496,6 +503,11 @@ int32_t	tcp_client_channel::on_recv_buff(const void* buf, const size_t len, bool
 
 		on_recv_pkg((uint8_t*)buf + size, ret);
 		size += ret;
+
+		if (!is_normal())
+		{
+			return CEC_INVALID_SOCKET;
+		}
 	}
 
 	return size;

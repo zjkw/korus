@@ -190,8 +190,11 @@ void	udp_server_channel::on_sockio_read(sockio_helper* sockio_id)
 	int32_t ret = udp_channel_base::do_recv();
 	if (ret < 0)
 	{
-		CLOSE_MODE_STRATEGY cms = on_error((CHANNEL_ERROR_CODE)ret);
-		handle_close_strategy(cms);
+		if (is_normal())
+		{
+			CLOSE_MODE_STRATEGY cms = on_error((CHANNEL_ERROR_CODE)ret);
+			handle_close_strategy(cms);
+		}
 	}
 }
 

@@ -4,6 +4,7 @@
 #include "socks5_associatecmd_server_channel.h"
 
 socks5_associatecmd_server_channel::socks5_associatecmd_server_channel(std::shared_ptr<reactor_loop> reactor)
+: udp_server_handler_base(reactor)
 {
 
 }

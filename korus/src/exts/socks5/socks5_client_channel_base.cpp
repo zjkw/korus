@@ -54,19 +54,19 @@ int32_t socks5_client_channel_base::on_recv_split(const void* buf, const size_t 
 {
 	switch (_shakehand_state)
 	{
-	case socks5_client_channel_base::SCS_METHOD:
+	case SCS_METHOD:
 		if (size >= 2)
 		{
 			return 2;
 		}
 		break;
-	case socks5_client_channel_base::SCS_AUTH:
+	case SCS_AUTH:
 		if (size >= 2)
 		{
 			return 2;
 		}
 		break;
-	case socks5_client_channel_base::SCS_TUNNEL:
+	case SCS_TUNNEL:
 		if (size > 4)
 		{
 			net_serialize	decodec((void*)buf, size);
@@ -104,9 +104,9 @@ int32_t socks5_client_channel_base::on_recv_split(const void* buf, const size_t 
 			}
 		}
 		break;
-	case socks5_client_channel_base::SCS_NORMAL:
+	case SCS_NORMAL:
 		return tcp_client_handler_base::on_recv_split(buf, size);
-	case socks5_client_channel_base::SCS_NONE:
+	case SCS_NONE:
 	default:
 		assert(false);
 		break;
@@ -120,19 +120,19 @@ void	socks5_client_channel_base::on_recv_pkg(const void* buf, const size_t size)
 {
 	switch (_shakehand_state)
 	{
-	case socks5_client_channel_base::SCS_METHOD:
+	case SCS_METHOD:
 		on_method_pkg(buf, size);
 		break;
-	case socks5_client_channel_base::SCS_AUTH:
+	case SCS_AUTH:
 		on_auth_pkg(buf, size);
 		break;
-	case socks5_client_channel_base::SCS_TUNNEL:
+	case SCS_TUNNEL:
 		on_tunnel_pkg(buf, size);
 		break;
-	case socks5_client_channel_base::SCS_NORMAL:
+	case SCS_NORMAL:
 		on_recv_pkg(buf, size);
 		break;
-	case socks5_client_channel_base::SCS_NONE:
+	case SCS_NONE:
 	default:
 		assert(false);
 		break;
