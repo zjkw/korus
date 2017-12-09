@@ -240,15 +240,20 @@ void	tcp_client_channel::shutdown(int32_t howto)
 	tcp_channel_base::shutdown(howto);
 }
 
-bool	tcp_client_channel::server_addr(const std::string& server_addr)
+void	tcp_client_channel::server_addr(const std::string& server_addr)
 {
 	if (CNS_CLOSED != _conn_state)
 	{
-		return false;
+		return;
+	}
+	//线程调度
+	if (!reactor()->is_current_thread())
+	{
+		reactor()->start_async_task(std::bind(&tcp_client_channel::server_addr, this, server_addr), this);
+		return;
 	}
 
 	_server_addr = server_addr;
-	return true;
 }
 
 void	tcp_client_channel::connect()

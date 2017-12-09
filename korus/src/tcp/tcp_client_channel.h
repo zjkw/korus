@@ -73,8 +73,8 @@ private:
 class tcp_client_channel : public tcp_channel_base, public tcp_client_handler_base, public multiform_state
 {
 public:
-	tcp_client_channel(std::shared_ptr<reactor_loop> reactor, const std::string& server_addr, std::chrono::seconds connect_timeout, std::chrono::seconds connect_retry_wait,
-		const uint32_t self_read_size, const uint32_t self_write_size, const uint32_t sock_read_size, const uint32_t sock_write_size);
+	tcp_client_channel(std::shared_ptr<reactor_loop> reactor, const std::string& server_addr, std::chrono::seconds connect_timeout = std::chrono::seconds(0), std::chrono::seconds connect_retry_wait = std::chrono::seconds(-1),
+		const uint32_t self_read_size = DEFAULT_READ_BUFSIZE, const uint32_t self_write_size = DEFAULT_WRITE_BUFSIZE, const uint32_t sock_read_size = 0, const uint32_t sock_write_size = 0);
 	virtual ~tcp_client_channel();
 
 	// 下面四个函数可能运行在多线程环境下	
@@ -83,7 +83,7 @@ public:
 	virtual void		shutdown(int32_t howto);// 参数参考全局函数 ::shutdown
 	virtual void		connect();
 	virtual TCP_CLTCONN_STATE	state()	{ return _conn_state; }
-	virtual bool		server_addr(const std::string& server_addr);
+	virtual void		server_addr(const std::string& server_addr);
 
 private:
 	SOCKET									_conn_fd;

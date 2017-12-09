@@ -1,4 +1,5 @@
 #include "korus/src//util/net_serialize.h"
+#include "korus/src/exts/domain/tcp_client_channel_domain.h"
 #include "socks5_server_channel.h"
 
 socks5_server_channel::socks5_server_channel(std::shared_ptr<reactor_loop> reactor, std::shared_ptr<socks5_server_auth> auth)
@@ -140,9 +141,6 @@ int32_t socks5_server_channel::on_recv_split(const void* buf, const size_t size)
 		return _connectcmd_tunnel_client_channel->on_recv_split(buf, size);
 	case TCT_BIND:
 		assert(_bindcmd_tunnel_server_channel);
-		{
-			_bindcmd_tunnel_server_channel = std::make_shared<socks5_bindcmd_tunnel_server_channel>(reactor());
-		}
 		return _bindcmd_tunnel_server_channel->on_recv_split(buf, size);
 	case TCT_ASSOCIATE:	//忽略
 		break;
@@ -156,12 +154,35 @@ int32_t socks5_server_channel::on_recv_split(const void* buf, const size_t size)
 
 static	bool	bin2method(std::vector<SOCKS_METHOD_TYPE>&	method_list, uint8_t* methods, uint8_t nmethod)
 {
-	return false;
+	method_list.clear();
+	for (size_t i = 0; i < nmethod; i++)
+	{
+		switch (methods[i])
+		{
+		case 0x05:
+			method_list.push_back(SMT_NOAUTH);
+			break;
+		case 0x01:
+			method_list.push_back(SMT_USERPSW);
+			break;
+		}
+	}
+	return true;
 }
 
 static	bool	method2bin(uint8_t* methods, const SOCKS_METHOD_TYPE&	method_type)
 {
-	return false;
+	switch (method_type)
+	{
+	case SMT_NOAUTH:
+		*methods = 0x05;
+		return true;
+	case SMT_USERPSW:
+		*methods = 0x01;
+		return true;
+	default:
+		return false;
+	}
 }
 
 //这是一个待处理的完整包
@@ -324,10 +345,13 @@ void	socks5_server_channel::on_recv_pkg(const void* buf, const size_t size)
 								return;
 							}
 
-							assert(!_connectcmd_tunnel_client_channel);
-							char addr[256];
-							snprintf(addr, sizeof(addr), "%u:%u", ip, port);
-							_connectcmd_tunnel_client_channel = std::make_shared<socks5_connectcmd_tunnel_client_channel>(reactor(), addr);
+							if (!build_connectcmd_tunnel(ip, port))
+							{
+								_shakehand_state = SSS_NONE;
+
+								close();
+								return;
+							}
 						}
 						break;
 					case 0x03:
@@ -337,7 +361,17 @@ void	socks5_server_channel::on_recv_pkg(const void* buf, const size_t size)
 							decodec >> domainlen;	
 							domain.resize(domainlen);
 							decodec.read((char*)domain.data(), domainlen);
+							uint16_t	port = 0;
+							decodec >> port;
 							if (!decodec)
+							{
+								_shakehand_state = SSS_NONE;
+
+								close();
+								return;
+							}
+
+							if (!build_connectcmd_tunnel(domain, port))
 							{
 								_shakehand_state = SSS_NONE;
 
@@ -374,4 +408,62 @@ void	socks5_server_channel::on_recv_pkg(const void* buf, const size_t size)
 		assert(false);
 		break;
 	}
+}
+
+bool	socks5_server_channel::build_connectcmd_tunnel(uint32_t ip, uint16_t port)
+{
+	assert(!_connectcmd_tunnel_client_channel);
+	char addr[256];
+	snprintf(addr, sizeof(addr), "%u:%u", ip, port);
+
+	std::shared_ptr<socks5_server_channel> self = std::dynamic_pointer_cast<socks5_server_channel>(shared_from_this());
+	_connectcmd_tunnel_client_channel = std::make_shared<socks5_connectcmd_tunnel_client_channel>(reactor(), self);
+	std::shared_ptr<tcp_client_channel>		origin_channel = std::make_shared<tcp_client_channel>(reactor(), addr);
+	build_channel_chain_helper(std::dynamic_pointer_cast<tcp_client_handler_base>(origin_channel), std::dynamic_pointer_cast<tcp_client_handler_base>(_connectcmd_tunnel_client_channel));
+
+	_connectcmd_tunnel_client_channel->connect();
+
+	return true;
+}
+
+bool	socks5_server_channel::build_connectcmd_tunnel(const std::string& ip, uint16_t port)
+{
+	assert(!_connectcmd_tunnel_client_channel);
+	char addr[256];
+	snprintf(addr, sizeof(addr), "%s:%u", ip.c_str(), port);
+
+	std::shared_ptr<socks5_server_channel> self = std::dynamic_pointer_cast<socks5_server_channel>(shared_from_this());
+	_connectcmd_tunnel_client_channel = std::make_shared<socks5_connectcmd_tunnel_client_channel>(reactor(), self);
+	std::shared_ptr<tcp_client_channel_domain>		origin_channel = std::make_shared<tcp_client_channel_domain>(reactor(), addr);
+	build_channel_chain_helper(std::dynamic_pointer_cast<tcp_client_handler_base>(origin_channel), std::dynamic_pointer_cast<tcp_client_handler_base>(_connectcmd_tunnel_client_channel));
+
+	_connectcmd_tunnel_client_channel->connect();
+
+	return true;
+}
+
+bool	socks5_server_channel::build_bindcmd_tunnel()
+{
+
+}
+
+bool	socks5_server_channel::build_associatecmd_tunnel()
+{
+
+}
+
+void	socks5_server_channel::on_connectcmd_tunnel_connect()
+{
+
+}
+
+void	socks5_server_channel::on_connectcmd_tunnel_close()
+{
+
+}
+
+//参考CHANNEL_ERROR_CODE定义
+CLOSE_MODE_STRATEGY	socks5_server_channel::on_connectcmd_error(CHANNEL_ERROR_CODE code)
+{
+	return CMS_INNER_AUTO_CLOSE;
 }

@@ -97,7 +97,6 @@ public:
 
 };
 
-
 class socks5_server_channel : public tcp_server_handler_base
 {
 public:
@@ -118,7 +117,11 @@ public:
 	virtual int32_t on_recv_split(const void* buf, const size_t size);
 	//这是一个待处理的完整包
 	virtual void	on_recv_pkg(const void* buf, const size_t size);
-
+	
+	//
+	void	on_connectcmd_tunnel_connect();
+	void	on_connectcmd_tunnel_close();
+	CLOSE_MODE_STRATEGY	on_connectcmd_error(CHANNEL_ERROR_CODE code);
 private:
 	std::shared_ptr<socks5_server_auth>	_auth;
 
@@ -141,4 +144,9 @@ private:
 	std::shared_ptr<socks5_connectcmd_tunnel_client_channel>	_connectcmd_tunnel_client_channel;	//仅当_tunnel_channel_type = TCT_CONNECT有效：控制生命期和数据转发
 	std::shared_ptr<socks5_bindcmd_tunnel_server_channel>		_bindcmd_tunnel_server_channel;		//仅当_tunnel_channel_type = TCT_BIND有效：控制生命期和数据转发
 	std::shared_ptr<socks5_associatecmd_server_channel>			_associatecmd_server_channel;		//仅当_tunnel_channel_type = TCT_ASSOCIATE有效：仅仅控制生命期
+
+	bool	build_connectcmd_tunnel(uint32_t ip, uint16_t port);
+	bool	build_connectcmd_tunnel(const std::string& ip, uint16_t port);
+	bool	build_bindcmd_tunnel();
+	bool	build_associatecmd_tunnel();
 };
