@@ -17,6 +17,9 @@ public:
 	virtual	void		shutdown(int32_t howto);
 	virtual	int32_t		on_recv_buff(const void* buf, const size_t len, bool& left_partial_pkg) = 0;
 	
+	virtual bool		peer_addr(std::string& addr);
+	virtual bool		local_addr(std::string& addr);
+
 protected:
 	//>0 表示还可以继续recv,=0表示收取到顶了，<0表示错误
 	int32_t				do_recv();									// 结果存放在_self_read_buff，触发on_after_recv

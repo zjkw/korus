@@ -42,7 +42,13 @@ void	socks5_connectcmd_tunnel_client_channel::on_connected()
 {
 	assert(_server_channel);
 
-	_server_channel->on_connectcmd_tunnel_connect();
+	std::string addr;
+	if (!peer_addr(addr))
+	{
+		return;
+	}
+
+	_server_channel->on_connectcmd_tunnel_connect(addr);
 }
 
 void	socks5_connectcmd_tunnel_client_channel::on_closed()
@@ -57,7 +63,7 @@ CLOSE_MODE_STRATEGY	socks5_connectcmd_tunnel_client_channel::on_error(CHANNEL_ER
 {
 	assert(_server_channel);
 
-	return _server_channel->on_connectcmd_error(code);
+	return _server_channel->on_connectcmd_tunnel_error(code);
 }
 
 //提取数据包：返回值 =0 表示包不完整； >0 完整的包(长)

@@ -1,5 +1,6 @@
 #include <fcntl.h>
 #include <unistd.h>
+#include <string.h>
 #include "socket_ops.h"
 
 bool split_hostport(const std::string& address, std::string& host, uint16_t& port)
@@ -81,6 +82,20 @@ bool sockaddr_from_string(const std::string& address, struct sockaddr_in& si)
 	si.sin_family = family;
 	si.sin_port = htons(port);
 
+	return true;
+}
+
+bool string_from_sockaddr(std::string& address, const struct sockaddr_in& si)
+{
+	char ip[128] = {0};
+	if ((inet_ntop(si.sin_family, &si.sin_addr, ip, sizeof(ip))) == NULL)
+	{
+		return false;
+	}
+	size_t len = strlen(ip);
+	snprintf(&ip[len], sizeof(ip) - len, ":%u", ntohs(si.sin_port));
+
+	address = ip;
 	return true;
 }
 

@@ -61,6 +61,9 @@ public:
 	virtual void	connect();
 	virtual TCP_CLTCONN_STATE	state();
 	virtual std::shared_ptr<reactor_loop>	reactor();
+
+	virtual bool	peer_addr(std::string& addr);
+	virtual bool	local_addr(std::string& addr);
 		
 private:
 	std::shared_ptr<reactor_loop>		_reactor;
@@ -83,7 +86,9 @@ public:
 	virtual void		shutdown(int32_t howto);// 参数参考全局函数 ::shutdown
 	virtual void		connect();
 	virtual TCP_CLTCONN_STATE	state()	{ return _conn_state; }
-	virtual void		server_addr(const std::string& server_addr);
+	virtual void		server_addr(const std::string& server_addr);	//set
+	virtual bool		peer_addr(std::string& addr);
+	virtual bool		local_addr(std::string& addr);
 
 private:
 	SOCKET									_conn_fd;

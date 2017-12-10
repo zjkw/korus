@@ -144,6 +144,27 @@ std::shared_ptr<reactor_loop>	tcp_client_handler_base::reactor()
 	return _reactor;
 }
 
+bool	tcp_client_handler_base::peer_addr(std::string& addr)
+{
+	if (!_tunnel_prev)
+	{
+		assert(false);
+		return false;
+	}
+
+	_tunnel_prev->peer_addr(addr);
+}
+
+bool	tcp_client_handler_base::local_addr(std::string& addr)
+{
+	if (!_tunnel_prev)
+	{
+		assert(false);
+		return false;
+	}
+
+	_tunnel_prev->local_addr(addr);
+}
 ////////////////channel
 
 tcp_client_channel::tcp_client_channel(std::shared_ptr<reactor_loop> reactor, const std::string& server_addr, std::chrono::seconds connect_timeout, std::chrono::seconds connect_retry_wait,
@@ -526,3 +547,28 @@ void tcp_client_channel::handle_close_strategy(CLOSE_MODE_STRATEGY cms)
 	}
 }
 
+bool	tcp_client_channel::peer_addr(std::string& addr)
+{
+	if (!is_normal())
+	{
+		return false;
+	}
+	if (!reactor()->is_current_thread())
+	{
+		return false;
+	}
+	return tcp_channel_base::peer_addr(addr);
+}
+
+bool	tcp_client_channel::local_addr(std::string& addr)
+{
+	if (!is_normal())
+	{
+		return false;
+	}
+	if (!reactor()->is_current_thread())
+	{
+		return false;
+	}
+	return tcp_channel_base::local_addr(addr);
+}

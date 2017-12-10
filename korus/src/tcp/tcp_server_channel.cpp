@@ -125,6 +125,28 @@ std::shared_ptr<reactor_loop>	tcp_server_handler_base::reactor()
 	return _reactor;
 }
 
+bool	tcp_server_handler_base::peer_addr(std::string& addr)
+{
+	if (!_tunnel_prev)
+	{
+		assert(false);
+		return false;
+	}
+
+	_tunnel_prev->peer_addr(addr);
+}
+
+bool	tcp_server_handler_base::local_addr(std::string& addr)
+{
+	if (!_tunnel_prev)
+	{
+		assert(false);
+		return false;
+	}
+
+	_tunnel_prev->local_addr(addr);
+}
+
 ///////////////////////////channel
 tcp_server_channel::tcp_server_channel(std::shared_ptr<reactor_loop> reactor, SOCKET fd, const uint32_t self_read_size, const uint32_t self_write_size, const uint32_t sock_read_size, const uint32_t sock_write_size)
 	: tcp_server_handler_base(reactor), tcp_channel_base(fd, self_read_size, self_write_size, sock_read_size, sock_write_size)
@@ -311,3 +333,28 @@ void tcp_server_channel::handle_close_strategy(CLOSE_MODE_STRATEGY cms)
 	}
 }
 
+bool	tcp_server_channel::peer_addr(std::string& addr)
+{
+	if (!is_normal())
+	{
+		return false;
+	}
+	if (!reactor()->is_current_thread())
+	{
+		return false;
+	}
+	return tcp_channel_base::peer_addr(addr);
+}
+
+bool	tcp_server_channel::local_addr(std::string& addr)
+{
+	if (!is_normal())
+	{
+		return false;
+	}
+	if (!reactor()->is_current_thread())
+	{
+		return false;
+	}
+	return tcp_channel_base::local_addr(addr);
+}

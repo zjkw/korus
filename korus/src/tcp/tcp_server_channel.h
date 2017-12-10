@@ -48,6 +48,9 @@ public:
 	virtual void	close();
 	virtual void	shutdown(int32_t howto);
 	std::shared_ptr<reactor_loop>	reactor();
+
+	virtual bool	peer_addr(std::string& addr);
+	virtual bool	local_addr(std::string& addr);
 	
 private:
 	std::shared_ptr<reactor_loop>		_reactor;
@@ -65,6 +68,8 @@ public:
 	virtual int32_t		send(const void* buf, const size_t len);// 保证原子, 认为是整包，返回值若<0参考CHANNEL_ERROR_CODE
 	virtual void		close();
 	virtual void		shutdown(int32_t howto);// 参数参考全局函数 ::shutdown
+	virtual bool		peer_addr(std::string& addr);
+	virtual bool		local_addr(std::string& addr);
 
 private:
 	friend class tcp_server_channel_creator;

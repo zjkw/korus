@@ -119,9 +119,9 @@ public:
 	virtual void	on_recv_pkg(const void* buf, const size_t size);
 	
 	//
-	void	on_connectcmd_tunnel_connect();
+	void	on_connectcmd_tunnel_connect(const std::string& addr);
 	void	on_connectcmd_tunnel_close();
-	CLOSE_MODE_STRATEGY	on_connectcmd_error(CHANNEL_ERROR_CODE code);
+	CLOSE_MODE_STRATEGY	on_connectcmd_tunnel_error(CHANNEL_ERROR_CODE code);
 private:
 	std::shared_ptr<socks5_server_auth>	_auth;
 

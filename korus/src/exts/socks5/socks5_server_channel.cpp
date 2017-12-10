@@ -47,7 +47,26 @@ void	socks5_server_channel::on_closed()
 //参考CHANNEL_ERROR_CODE定义
 CLOSE_MODE_STRATEGY	socks5_server_channel::on_error(CHANNEL_ERROR_CODE code)
 {
-	return CMS_INNER_AUTO_CLOSE;
+	if (CEC_CLOSE_BY_PEER == code)
+	{
+		switch (_tunnel_channel_type)
+		{
+		case socks5_server_channel::TCT_CONNECT:
+			_connectcmd_tunnel_client_channel->shutdown(SHUT_WR);
+			return CMS_MANUAL_CONTROL;
+		case socks5_server_channel::TCT_BIND:
+			_bindcmd_tunnel_server_channel->shutdown(SHUT_WR);
+			return CMS_MANUAL_CONTROL;
+		case socks5_server_channel::TCT_ASSOCIATE:
+		//	_associatecmd_server_channel->close();
+			break;
+		case socks5_server_channel::TCT_NONE:
+		default:
+			break;
+		}
+	}
+
+	return CMS_INNER_AUTO_CLOSE;	
 }
 
 //提取数据包：返回值 =0 表示包不完整； >0 完整的包(长)
@@ -452,9 +471,20 @@ bool	socks5_server_channel::build_associatecmd_tunnel()
 
 }
 
-void	socks5_server_channel::on_connectcmd_tunnel_connect()
+/////////////////////////////////////
+void	socks5_server_channel::on_connectcmd_tunnel_connect(const std::string& addr)
 {
+	std::string ip;
+	std::string port;
+	if (!sockaddr_from_string(addr, ip, port))
+	{
+		return;
+	}
 
+	uint8_t buf[32];
+	net_serialize	codec(buf, sizeof(buf));
+	codec << static_cast<uint8_t>(SOCKS5_V) << static_cast<uint8_t>(0x00) << static_cast<uint8_t>(0x00) << static_cast<uint8_t>(0x01) << static_cast<uint32_t>(strtoul(ip.c_str(), NULL, 10)) << static_cast<uint16_t>(strtoul(port.c_str(), NULL, 10));
+	send(codec.data(), codec.wpos());
 }
 
 void	socks5_server_channel::on_connectcmd_tunnel_close()
@@ -463,7 +493,15 @@ void	socks5_server_channel::on_connectcmd_tunnel_close()
 }
 
 //参考CHANNEL_ERROR_CODE定义
-CLOSE_MODE_STRATEGY	socks5_server_channel::on_connectcmd_error(CHANNEL_ERROR_CODE code)
+CLOSE_MODE_STRATEGY	socks5_server_channel::on_connectcmd_tunnel_error(CHANNEL_ERROR_CODE code)
 {
-	return CMS_INNER_AUTO_CLOSE;
+	if (CEC_CLOSE_BY_PEER == code)
+	{
+		shutdown(SHUT_RD);
+		return CMS_MANUAL_CONTROL;
+	}
+	else
+	{
+		return CMS_INNER_AUTO_CLOSE;
+	}
 }
