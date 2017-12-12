@@ -118,6 +118,7 @@ public:
 	}
 
 protected:
+	std::thread::id							_tid;
 	tcp_server_channel_factory_t			_factory;
 
 	void inner_init()
@@ -130,7 +131,6 @@ protected:
 	}
 
 private:
-	std::thread::id							_tid;
 	uint16_t								_thread_num;
 	std::map<uint16_t, thread_object*>		_thread_pool;
 	std::atomic_flag						_start = ATOMIC_FLAG_INIT;
@@ -274,11 +274,11 @@ public:
 	}
 
 protected:
+	std::thread::id							_tid;
 	tcp_server_channel_factory_t			_factory;
 	
 private:
 	std::shared_ptr<reactor_loop>			_reactor;
-	std::thread::id							_tid;
 	std::atomic_flag						_start = ATOMIC_FLAG_INIT;
 	std::string								_listen_addr;
 	uint32_t								_backlog;

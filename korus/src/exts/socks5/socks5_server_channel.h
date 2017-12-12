@@ -147,6 +147,6 @@ private:
 
 	bool	build_connectcmd_tunnel(uint32_t ip, uint16_t port);
 	bool	build_connectcmd_tunnel(const std::string& ip, uint16_t port);
-	bool	build_bindcmd_tunnel();
+	bool	build_bindcmd_tunnel(uint32_t ip, uint16_t port);
 	bool	build_associatecmd_tunnel();
 };

@@ -1,5 +1,6 @@
 #include "korus/src//util/net_serialize.h"
 #include "korus/src/exts/domain/tcp_client_channel_domain.h"
+#include "socks5_server_data_mgr.h"
 #include "socks5_server_channel.h"
 
 socks5_server_channel::socks5_server_channel(std::shared_ptr<reactor_loop> reactor, std::shared_ptr<socks5_server_auth> auth)
@@ -31,7 +32,20 @@ void	socks5_server_channel::on_chain_zomby()
 
 long	socks5_server_channel::chain_refcount()
 {
-	return tcp_server_handler_base::chain_refcount();
+	long ref = 0;
+	if (_connectcmd_tunnel_client_channel)
+	{
+		ref++;
+	}
+	if (_bindcmd_tunnel_server_channel)
+	{
+		ref++;
+	}
+	if (_associatecmd_server_channel)
+	{
+		ref++;
+	}
+	return ref + tcp_server_handler_base::chain_refcount();
 }
 
 void	socks5_server_channel::on_accept()	//连接已经建立
@@ -156,11 +170,9 @@ int32_t socks5_server_channel::on_recv_split(const void* buf, const size_t size)
 		}
 		break;
 	case TCT_CONNECT:
-		assert(_connectcmd_tunnel_client_channel);
-		return _connectcmd_tunnel_client_channel->on_recv_split(buf, size);
+		return size;
 	case TCT_BIND:
-		assert(_bindcmd_tunnel_server_channel);
-		return _bindcmd_tunnel_server_channel->on_recv_split(buf, size);
+		return size;
 	case TCT_ASSOCIATE:	//忽略
 		break;
 	default:
@@ -337,10 +349,10 @@ void	socks5_server_channel::on_recv_pkg(const void* buf, const size_t size)
 					}
 
 					uint8_t	ver = 0;
-					uint8_t	rep = 0;
+					uint8_t	cmd = 0;
 					uint8_t	rsv = 0;
 					uint8_t	atyp = 0;
-					decodec >> ver >> rep >> rsv >> atyp;
+					decodec >> ver >> cmd >> rsv >> atyp;
 					if (!decodec)
 					{
 						_shakehand_state = SSS_NONE;
@@ -364,12 +376,40 @@ void	socks5_server_channel::on_recv_pkg(const void* buf, const size_t size)
 								return;
 							}
 
-							if (!build_connectcmd_tunnel(ip, port))
+							switch (cmd)
 							{
-								_shakehand_state = SSS_NONE;
+							case 0x01:
+								if (!build_connectcmd_tunnel(ip, port))
+								{
+									_shakehand_state = SSS_NONE;
 
+									close();
+									return;
+								}
+
+								break;
+							case 0x02:
+								if (!build_bindcmd_tunnel(ip, port))
+								{
+									_shakehand_state = SSS_NONE;
+
+									close();
+									return;
+								}
+								break;
+							case 0x03:
+					//			if (!build_associatecmd_tunnel(ip, port))
+								{
+									_shakehand_state = SSS_NONE;
+
+									close();
+									return;
+								}
+								break;
+							default:
+								_shakehand_state = SSS_NONE;
 								close();
-								return;
+								break;
 							}
 						}
 						break;
@@ -390,12 +430,30 @@ void	socks5_server_channel::on_recv_pkg(const void* buf, const size_t size)
 								return;
 							}
 
-							if (!build_connectcmd_tunnel(domain, port))
+							switch (cmd)
 							{
-								_shakehand_state = SSS_NONE;
+							case 0x01:
+								if (!build_connectcmd_tunnel(domain, port))
+								{
+									_shakehand_state = SSS_NONE;
 
+									close();
+									return;
+								}
+								break;
+							case 0x03:
+						//		if (!build_connectcmd_tunnel(domain, port))
+								{
+									_shakehand_state = SSS_NONE;
+
+									close();
+									return;
+								}
+								break;
+							default:
+								_shakehand_state = SSS_NONE;
 								close();
-								return;
+								break;
 							}
 						}
 						break;
@@ -461,14 +519,17 @@ bool	socks5_server_channel::build_connectcmd_tunnel(const std::string& ip, uint1
 	return true;
 }
 
-bool	socks5_server_channel::build_bindcmd_tunnel()
+bool	socks5_server_channel::build_bindcmd_tunnel(uint32_t ip, uint16_t port)
 {
-
+	char addr[256];
+	snprintf(addr, sizeof(addr), "%u:%u", ip, port);
+	set_bindcmd_line(addr, std::dynamic_pointer_cast<socks5_server_channel>(shared_from_this()));
+	return true;
 }
 
 bool	socks5_server_channel::build_associatecmd_tunnel()
 {
-
+	return true;
 }
 
 /////////////////////////////////////
