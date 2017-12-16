@@ -19,7 +19,8 @@ public:
 
 	bool	start();
 	void	add_accept_handler(const newfd_handle_t handler);
-	 
+	bool	listen_addr(std::string& addr);
+
 private:
 	sockio_helper	_sockio_helper;
 	virtual void on_sockio_read(sockio_helper* sockio_id);

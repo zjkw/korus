@@ -272,6 +272,20 @@ public:
 			_listen->start();
 		}
 	}
+	bool listen_addr(std::string& addr)
+	{
+		if (_tid != std::this_thread::get_id())
+		{
+			assert(false);
+			return false;
+		}
+		if (!_listen)
+		{
+			return false;
+		}
+
+		return _listen->listen_addr(addr);
+	}
 
 protected:
 	std::thread::id							_tid;

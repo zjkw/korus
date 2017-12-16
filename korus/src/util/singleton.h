@@ -13,7 +13,7 @@ class singleton
 public:
 	static T& instance()
 	{ 
-		if(NULL == m_pInstance)
+		if(!m_pInstance)
 		{
 			m_pInstance = new T;
 		}
@@ -21,10 +21,10 @@ public:
 	}
 	static void uninstance()
 	{
-		if (NULL != m_pInstance)
+		if (m_pInstance)
 		{
 			delete m_pInstance;
-			m_pInstance = NULL;
+			m_pInstance = nullptr;
 		}
 	}
 protected:
@@ -34,5 +34,5 @@ private:
  };
 
 template<class T>
-T*	singleton<T>::m_pInstance = NULL;
+T*	singleton<T>::m_pInstance = nullptr;
 

@@ -64,6 +64,16 @@ void	tcp_listen::add_accept_handler(const newfd_handle_t handler)
 	_handler_list.emplace_back(handler);
 }
 
+bool tcp_listen::listen_addr(std::string& addr)
+{
+	if (INVALID_SOCKET != _fd)
+	{
+		return true;
+	}
+
+	return localaddr_from_fd(_fd, addr);
+}
+
 void tcp_listen::on_sockio_read(sockio_helper* sockio_id)
 {
 	while (true)

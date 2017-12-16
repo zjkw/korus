@@ -10,8 +10,8 @@
 class socks5_server_data_mgr
 {
 public:
-	socks5_server_data_mgr(){}
-	virtual ~socks5_server_data_mgr(){}
+	socks5_server_data_mgr();
+	virtual ~socks5_server_data_mgr();
 
 	void	set_bindcmd_line(const std::string& addr, std::shared_ptr<socks5_server_channel> channel);
 	std::shared_ptr<socks5_server_channel>	gac_bindcmd_line(const std::string& addr);	//获取并清除

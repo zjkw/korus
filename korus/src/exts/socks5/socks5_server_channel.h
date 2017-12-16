@@ -1,7 +1,7 @@
 #pragma once
 
 #include <vector>
-#include "korus/src/tcp/tcp_server_channel.h"
+#include "korus/src/tcp/tcp_server.h"
 #include "socks5_connectcmd_tunnel_client_channel.h"
 #include "socks5_bindcmd_tunnel_server_channel.h"
 #include "socks5_associatecmd_server_channel.h"
@@ -121,7 +121,10 @@ public:
 	//
 	void	on_connectcmd_tunnel_connect(const std::string& addr);
 	void	on_connectcmd_tunnel_close();
-	CLOSE_MODE_STRATEGY	on_connectcmd_tunnel_error(CHANNEL_ERROR_CODE code);
+
+	void	on_bindcmd_tunnel_accept(std::shared_ptr<socks5_bindcmd_tunnel_server_channel> channel);
+	void	on_bindcmd_tunnel_close();
+
 private:
 	std::shared_ptr<socks5_server_auth>	_auth;
 
@@ -142,11 +145,14 @@ private:
 	};
 	TUNNEL_CHANNEL_TYPE		_tunnel_channel_type;
 	std::shared_ptr<socks5_connectcmd_tunnel_client_channel>	_connectcmd_tunnel_client_channel;	//仅当_tunnel_channel_type = TCT_CONNECT有效：控制生命期和数据转发
+	tcp_server<reactor_loop>*									_bindcmd_server;
 	std::shared_ptr<socks5_bindcmd_tunnel_server_channel>		_bindcmd_tunnel_server_channel;		//仅当_tunnel_channel_type = TCT_BIND有效：控制生命期和数据转发
 	std::shared_ptr<socks5_associatecmd_server_channel>			_associatecmd_server_channel;		//仅当_tunnel_channel_type = TCT_ASSOCIATE有效：仅仅控制生命期
 
 	bool	build_connectcmd_tunnel(uint32_t ip, uint16_t port);
 	bool	build_connectcmd_tunnel(const std::string& ip, uint16_t port);
-	bool	build_bindcmd_tunnel(uint32_t ip, uint16_t port);
+	bool	build_bindcmd_tunnel(uint32_t ip_digit, uint16_t port_digit);
 	bool	build_associatecmd_tunnel();
+
+	std::shared_ptr<tcp_server_handler_base> binccmd_channel_factory(std::shared_ptr<reactor_loop> reactor);
 };

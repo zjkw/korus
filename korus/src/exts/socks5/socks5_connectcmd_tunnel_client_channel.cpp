@@ -63,7 +63,15 @@ CLOSE_MODE_STRATEGY	socks5_connectcmd_tunnel_client_channel::on_error(CHANNEL_ER
 {
 	assert(_server_channel);
 
-	return _server_channel->on_connectcmd_tunnel_error(code);
+	if (CEC_CLOSE_BY_PEER == code)
+	{
+		_server_channel->shutdown(SHUT_RD);
+		return CMS_MANUAL_CONTROL;
+	}
+	else
+	{
+		return CMS_INNER_AUTO_CLOSE;
+	}
 }
 
 //提取数据包：返回值 =0 表示包不完整； >0 完整的包(长)

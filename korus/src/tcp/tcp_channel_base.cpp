@@ -270,36 +270,10 @@ int32_t	tcp_channel_base::do_recv_nolock()
 bool	tcp_channel_base::peer_addr(std::string& addr)
 {
 	std::unique_lock <std::mutex> lck(_mutex_write);
-	if (INVALID_SOCKET != _fd)
-	{
-		struct sockaddr_in si;
-		socklen_t addrlen = sizeof(si);
-		if (!getpeername(_fd, (struct sockaddr*)&addr, &addrlen) == -1) 
-		{		
-			if (string_from_sockaddr(addr, si))
-			{
-				return true;
-			}
-		}
-	}
-
-	return false;
+	return peeraddr_from_fd(_fd, addr);
 }
 bool	tcp_channel_base::local_addr(std::string& addr)
 {
 	std::unique_lock <std::mutex> lck(_mutex_write);
-	if (INVALID_SOCKET != _fd)
-	{
-		struct sockaddr_in si;
-		socklen_t addrlen = sizeof(si);
-		if (!getsockname(_fd, (struct sockaddr*)&addr, &addrlen) == -1)
-		{
-			if (string_from_sockaddr(addr, si))
-			{
-				return true;
-			}
-		}
-	}
-
-	return false;
+	return localaddr_from_fd(_fd, addr);
 }

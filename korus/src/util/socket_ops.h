@@ -21,6 +21,9 @@ bool sockaddr_from_string(const std::string& address, std::string& host, std::st
 
 bool string_from_sockaddr(std::string& address, const struct sockaddr_in& si);
 
+bool peeraddr_from_fd(SOCKET fd, std::string& addr);
+bool localaddr_from_fd(SOCKET fd, std::string& addr);
+
 enum SOCK_ADDR_TYPE
 {
 	SAT_NONE = 0,

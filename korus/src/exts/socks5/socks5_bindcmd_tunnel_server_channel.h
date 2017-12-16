@@ -6,7 +6,7 @@ class socks5_server_channel;
 class socks5_bindcmd_tunnel_server_channel : public tcp_server_handler_base, public multiform_state
 {
 public:
-	socks5_bindcmd_tunnel_server_channel(std::shared_ptr<reactor_loop> reactor);
+	socks5_bindcmd_tunnel_server_channel(std::shared_ptr<reactor_loop> reactor, std::shared_ptr<socks5_server_channel> channel);
 	virtual ~socks5_bindcmd_tunnel_server_channel();
 
 	//override------------------

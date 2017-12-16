@@ -187,3 +187,39 @@ SOCK_ADDR_TYPE	addrtype_from_string(const std::string& host)	//  if (inet_aton (
 		return SAT_NONE;
 	}
 }
+
+bool	peeraddr_from_fd(SOCKET fd, std::string& addr)
+{
+	if (INVALID_SOCKET != fd)
+	{
+		struct sockaddr_in si;
+		socklen_t addrlen = sizeof(si);
+		if (!getpeername(fd, (struct sockaddr*)&addr, &addrlen) == -1)
+		{
+			if (string_from_sockaddr(addr, si))
+			{
+				return true;
+			}
+		}
+	}
+
+	return false;
+}
+
+bool	localaddr_from_fd(SOCKET fd, std::string& addr)
+{
+	if (INVALID_SOCKET != fd)
+	{
+		struct sockaddr_in si;
+		socklen_t addrlen = sizeof(si);
+		if (!getsockname(fd, (struct sockaddr*)&addr, &addrlen) == -1)
+		{
+			if (string_from_sockaddr(addr, si))
+			{
+				return true;
+			}
+		}
+	}
+
+	return false;
+}

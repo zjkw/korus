@@ -1,6 +1,5 @@
 #pragma once
 
-#include <vector>
 #include "korus/src/tcp/tcp_server.h"
 #include "socks5_bindcmd_tunnel_server_channel.h"
 #include "socks5_server_channel.h"
@@ -28,43 +27,14 @@ public:
 	}
 	virtual ~socks5_server()
 	{
-		assert(_tid == std::this_thread::get_id());
-
-		for (std::vector<tcp_server<uint16_t>*>::iterator it = _bindcmd_listen_list.begin(); it != _bindcmd_listen_list.end(); it++)
-		{
-			delete *it;
-		}
-	}
-
-	bool	add_bindcmd_listen(uint16_t thread_num, const std::string& listen_addr, uint32_t backlog = DEFAULT_LISTEN_BACKLOG, uint32_t defer_accept = DEFAULT_DEFER_ACCEPT,
-		const uint32_t self_read_size = DEFAULT_READ_BUFSIZE, const uint32_t self_write_size = DEFAULT_WRITE_BUFSIZE, const uint32_t sock_read_size = 0, const uint32_t sock_write_size = 0)
-	{
-		if (_tid != std::this_thread::get_id())
-		{
-			return false;
-		}
-
-		tcp_server<uint16_t>* server = new tcp_server<uint16_t>(thread_num, listen_addr, std::bind(&socks5_server::binccmd_channel_factory, this, std::placeholders::_1), backlog, defer_accept,
-			self_read_size, self_write_size, sock_read_size, sock_write_size);
-		_bindcmd_listen_list.push_back(server);
-		server->start();
-
-		return true;
 	}
 
 private:
 	std::shared_ptr<socks5_server_auth> _auth;
-	std::vector<tcp_server<uint16_t>*>	_bindcmd_listen_list;
 
 	std::shared_ptr<tcp_server_handler_base> channel_factory(std::shared_ptr<reactor_loop> reactor)
 	{
 		std::shared_ptr<socks5_server_channel> channel = std::make_shared<socks5_server_channel>(reactor, _auth);
-		std::shared_ptr<tcp_server_handler_base> cb = std::dynamic_pointer_cast<tcp_server_handler_base>(channel);
-		return cb;
-	}
-	std::shared_ptr<tcp_server_handler_base> binccmd_channel_factory(std::shared_ptr<reactor_loop> reactor)
-	{
-		std::shared_ptr<socks5_bindcmd_tunnel_server_channel> channel = std::make_shared<socks5_bindcmd_tunnel_server_channel>(reactor);
 		std::shared_ptr<tcp_server_handler_base> cb = std::dynamic_pointer_cast<tcp_server_handler_base>(channel);
 		return cb;
 	}
@@ -84,43 +54,14 @@ public:
 	}
 	virtual ~socks5_server()
 	{
-		assert(_tid == std::this_thread::get_id());
-
-		for (std::vector<tcp_server<uint16_t>*>::iterator it = _bindcmd_listen_list.begin(); it != _bindcmd_listen_list.end(); it++)
-		{
-			delete *it;
-		}
-	}
-	bool	add_bindcmd_listen(uint16_t thread_num, const std::string& listen_addr, uint32_t backlog = DEFAULT_LISTEN_BACKLOG, uint32_t defer_accept = DEFAULT_DEFER_ACCEPT,
-		const uint32_t self_read_size = DEFAULT_READ_BUFSIZE, const uint32_t self_write_size = DEFAULT_WRITE_BUFSIZE, const uint32_t sock_read_size = 0, const uint32_t sock_write_size = 0)
-	{
-		if (_tid != std::this_thread::get_id())
-		{
-			assert(false);
-			return false;
-		}
-
-		tcp_server<uint16_t>* server = new tcp_server<uint16_t>(thread_num, listen_addr, std::bind(&socks5_server::binccmd_channel_factory, this, std::placeholders::_1), backlog, defer_accept,
-			self_read_size, self_write_size, sock_read_size, sock_write_size);
-		_bindcmd_listen_list.push_back(server);
-		server->start();
-
-		return true;
 	}
 
 private:
 	std::shared_ptr<socks5_server_auth> _auth;
-	std::vector<tcp_server<uint16_t>*>	_bindcmd_listen_list;
 
 	std::shared_ptr<tcp_server_handler_base> channel_factory(std::shared_ptr<reactor_loop> reactor)
 	{
 		std::shared_ptr<socks5_server_channel> channel = std::make_shared<socks5_server_channel>(reactor, _auth);
-		std::shared_ptr<tcp_server_handler_base> cb = std::dynamic_pointer_cast<tcp_server_handler_base>(channel);
-		return cb;
-	}
-	std::shared_ptr<tcp_server_handler_base> binccmd_channel_factory(std::shared_ptr<reactor_loop> reactor)
-	{
-		std::shared_ptr<socks5_bindcmd_tunnel_server_channel> channel = std::make_shared<socks5_bindcmd_tunnel_server_channel>(reactor);
 		std::shared_ptr<tcp_server_handler_base> cb = std::dynamic_pointer_cast<tcp_server_handler_base>(channel);
 		return cb;
 	}

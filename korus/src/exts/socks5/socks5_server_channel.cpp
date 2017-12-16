@@ -1,16 +1,17 @@
 #include "korus/src//util/net_serialize.h"
 #include "korus/src/exts/domain/tcp_client_channel_domain.h"
-#include "socks5_server_data_mgr.h"
 #include "socks5_server_channel.h"
 
 socks5_server_channel::socks5_server_channel(std::shared_ptr<reactor_loop> reactor, std::shared_ptr<socks5_server_auth> auth)
-	: _tunnel_channel_type(TCT_NONE), _shakehand_state(SSS_NONE), _auth(auth),
+: _tunnel_channel_type(TCT_NONE), _shakehand_state(SSS_NONE), _auth(auth), _bindcmd_server(nullptr), 
 	tcp_server_handler_base(reactor)
 {
 }
 
 socks5_server_channel::~socks5_server_channel()
 {
+	delete _bindcmd_server;
+	_bindcmd_server = nullptr;
 }
 
 //override------------------
@@ -442,14 +443,9 @@ void	socks5_server_channel::on_recv_pkg(const void* buf, const size_t size)
 								}
 								break;
 							case 0x03:
-						//		if (!build_connectcmd_tunnel(domain, port))
-								{
-									_shakehand_state = SSS_NONE;
-
-									close();
-									return;
-								}
-								break;
+								_shakehand_state = SSS_NONE;
+								close();
+								return;
 							default:
 								_shakehand_state = SSS_NONE;
 								close();
@@ -519,11 +515,27 @@ bool	socks5_server_channel::build_connectcmd_tunnel(const std::string& ip, uint1
 	return true;
 }
 
-bool	socks5_server_channel::build_bindcmd_tunnel(uint32_t ip, uint16_t port)
+bool	socks5_server_channel::build_bindcmd_tunnel(uint32_t ip_digit, uint16_t port_digit)
 {
-	char addr[256];
-	snprintf(addr, sizeof(addr), "%u:%u", ip, port);
-	set_bindcmd_line(addr, std::dynamic_pointer_cast<socks5_server_channel>(shared_from_this()));
+	assert(!_bindcmd_server);
+	_bindcmd_server = new tcp_server<reactor_loop>(reactor(), "0.0.0.0:0", std::bind(&socks5_server_channel::binccmd_channel_factory, this, std::placeholders::_1));
+	_bindcmd_server->start();
+
+	std::string addr;
+	_bindcmd_server->listen_addr(addr);
+
+	std::string ip;
+	std::string port;
+	if (!sockaddr_from_string(addr, ip, port))
+	{
+		return false;
+	}
+
+	uint8_t buf[32];
+	net_serialize	codec(buf, sizeof(buf));
+	codec << static_cast<uint8_t>(SOCKS5_V) << static_cast<uint8_t>(0x00) << static_cast<uint8_t>(0x00) << static_cast<uint8_t>(0x01) << static_cast<uint32_t>(strtoul(ip.c_str(), NULL, 10)) << static_cast<uint16_t>(strtoul(port.c_str(), NULL, 10));
+	send(codec.data(), codec.wpos());
+
 	return true;
 }
 
@@ -553,16 +565,39 @@ void	socks5_server_channel::on_connectcmd_tunnel_close()
 
 }
 
-//²Î¿¼CHANNEL_ERROR_CODE¶¨Òå
-CLOSE_MODE_STRATEGY	socks5_server_channel::on_connectcmd_tunnel_error(CHANNEL_ERROR_CODE code)
+void	socks5_server_channel::on_bindcmd_tunnel_accept(std::shared_ptr<socks5_bindcmd_tunnel_server_channel> channel)
 {
-	if (CEC_CLOSE_BY_PEER == code)
+	if (_bindcmd_tunnel_server_channel)
 	{
-		shutdown(SHUT_RD);
-		return CMS_MANUAL_CONTROL;
+		_bindcmd_tunnel_server_channel->close();
+		return;
 	}
-	else
+
+	_bindcmd_tunnel_server_channel = channel;
+	std::string addr;
+	channel->peer_addr(addr);
+
+	std::string ip;
+	std::string port;
+	if (!sockaddr_from_string(addr, ip, port))
 	{
-		return CMS_INNER_AUTO_CLOSE;
+		return;
 	}
+
+	uint8_t buf[32];
+	net_serialize	codec(buf, sizeof(buf));
+	codec << static_cast<uint8_t>(SOCKS5_V) << static_cast<uint8_t>(0x00) << static_cast<uint8_t>(0x00) << static_cast<uint8_t>(0x03) << static_cast<uint32_t>(strtoul(ip.c_str(), NULL, 10)) << static_cast<uint16_t>(strtoul(port.c_str(), NULL, 10));
+	send(codec.data(), codec.wpos());
+}
+
+void	socks5_server_channel::on_bindcmd_tunnel_close()
+{
+
+}
+
+std::shared_ptr<tcp_server_handler_base> socks5_server_channel::binccmd_channel_factory(std::shared_ptr<reactor_loop> reactor)
+{	
+	std::shared_ptr<socks5_bindcmd_tunnel_server_channel> channel = std::make_shared<socks5_bindcmd_tunnel_server_channel>(reactor, std::dynamic_pointer_cast<socks5_server_channel>(shared_from_this()));
+	std::shared_ptr<tcp_server_handler_base> cb = std::dynamic_pointer_cast<tcp_server_handler_base>(channel);
+	return cb;
 }
