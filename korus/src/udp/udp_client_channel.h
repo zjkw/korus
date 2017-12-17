@@ -42,6 +42,7 @@ public:
 	//这是一个待处理的完整包
 	virtual void	on_recv_pkg(const void* buf, const size_t len, const sockaddr_in& peer_addr);
 
+	virtual bool	start();
 	virtual int32_t	send(const void* buf, const size_t len, const sockaddr_in& peer_addr);
 	virtual void	close();
 	std::shared_ptr<reactor_loop>	reactor();
@@ -58,11 +59,11 @@ public:
 	virtual ~udp_client_channel();
 
 	// 下面四个函数可能运行在多线程环境下	
+	virtual bool		start();
 	virtual int32_t		send(const void* buf, const size_t len, const sockaddr_in& peer_addr);	// 保证原子, 认为是整包，返回值若<0参考CHANNEL_ERROR_CODE
 	virtual int32_t		connect(const sockaddr_in& server_addr);								// 保证原子, 返回值若<0参考CHANNEL_ERROR_CODE
 	virtual int32_t		send(const void* buf, const size_t len);								// 保证原子, 认为是整包，返回值若<0参考CHANNEL_ERROR_CODE
 	virtual void		close();
-	bool				start();
 
 private:
 	template<typename T> friend class udp_client;

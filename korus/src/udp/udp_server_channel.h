@@ -41,24 +41,28 @@ public:
 	//这是一个待处理的完整包
 	virtual void	on_recv_pkg(const void* buf, const size_t len, const sockaddr_in& peer_addr);
 
+	virtual bool	start();
 	virtual int32_t	send(const void* buf, const size_t len, const sockaddr_in& peer_addr);
 	virtual void	close();
+	virtual bool	local_addr(std::string& addr);
+
 	std::shared_ptr<reactor_loop>	reactor();
 
 private:
-	std::shared_ptr<reactor_loop>				_reactor;
+	std::shared_ptr<reactor_loop>	_reactor;
 };
 
 class udp_server_channel : public udp_channel_base, public udp_server_handler_base, public multiform_state
 {
 public:
-	udp_server_channel(std::shared_ptr<reactor_loop> reactor, const std::string& local_addr, const uint32_t self_read_size, const uint32_t self_write_size, const uint32_t sock_read_size, const uint32_t sock_write_size);
+	udp_server_channel(std::shared_ptr<reactor_loop> reactor, const std::string& local_addr, const uint32_t self_read_size = DEFAULT_READ_BUFSIZE, const uint32_t self_write_size = DEFAULT_WRITE_BUFSIZE, const uint32_t sock_read_size = 0, const uint32_t sock_write_size = 0);
 	virtual ~udp_server_channel();
 
 	// 下面四个函数可能运行在多线程环境下	
-	virtual int32_t		send(const void* buf, const size_t len, const sockaddr_in& peer_addr);// 保证原子, 认为是整包，返回值若<0参考CHANNEL_ERROR_CODE
-	virtual void		close();
-	bool				start();
+	virtual bool	start();
+	virtual int32_t	send(const void* buf, const size_t len, const sockaddr_in& peer_addr);// 保证原子, 认为是整包，返回值若<0参考CHANNEL_ERROR_CODE
+	virtual void	close();
+	virtual bool	local_addr(std::string& addr);
 
 private:
 	template<typename T> friend class udp_server;

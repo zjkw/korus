@@ -83,6 +83,7 @@ enum SOCKS_METHOD_TYPE
 //							vdst_addr	代理服务器udp监听地址
 //							u16dst_port	代理服务器udp监听端口
 
+//		不支持u8atyp为非ipv4
 //	7,	udp_associate_req:	u16rsv + u8flag + u8atyp + vdst_addr + u16dst_port + vdata	客户端向代理服务器发udp数据包，让其转发/拆解到目标服务器
 //						u16rsv = 0x0000
 //						u8flag:	当前udp包分段号，无分段填0

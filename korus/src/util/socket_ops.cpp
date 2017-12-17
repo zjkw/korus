@@ -108,6 +108,15 @@ bool sockaddr_from_string(const std::string& ip, const uint16_t port, struct soc
 	return true;
 }
 
+bool sockaddr_from_string(const uint32_t ip, const uint16_t port, struct sockaddr_in& si)		//ip portÎªhost×Ö½ÚÐò
+{
+	si.sin_family = AF_INET;
+	si.sin_addr.s_addr = htonl(ip);
+	si.sin_port = htons(port);
+
+	return true;
+}
+
 bool set_reuse_addr_sock(SOCKET fd, int reuse)
 {
 	int val = reuse > 0 ? 1 : 0;

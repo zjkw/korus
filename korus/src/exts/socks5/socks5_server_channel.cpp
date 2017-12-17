@@ -399,7 +399,7 @@ void	socks5_server_channel::on_recv_pkg(const void* buf, const size_t size)
 								}
 								break;
 							case 0x03:
-					//			if (!build_associatecmd_tunnel(ip, port))
+								if (!build_associatecmd_tunnel(ip, port))
 								{
 									_shakehand_state = SSS_NONE;
 
@@ -442,10 +442,6 @@ void	socks5_server_channel::on_recv_pkg(const void* buf, const size_t size)
 									return;
 								}
 								break;
-							case 0x03:
-								_shakehand_state = SSS_NONE;
-								close();
-								return;
 							default:
 								_shakehand_state = SSS_NONE;
 								close();
@@ -528,6 +524,7 @@ bool	socks5_server_channel::build_bindcmd_tunnel(uint32_t ip_digit, uint16_t por
 	std::string port;
 	if (!sockaddr_from_string(addr, ip, port))
 	{
+		_bindcmd_server = nullptr;
 		return false;
 	}
 
@@ -539,8 +536,18 @@ bool	socks5_server_channel::build_bindcmd_tunnel(uint32_t ip_digit, uint16_t por
 	return true;
 }
 
-bool	socks5_server_channel::build_associatecmd_tunnel()
+bool	socks5_server_channel::build_associatecmd_tunnel(uint32_t ip_digit, uint16_t port_digit)
 {
+	assert(!_associatecmd_server_channel);
+
+	std::shared_ptr<socks5_server_channel>	self = std::dynamic_pointer_cast<socks5_server_channel>(shared_from_this());
+	_associatecmd_server_channel = std::make_shared<socks5_associatecmd_tunnel_server_channel>(reactor(), self, ip_digit, port_digit);
+
+	std::shared_ptr<udp_server_channel>		origin_channel = std::make_shared<udp_server_channel>(reactor(), "0.0.0.0:0");
+	build_channel_chain_helper(std::dynamic_pointer_cast<tcp_client_handler_base>(origin_channel), std::dynamic_pointer_cast<tcp_client_handler_base>(_associatecmd_server_channel));
+
+	_associatecmd_server_channel->start();
+
 	return true;
 }
 
@@ -595,9 +602,36 @@ void	socks5_server_channel::on_bindcmd_tunnel_close()
 
 }
 
+void	socks5_server_channel::on_associatecmd_tunnel_ready(const std::string& addr)
+{
+	std::string ip;
+	std::string port;
+	if (!sockaddr_from_string(addr, ip, port))
+	{
+		return;
+	}
+
+	uint8_t buf[32];
+	net_serialize	codec(buf, sizeof(buf));
+	codec << static_cast<uint8_t>(SOCKS5_V) << static_cast<uint8_t>(0x00) << static_cast<uint8_t>(0x00) << static_cast<uint8_t>(0x01) << static_cast<uint32_t>(strtoul(ip.c_str(), NULL, 10)) << static_cast<uint16_t>(strtoul(port.c_str(), NULL, 10));
+	send(codec.data(), codec.wpos());
+}
+
+void	socks5_server_channel::on_associatecmd_tunnel_close()
+{
+
+}
+
 std::shared_ptr<tcp_server_handler_base> socks5_server_channel::binccmd_channel_factory(std::shared_ptr<reactor_loop> reactor)
 {	
 	std::shared_ptr<socks5_bindcmd_tunnel_server_channel> channel = std::make_shared<socks5_bindcmd_tunnel_server_channel>(reactor, std::dynamic_pointer_cast<socks5_server_channel>(shared_from_this()));
 	std::shared_ptr<tcp_server_handler_base> cb = std::dynamic_pointer_cast<tcp_server_handler_base>(channel);
+	return cb;
+}
+
+std::shared_ptr<udp_client_handler_base> socks5_server_channel::associatecmd_channel_factory(std::shared_ptr<reactor_loop> reactor)
+{
+	std::shared_ptr<udp_client_handler_base> handler = std::make_shared<udp_client_handler_base>(reactor);
+	std::shared_ptr<udp_client_handler_base> cb = std::dynamic_pointer_cast<udp_client_handler_base>(handler);
 	return cb;
 }

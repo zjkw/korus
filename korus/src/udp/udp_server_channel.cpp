@@ -71,6 +71,17 @@ void	udp_server_handler_base::on_recv_pkg(const void* buf, const size_t len, con
 	_tunnel_next->on_recv_pkg(buf, len, peer_addr);
 }
 
+bool	udp_server_handler_base::start()
+{ 
+	if (!_tunnel_prev)
+	{
+		assert(false);
+		return CEC_INVALID_SOCKET;
+	}
+	
+	return _tunnel_prev->start();
+}
+
 int32_t	udp_server_handler_base::send(const void* buf, const size_t len, const sockaddr_in& peer_addr)	
 { 
 	if (!_tunnel_prev)
@@ -93,13 +104,24 @@ void	udp_server_handler_base::close()
 	_tunnel_prev->close();
 }
 
+bool	udp_server_handler_base::local_addr(std::string& addr)
+{
+	if (!_tunnel_prev)
+	{
+		assert(false);
+		return false;
+	}
+
+	return _tunnel_prev->local_addr(addr);
+}
+
 std::shared_ptr<reactor_loop>	udp_server_handler_base::reactor()		
 { 
 	return _reactor; 
 }
 
 //////////////////////////////////channel
-udp_server_channel::udp_server_channel(std::shared_ptr<reactor_loop> reactor, const std::string& local_addr, const uint32_t self_read_size, const uint32_t self_write_size, const uint32_t sock_read_size, const uint32_t sock_write_size)
+udp_server_channel::udp_server_channel(std::shared_ptr<reactor_loop> reactor, const std::string& local_addr, const uint32_t self_read_size/* = DEFAULT_READ_BUFSIZE*/, const uint32_t self_write_size/* = DEFAULT_WRITE_BUFSIZE*/, const uint32_t sock_read_size/* = 0*/, const uint32_t sock_write_size/* = 0*/)
 	: udp_server_handler_base(reactor), 
 	udp_channel_base(local_addr, self_read_size, self_write_size, sock_read_size, sock_write_size)
 										
@@ -177,6 +199,19 @@ void	udp_server_channel::close()
 	}	
 
 	set_release();
+}
+
+bool	udp_server_channel::local_addr(std::string& addr)
+{
+	if (!is_normal())
+	{
+		return false;
+	}
+	if (!reactor()->is_current_thread())
+	{
+		return false;
+	}
+	return udp_channel_base::peer_addr(addr);
 }
 
 void	udp_server_channel::on_sockio_read(sockio_helper* sockio_id)

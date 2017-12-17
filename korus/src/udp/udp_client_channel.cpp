@@ -71,7 +71,7 @@ void	udp_client_handler_base::on_recv_pkg(const void* buf, const size_t len, con
 	_tunnel_next->on_recv_pkg(buf, len, peer_addr); 
 }
 
-int32_t	udp_client_handler_base::send(const void* buf, const size_t len, const sockaddr_in& peer_addr)
+bool	udp_client_handler_base::start()
 { 
 	if (!_tunnel_prev)
 	{
@@ -79,7 +79,7 @@ int32_t	udp_client_handler_base::send(const void* buf, const size_t len, const s
 		return CEC_INVALID_SOCKET;
 	}
 	
-	return _tunnel_prev->send(buf, len, peer_addr);
+	return _tunnel_prev->start();
 }
 
 void	udp_client_handler_base::close()

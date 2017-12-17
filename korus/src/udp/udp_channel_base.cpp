@@ -261,3 +261,14 @@ int32_t	udp_channel_base::do_recv_nolock()
 
 	return total_read;
 }
+
+bool	udp_channel_base::peer_addr(std::string& addr)
+{
+	std::unique_lock <std::mutex> lck(_mutex_write);
+	return peeraddr_from_fd(_fd, addr);
+}
+bool	udp_channel_base::local_addr(std::string& addr)
+{
+	std::unique_lock <std::mutex> lck(_mutex_write);
+	return localaddr_from_fd(_fd, addr);
+}

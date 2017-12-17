@@ -4,7 +4,7 @@
 #include "korus/src/tcp/tcp_server.h"
 #include "socks5_connectcmd_tunnel_client_channel.h"
 #include "socks5_bindcmd_tunnel_server_channel.h"
-#include "socks5_associatecmd_server_channel.h"
+#include "socks5_associatecmd_tunnel_server_channel.h"
 
 //connectcmd:
 //	source_client													socks5_proxy												target_server
@@ -70,22 +70,22 @@
 //		|																|	|构造socks5_server_channel									|					
 //		|																|<---															|					
 //		|																|----															|					
-//		|																|	|构造socks5_associatecmd_server_channel，执行bind			|					
+//		|																|	|构造socks5_associatecmd_tunnel_server_channel，执行bind	|					
 //		|																|<---															|	
 //		|<----------------------tunnel_ack------------------------------|																|					
 //		|																|																|					
 //		|-----------------------data_trans(udp)------------------------>|																|
 //		|																|----															|					
-//		|																|	|socks5_associatecmd_server_channel接收						|					
+//		|																|	|socks5_associatecmd_tunnel_server_channel接收				|					
 //		|																|<---															|		
-//		|																|----socks5_associatecmd_server_channel		data_trans(udp)---->|	
+//		|																|--ocks5_associatecmd_tunnel_server_channel	   data_trans(udp)->|	
 //		|																|																|		
 //		|																|																|		
 //		|																|<---data_trans(udp)--------------------------------------------|	
 //		|																|----															|					
-//		|																|	|socks5_associatecmd_server_channel接收						|					
+//		|																|	|socks5_associatecmd_tunnel_server_channel接收				|					
 //		|																|<---															|		
-//		|<-------socks5_associatecmd_server_channel	data_trans(udp)-----|																|
+//		|<---socks5_associatecmd_tunnel_server_channel	data_trans(udp)-|																|
 
 class socks5_server_auth
 {
@@ -125,6 +125,9 @@ public:
 	void	on_bindcmd_tunnel_accept(std::shared_ptr<socks5_bindcmd_tunnel_server_channel> channel);
 	void	on_bindcmd_tunnel_close();
 
+	void	on_associatecmd_tunnel_ready(const std::string& addr);
+	void	on_associatecmd_tunnel_close();
+
 private:
 	std::shared_ptr<socks5_server_auth>	_auth;
 
@@ -147,12 +150,13 @@ private:
 	std::shared_ptr<socks5_connectcmd_tunnel_client_channel>	_connectcmd_tunnel_client_channel;	//仅当_tunnel_channel_type = TCT_CONNECT有效：控制生命期和数据转发
 	tcp_server<reactor_loop>*									_bindcmd_server;
 	std::shared_ptr<socks5_bindcmd_tunnel_server_channel>		_bindcmd_tunnel_server_channel;		//仅当_tunnel_channel_type = TCT_BIND有效：控制生命期和数据转发
-	std::shared_ptr<socks5_associatecmd_server_channel>			_associatecmd_server_channel;		//仅当_tunnel_channel_type = TCT_ASSOCIATE有效：仅仅控制生命期
+	std::shared_ptr<socks5_associatecmd_tunnel_server_channel>	_associatecmd_server_channel;		//仅当_tunnel_channel_type = TCT_ASSOCIATE有效：仅仅控制生命期
 
 	bool	build_connectcmd_tunnel(uint32_t ip, uint16_t port);
 	bool	build_connectcmd_tunnel(const std::string& ip, uint16_t port);
 	bool	build_bindcmd_tunnel(uint32_t ip_digit, uint16_t port_digit);
-	bool	build_associatecmd_tunnel();
+	bool	build_associatecmd_tunnel(uint32_t ip_digit, uint16_t port_digit);
 
 	std::shared_ptr<tcp_server_handler_base> binccmd_channel_factory(std::shared_ptr<reactor_loop> reactor);
+	std::shared_ptr<udp_client_handler_base> associatecmd_channel_factory(std::shared_ptr<reactor_loop> reactor);
 };

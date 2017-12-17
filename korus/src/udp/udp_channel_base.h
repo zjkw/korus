@@ -17,6 +17,9 @@ public:
 	virtual int32_t		send(const void* buf, const size_t len);								// 外部数据发送
 	virtual	void		close();
 	virtual	int32_t		on_recv_buff(const void* buf, const size_t len, const sockaddr_in& peer_addr) = 0;
+	virtual bool		peer_addr(std::string& addr);
+	virtual bool		local_addr(std::string& addr);
+
 protected:
 	//>0 表示还可以继续recv,=0表示收取到顶了，<0表示错误
 	int32_t				do_recv();									
