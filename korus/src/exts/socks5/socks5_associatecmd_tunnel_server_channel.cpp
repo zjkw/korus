@@ -62,7 +62,8 @@ CLOSE_MODE_STRATEGY	socks5_associatecmd_tunnel_server_channel::on_error(CHANNEL_
 //这是一个待处理的完整包
 void	socks5_associatecmd_tunnel_server_channel::on_recv_pkg(const void* buf, const size_t size, const sockaddr_in& peer_addr)
 {
-	if (_client_ip == ntohl(peer_addr.sin_addr.s_addr) && _client_port == ntohs(peer_addr.sin_port))
+	//根据协议，_client_ip可为空，所以不能作为判断依据
+	if (/*_client_ip == ntohl(peer_addr.sin_addr.s_addr) && */_client_port == ntohs(peer_addr.sin_port))
 	{
 		net_serialize	decodec(buf, size);
 		uint16_t	rsv	=	0;
