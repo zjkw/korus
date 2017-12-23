@@ -78,6 +78,28 @@ CLOSE_MODE_STRATEGY	socks5_bindcmd_originalbind_client_channel::on_error(CHANNEL
 	return _integration->on_data_error(code);
 }
 
+int32_t socks5_bindcmd_originalbind_client_channel::on_recv_split(const void* buf, const size_t size)
+{
+	if (!_integration)
+	{
+		assert(false);
+		return 0;
+	}
+
+	return _integration->on_data_recv_split(buf, size);
+}
+
+void	socks5_bindcmd_originalbind_client_channel::on_recv_pkg(const void* buf, const size_t size)
+{
+	if (!_integration)
+	{
+		assert(false);
+		return;
+	}
+
+	_integration->on_data_recv_pkg(buf, size);
+}
+
 int32_t	socks5_bindcmd_originalbind_client_channel::make_tunnel_pkg(void* buf, const uint16_t size)
 {
 	net_serialize	codec(buf, size);

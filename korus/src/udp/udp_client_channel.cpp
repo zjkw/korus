@@ -82,6 +82,39 @@ bool	udp_client_handler_base::start()
 	return _tunnel_prev->start();
 }
 
+int32_t	udp_client_handler_base::send(const void* buf, const size_t len, const sockaddr_in& peer_addr)
+{
+	if (!_tunnel_prev)
+	{
+		assert(false);
+		return 0;
+	}
+
+	return _tunnel_prev->send(buf, len, peer_addr);
+}
+
+int32_t	udp_client_handler_base::connect(const sockaddr_in& server_addr)
+{
+	if (!_tunnel_prev)
+	{
+		assert(false);
+		return 0;
+	}
+
+	return _tunnel_prev->connect(server_addr);
+}
+
+int32_t	udp_client_handler_base::send(const void* buf, const size_t len)
+{
+	if (!_tunnel_prev)
+	{
+		assert(false);
+		return 0;
+	}
+
+	return _tunnel_prev->send(buf, len);
+}
+
 void	udp_client_handler_base::close()
 { 
 	if (!_tunnel_prev)

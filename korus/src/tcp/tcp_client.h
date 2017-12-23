@@ -3,7 +3,6 @@
 #include <map>
 #include <memory>
 #include <thread>
-#include <list>
 #include "korus/src/thread/thread_object.h"
 #include "korus/src/reactor/reactor_loop.h"
 #include "tcp_client_channel.h"
@@ -102,20 +101,16 @@ protected:
 		std::shared_ptr<tcp_client_handler_base>	channel = _factory(reactor);
 		return channel;
 	}
-	virtual bool build_channel_chain(std::shared_ptr<reactor_loop> reactor, std::list<std::shared_ptr<tcp_client_channel>>& origin_channel_list)	//存在一次性构建多个origin_channel
+	virtual std::shared_ptr<chain_sharedobj_interface> build_channel_chain(std::shared_ptr<reactor_loop> reactor)	
 	{
 		std::shared_ptr<tcp_client_channel>			origin_channel	=	create_origin_channel(reactor);
-		origin_channel_list.push_back(origin_channel);
-
 		std::shared_ptr<tcp_client_handler_base>	terminal_channel = create_terminal_channel(reactor);
-
 		build_channel_chain_helper(std::dynamic_pointer_cast<tcp_client_handler_base>(origin_channel), terminal_channel);
-
 		origin_channel->connect();
-		return true;
+
+		return std::dynamic_pointer_cast<chain_sharedobj_interface>(origin_channel);
 	}
 
-private:
 	std::thread::id							_tid;
 	uint16_t								_thread_num;
 	std::map<uint16_t, thread_object*>		_thread_pool;
@@ -133,18 +128,14 @@ private:
 	{
 		std::shared_ptr<reactor_loop>		reactor = std::make_shared<reactor_loop>();
 
-		std::list<std::shared_ptr<tcp_client_channel>>	origin_channel_list;
-		build_channel_chain(reactor, origin_channel_list);
+		std::shared_ptr<chain_sharedobj_interface>	origin_channel = build_channel_chain(reactor);
 		
-		thread_obj->add_exit_task(std::bind(&tcp_client::thread_exit, this, thread_obj, reactor, origin_channel_list));
+		thread_obj->add_exit_task(std::bind(&tcp_client::thread_exit, this, thread_obj, reactor, origin_channel));
 		thread_obj->add_resident_task(std::bind(&reactor_loop::run_once, reactor));
 	}
-	void thread_exit(thread_object*	thread_obj, std::shared_ptr<reactor_loop> reactor, std::list<std::shared_ptr<tcp_client_channel>>&	origin_channel_list)
+	void thread_exit(thread_object*	thread_obj, std::shared_ptr<reactor_loop> reactor, std::shared_ptr<chain_sharedobj_interface>	origin_channel_list)
 	{
-		for (std::list<std::shared_ptr<tcp_client_channel>>::iterator it = origin_channel_list.begin(); it != origin_channel_list.end(); it++)
-		{
-			try_chain_final(*it, 1);
-		}
+		try_chain_final(origin_channel_list, 1);
 
 		reactor->invalid();
 	}
@@ -167,9 +158,9 @@ public:
 
 	virtual ~tcp_client()
 	{
-		for (std::list<std::shared_ptr<tcp_client_channel>>::iterator it = _channels.begin(); it != _channels.end(); it++)
+		if(_channels)
 		{
-			try_chain_final(*it, 1);
+			try_chain_final(_channels, 1);
 		}
 	}
 	
@@ -185,11 +176,10 @@ public:
 		if (!_start.test_and_set())
 		{
 			// 构造中执行::connect，无需外部手动调用
-			std::list<std::shared_ptr<tcp_client_channel>>	origin_channel_list;
-			build_channel_chain(_reactor, origin_channel_list);
+			_channels = build_channel_chain(_reactor);
 		}
 	}
-
+	
 protected:
 	std::shared_ptr<tcp_client_channel>			create_origin_channel(std::shared_ptr<reactor_loop> reactor)
 	{
@@ -205,19 +195,16 @@ protected:
 		std::shared_ptr<tcp_client_handler_base>	channel = _factory(reactor);
 		return channel;
 	}
-	virtual bool build_channel_chain(std::shared_ptr<reactor_loop> reactor, std::list<std::shared_ptr<tcp_client_channel>>& origin_channel_list)
+	virtual std::shared_ptr<chain_sharedobj_interface> build_channel_chain(std::shared_ptr<reactor_loop> reactor)
 	{
 		std::shared_ptr<tcp_client_channel>			origin_channel = create_origin_channel(reactor);
-		origin_channel_list.push_back(origin_channel);
-
 		std::shared_ptr<tcp_client_handler_base>	terminal_channel = create_terminal_channel(reactor);
 		build_channel_chain_helper(std::dynamic_pointer_cast<tcp_client_handler_base>(origin_channel), terminal_channel);
-
 		origin_channel->connect();
-		return true;
+
+		return std::dynamic_pointer_cast<chain_sharedobj_interface>(origin_channel);
 	}
 
-private:
 	std::shared_ptr<reactor_loop>			_reactor;
 	std::thread::id							_tid;
 	std::atomic_flag						_start = ATOMIC_FLAG_INIT;
@@ -230,5 +217,5 @@ private:
 	uint32_t								_sock_read_size;
 	uint32_t								_sock_write_size;
 
-	std::list<std::shared_ptr<tcp_client_channel>> _channels;
+	std::shared_ptr<chain_sharedobj_interface>		_channels;
 };

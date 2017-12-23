@@ -16,14 +16,12 @@ public:
 	virtual void	on_chain_final();
 	virtual void	on_connected();
 	virtual void	on_closed();
-	virtual int32_t on_recv_split(const void* buf, const size_t size);
-	virtual void	on_recv_pkg(const void* buf, const size_t size);
 
 protected:
 	enum SOCKS_CLIENT_STATE
 	{
 		SCS_NONE = 0,
-		SCS_METHOD = 1,		//等待服务器回应METHOD==
+		SCS_METHOD = 1,		//等待服务器回应METHOD
 		SCS_AUTH = 2,
 		SCS_TUNNEL = 3,
 		SCS_NORMAL = 4,
@@ -44,4 +42,8 @@ protected:
 private:
 	std::string _socks_user;
 	std::string _socks_psw;
+
+	//不暴露接口，因为内部已做了特化处理
+	virtual int32_t on_recv_split(const void* buf, const size_t size);
+	virtual void	on_recv_pkg(const void* buf, const size_t size);
 };

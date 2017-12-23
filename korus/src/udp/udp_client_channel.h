@@ -44,6 +44,8 @@ public:
 
 	virtual bool	start();
 	virtual int32_t	send(const void* buf, const size_t len, const sockaddr_in& peer_addr);
+	virtual int32_t	connect(const sockaddr_in& server_addr);								// 保证原子, 返回值若<0参考CHANNEL_ERROR_CODE
+	virtual int32_t	send(const void* buf, const size_t len);
 	virtual void	close();
 	std::shared_ptr<reactor_loop>	reactor();
 
