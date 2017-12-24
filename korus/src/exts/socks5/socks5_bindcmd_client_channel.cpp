@@ -377,22 +377,17 @@ TCP_CLTCONN_STATE	socks5_bindcmd_client_channel::ctrl_state()
 
 void	socks5_bindcmd_client_channel::on_ctrl_connected()
 {
-
+	socks5_bindcmd_client_handler_base::on_ctrl_connected();
 }
 
 void	socks5_bindcmd_client_channel::on_ctrl_closed()
 {
-
+	socks5_bindcmd_client_handler_base::on_ctrl_closed();
 }
 
 CLOSE_MODE_STRATEGY	socks5_bindcmd_client_channel::on_ctrl_error(CHANNEL_ERROR_CODE code)		//参考CHANNEL_ERROR_CODE定义	
 {
 	return CMS_INNER_AUTO_CLOSE;
-
-}
-
-void	socks5_bindcmd_client_channel::on_ctrl_recv_pkg(const void* buf, const size_t len)	//这是一个待处理的完整包
-{
 
 }
 
@@ -450,22 +445,17 @@ TCP_CLTCONN_STATE	socks5_bindcmd_client_channel::data_state()
 
 void	socks5_bindcmd_client_channel::on_data_connected()
 {
-
+	socks5_bindcmd_client_handler_base::on_data_connected();
 }
 
 void	socks5_bindcmd_client_channel::on_data_closed()
 {
-
+	socks5_bindcmd_client_handler_base::on_data_closed();
 }
 
 CLOSE_MODE_STRATEGY	socks5_bindcmd_client_channel::on_data_error(CHANNEL_ERROR_CODE code)		//参考CHANNEL_ERROR_CODE定义
 {
 	return CMS_INNER_AUTO_CLOSE;
-}
-
-void	socks5_bindcmd_client_channel::on_data_recv_pkg(const void* buf, const size_t len)	//这是一个待处理的完整包
-{
-
 }
 
 void	socks5_bindcmd_client_channel::on_data_bindcmd_result(const CHANNEL_ERROR_CODE code, const std::string& proxy_listen_target_addr)		//代理服务器用于监听“目标服务器过来的连接”地址

@@ -77,11 +77,10 @@ public:
 	virtual void	ctrl_shutdown(int32_t howto);							// 参数参考全局函数 ::shutdown
 	virtual void	ctrl_connect();
 	virtual TCP_CLTCONN_STATE	ctrl_state();
+
 	virtual void	on_ctrl_connected();
 	virtual void	on_ctrl_closed();	
 	CLOSE_MODE_STRATEGY	on_ctrl_error(CHANNEL_ERROR_CODE code);				//参考CHANNEL_ERROR_CODE定义	
-	virtual int32_t on_ctrl_recv_split(const void* buf, const size_t size);
-	virtual void	on_ctrl_recv_pkg(const void* buf, const size_t size);	//这是一个待处理的完整包
 
 	//data channel--------------
 	// 下面五个函数可能运行在多线程环境下	
@@ -90,11 +89,10 @@ public:
 	virtual void	data_shutdown(int32_t howto);							// 参数参考全局函数 ::shutdown
 	virtual void	data_connect();
 	virtual TCP_CLTCONN_STATE	data_state();
+
 	virtual void	on_data_connected();
 	virtual void	on_data_closed();
 	virtual CLOSE_MODE_STRATEGY	on_data_error(CHANNEL_ERROR_CODE code);		//参考CHANNEL_ERROR_CODE定义
-	virtual int32_t on_data_recv_split(const void* buf, const size_t size);
-	virtual void	on_data_recv_pkg(const void* buf, const size_t size);	//这是一个待处理的完整包
 
 	virtual void	on_data_bindcmd_result(const CHANNEL_ERROR_CODE code, const std::string& proxy_listen_target_addr);		//代理服务器用于监听“目标服务器过来的连接”地址
 
