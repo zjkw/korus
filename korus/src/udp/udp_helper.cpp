@@ -2,7 +2,7 @@
 #include <unistd.h>
 #include "udp_helper.h"
 
-SOCKET create_tcp_origin_sock()
+SOCKET create_udp_origin_sock()
 {
 	return ::socket(AF_INET, SOCK_DGRAM | SOCK_NONBLOCK | SOCK_CLOEXEC, IPPROTO_UDP);
 }
@@ -10,7 +10,7 @@ SOCKET create_tcp_origin_sock()
 SOCKET create_udp_socket()
 {
 	/* Request socket. */
-	SOCKET s = create_tcp_origin_sock();
+	SOCKET s = create_udp_origin_sock();
 	if (s == INVALID_SOCKET)
 	{
 		return INVALID_SOCKET;

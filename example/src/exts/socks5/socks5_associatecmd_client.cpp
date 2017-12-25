@@ -79,31 +79,19 @@ int main(int argc, char* argv[])
 
 	uint16_t		thread_num = 4;
 
-#ifndef REUSEPORT_OPTION
-	if (argc != 2)
+	if (argc != 4)
 	{
-		printf("Usage: %s <port>\n", argv[0]);
-		printf("  e.g: %s 9099\n", argv[0]);
-#else
-	if (argc != 3)
-	{
-		printf("Usage: %s <port> <thread-num>\n", argv[0]);
-		printf("  e.g: %s 9099 12\n", argv[0]);
-#endif
+		printf("Usage: %s <proxy_port> <server_port> <thread-num> \n", argv[0]);
+		printf("  e.g: %s 9099 9100 12\n", argv[0]);
 		return 0;
 	}
 
-	server_addr = std::string("127.0.0.1:") + argv[1];
-	if (argc >= 3)
-	{
-		thread_num = (uint16_t)atoi(argv[2]);
-	}
-
-#ifndef REUSEPORT_OPTION
-	socks5_associatecmd_client<uint16_t> client(channel_factory);
-#else
-	socks5_associatecmd_client<uint16_t> client(thread_num, channel_factory);
-#endif
+	std::string	proxy_addr = std::string("127.0.0.1:") + argv[1];
+	std::string	server_addr = std::string("127.0.0.1:") + argv[2];
+	thread_num = (uint16_t)atoi(argv[3]);
+	
+	socks5_associatecmd_client<uint16_t> client(thread_num, proxy_addr, server_addr, channel_factory);
+	
 	client.start();
 	for (;;)
 	{

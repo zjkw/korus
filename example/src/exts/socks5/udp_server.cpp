@@ -8,11 +8,12 @@
 #define min(a,b) (((a) < (b)) ? (a) : (b))  
 #endif
 
-class udp_server_handler : public udp_server_handler_base
+//associatecmd
+class udp_associatecmd_server_handler : public udp_server_handler_base
 {
 public:
-	udp_server_handler(std::shared_ptr<reactor_loop> reactor) : udp_server_handler_base(reactor){}
-	virtual ~udp_server_handler(){}
+	udp_associatecmd_server_handler(std::shared_ptr<reactor_loop> reactor) : udp_server_handler_base(reactor){}
+	virtual ~udp_associatecmd_server_handler(){}
 
 	//override------------------
 	virtual void	on_chain_init()
@@ -29,8 +30,19 @@ public:
 	{
 		return udp_server_handler_base::chain_refcount();
 	}
-	virtual void	on_ready()	
+	virtual void	on_ready()
 	{
+		udp_server_handler_base::on_ready();
+
+//		char szTest[] = "hello server, i am client!";
+
+//		struct sockaddr_in	si;
+//		if (!sockaddr_from_string(server_addr, si))
+		{
+//			return;
+		}
+//		int32_t ret = send(szTest, strlen(szTest), si);
+//		printf("\non_ready, then Send %s, ret: %d\n", szTest, ret);
 	}
 
 	virtual void	on_closed()
@@ -51,16 +63,12 @@ public:
 		char szTest[1024] = { 0 };
 		memcpy(szTest, buf, min(len, 1023));
 		printf("\non_recv_pkg: %s, len: %u\n", szTest, len);
-
-		char szTest2[] = "hello client, i am server!";
-		int32_t ret = send(szTest2, strlen(szTest2), peer_addr);
-		printf("\necho, then Send %s, ret: %d\n", szTest2, ret);
 	}
 };
 
-std::shared_ptr<udp_server_handler_base> channel_factory(std::shared_ptr<reactor_loop> reactor)
+std::shared_ptr<udp_server_handler_base> associatecmd_channel_factory(std::shared_ptr<reactor_loop> reactor)
 {
-	std::shared_ptr<udp_server_handler> handler = std::make_shared<udp_server_handler>(reactor);
+	std::shared_ptr<udp_associatecmd_server_handler> handler = std::make_shared<udp_associatecmd_server_handler>(reactor);
 	std::shared_ptr<udp_server_handler_base> cb = std::dynamic_pointer_cast<udp_server_handler_base>(handler);
 	return cb;
 }
@@ -70,32 +78,22 @@ int main(int argc, char* argv[])
 	std::string	addr = "0.0.0.0:9099";
 	uint16_t		thread_num = 4;
 
-#ifndef REUSEPORT_OPTION
-	if (argc != 2) 
-	{
-			printf("Usage: %s <port>\n", argv[0]);
-			printf("  e.g: %s 9099\n", argv[0]);
-#else
 	if (argc != 3) 
 	{
 		printf("Usage: %s <port> <thread-num>\n", argv[0]);
 		printf("  e.g: %s 9099 12\n", argv[0]);
-#endif
 		return 0;
 	}
 
-	addr = std::string("0.0.0.0:") + argv[1];
-	if (argc >= 3)
-	{
-		thread_num = (uint16_t)atoi(argv[2]);
-	}
-		
+	addr = std::string("127.0.0.1:") + argv[1];
+	thread_num = (uint16_t)atoi(argv[2]);
+
 #ifndef REUSEPORT_OPTION
-	udp_server<uint16_t> server(addr, channel_factory);
+	udp_server<uint16_t> associatecmd_server(addr, associatecmd_channel_factory);
 #else
-	udp_server<uint16_t> server(thread_num, addr, channel_factory);
+	udp_server<uint16_t> associatecmd_server(thread_num, addr, associatecmd_channel_factory);
 #endif
-	server.start();
+	associatecmd_server.start();
 
 	for (;;)
 	{

@@ -13,6 +13,16 @@ socks5_connectcmd_embedbind_client_channel::~socks5_connectcmd_embedbind_client_
 }
 
 //override------------------
+void	socks5_connectcmd_embedbind_client_channel::on_chain_init()
+{
+	socks5_connectcmd_client_channel::on_chain_init();
+}
+
+void	socks5_connectcmd_embedbind_client_channel::on_chain_final()
+{
+	socks5_connectcmd_client_channel::on_chain_final();
+}
+
 long	socks5_connectcmd_embedbind_client_channel::chain_refcount()
 {
 	long ref = 0;

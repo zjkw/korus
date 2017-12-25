@@ -8,11 +8,12 @@
 #define min(a,b) (((a) < (b)) ? (a) : (b))  
 #endif
 
-class tcp_client_handler : public tcp_client_handler_base
+//connectcmd
+class tcp_connectcmd_server_handler : public tcp_server_handler_base
 {
 public:
-	tcp_client_handler(std::shared_ptr<reactor_loop> reactor) : tcp_client_handler_base(reactor){}
-	virtual ~tcp_client_handler()
+	tcp_connectcmd_server_handler(std::shared_ptr<reactor_loop> reactor) : tcp_server_handler_base(reactor){}
+	virtual ~tcp_connectcmd_server_handler()
 	{
 		printf("\nexit: 0x%p\n", this);
 	}
@@ -30,13 +31,13 @@ public:
 	}
 	virtual long	chain_refcount()
 	{
-		return tcp_client_handler_base::chain_refcount();
+		return tcp_server_handler_base::chain_refcount();
 	}
-	virtual void	on_connected()	//连接已经建立
+	virtual void	on_accept()	//连接已经建立
 	{
-		char szTest[] = "hello server, i am client!";
+		char szTest[] = "hello client, i am server!";
 		int32_t ret = send(szTest, strlen(szTest));
-		printf("\nConnected, then Send %s, ret: %d\n", szTest, ret);
+		printf("\nConnected/accepted, then Send %s, ret: %d\n", szTest, ret);
 	}
 
 	virtual void	on_closed()
@@ -61,17 +62,17 @@ public:
 	//这是一个待处理的完整包
 	virtual void	on_recv_pkg(const void* buf, const size_t len)
 	{
-		char szTest[1024] = {0};
+		char szTest[1024] = { 0 };
 		memcpy(szTest, buf, min(len, 1023));
 		printf("\non_recv_pkg: %s, len: %u\n", szTest, len);
 	}
 };
 
-std::shared_ptr<tcp_client_handler_base> channel_factory(std::shared_ptr<reactor_loop> reactor)
+std::shared_ptr<tcp_server_handler_base> connectcmd_channel_factory(std::shared_ptr<reactor_loop> reactor)
 {
-	std::shared_ptr<tcp_client_handler> handler = std::make_shared<tcp_client_handler>(reactor);
-	std::shared_ptr<tcp_client_handler_base> cb = std::dynamic_pointer_cast<tcp_client_handler_base>(handler);
-	return nullptr;
+	std::shared_ptr<tcp_connectcmd_server_handler> handler = std::make_shared<tcp_connectcmd_server_handler>(reactor);
+	std::shared_ptr<tcp_server_handler_base> cb = std::dynamic_pointer_cast<tcp_server_handler_base>(handler);
+	return cb;
 }
 
 int main(int argc, char* argv[]) 
@@ -88,9 +89,10 @@ int main(int argc, char* argv[])
 
 	addr = std::string("127.0.0.1:") + argv[1];
 	thread_num = (uint16_t)atoi(argv[2]);
-		
-	socks5_connectcmd_client<uint16_t> client(thread_num, addr, addr, channel_factory);
-	client.start();
+
+	tcp_server<uint16_t> connectcmd_server(thread_num, addr, connectcmd_channel_factory);
+	connectcmd_server.start();
+	
 	for (;;)
 	{
 		sleep(1);
