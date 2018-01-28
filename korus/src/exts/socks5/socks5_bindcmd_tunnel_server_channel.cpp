@@ -2,7 +2,7 @@
 #include "socks5_bindcmd_tunnel_server_channel.h"
 
 socks5_bindcmd_tunnel_server_channel::socks5_bindcmd_tunnel_server_channel(std::shared_ptr<reactor_loop> reactor, std::shared_ptr<socks5_server_channel> channel)
-: _origin_channel(channel), tcp_server_handler_base(reactor)
+: _origin_channel(channel), tcp_server_handler_terminal(reactor)
 {
 }
 
@@ -21,25 +21,9 @@ void	socks5_bindcmd_tunnel_server_channel::on_chain_final()
 	_origin_channel = nullptr;
 }
 
-void	socks5_bindcmd_tunnel_server_channel::on_chain_zomby()
-{
-	// 因为没有被其他对象引用，本对象可在框架要求下退出，可以主动与消去外界引用
-}
-
-long	socks5_bindcmd_tunnel_server_channel::chain_refcount()
-{
-	long ref = 0;
-	if (_origin_channel)
-	{
-		ref++;
-	}
-
-	return ref + tcp_server_handler_base::chain_refcount();
-}
-
 void	socks5_bindcmd_tunnel_server_channel::on_accept()	//连接已经建立
 {
-	_origin_channel->on_bindcmd_tunnel_accept(std::dynamic_pointer_cast<socks5_bindcmd_tunnel_server_channel>(shared_from_this()));
+	_origin_channel->on_bindcmd_tunnel_accept(std::dynamic_pointer_cast<socks5_bindcmd_tunnel_server_channel>(this->shared_from_this()));
 }
 
 void	socks5_bindcmd_tunnel_server_channel::on_closed()

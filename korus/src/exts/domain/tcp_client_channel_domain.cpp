@@ -8,7 +8,7 @@
 /////////////////base
 tcp_client_channel_domain::tcp_client_channel_domain(std::shared_ptr<reactor_loop> reactor, const std::string& server_addr, std::chrono::seconds connect_timeout/* = std::chrono::seconds(0)*/, std::chrono::seconds connect_retry_wait/* = std::chrono::seconds(-1)*/,
 	const uint32_t self_read_size/* = DEFAULT_READ_BUFSIZE*/, const uint32_t self_write_size/* = DEFAULT_WRITE_BUFSIZE*/, const uint32_t sock_read_size/* = 0*/, const uint32_t sock_write_size/* = 0*/)
-	: _server_addr_tmp(server_addr), tcp_client_channel(reactor, server_addr, connect_timeout, connect_retry_wait,	self_read_size, self_write_size, sock_read_size, sock_write_size)
+	: _server_addr_tmp(server_addr), tcp_client_handler_origin(reactor, server_addr, connect_timeout, connect_retry_wait,	self_read_size, self_write_size, sock_read_size, sock_write_size)
 {
 	_resolve.bind(std::bind(&tcp_client_channel_domain::on_resolve_result, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 }

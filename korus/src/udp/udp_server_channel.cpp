@@ -20,11 +20,6 @@ void	udp_server_handler_base::on_chain_final()
 {
 }
 
-void	udp_server_handler_base::on_chain_zomby()
-{
-
-}
-
 void	udp_server_handler_base::on_ready()
 { 
 	if (!_tunnel_next)
@@ -121,21 +116,21 @@ std::shared_ptr<reactor_loop>	udp_server_handler_base::reactor()
 }
 
 //////////////////////////////////channel
-udp_server_channel::udp_server_channel(std::shared_ptr<reactor_loop> reactor, const std::string& local_addr, const uint32_t self_read_size/* = DEFAULT_READ_BUFSIZE*/, const uint32_t self_write_size/* = DEFAULT_WRITE_BUFSIZE*/, const uint32_t sock_read_size/* = 0*/, const uint32_t sock_write_size/* = 0*/)
+udp_server_handler_origin::udp_server_handler_origin(std::shared_ptr<reactor_loop> reactor, const std::string& local_addr, const uint32_t self_read_size/* = DEFAULT_READ_BUFSIZE*/, const uint32_t self_write_size/* = DEFAULT_WRITE_BUFSIZE*/, const uint32_t sock_read_size/* = 0*/, const uint32_t sock_write_size/* = 0*/)
 	: udp_server_handler_base(reactor), 
 	udp_channel_base(local_addr, self_read_size, self_write_size, sock_read_size, sock_write_size)
 										
 {
-	_sockio_helper.bind(std::bind(&udp_server_channel::on_sockio_read, this, std::placeholders::_1), nullptr);
+	_sockio_helper.bind(std::bind(&udp_server_handler_origin::on_sockio_read, this, std::placeholders::_1), nullptr);
 	set_prepare();
 }
 
 //析构需要发生在产生线程
-udp_server_channel::~udp_server_channel()
+udp_server_handler_origin::~udp_server_handler_origin()
 {
 }
 
-bool	udp_server_channel::start()
+bool	udp_server_handler_origin::start()
 {
 	if (!is_prepare())
 	{
@@ -151,8 +146,8 @@ bool	udp_server_channel::start()
 	//线程调度，对于服务端的链接而言，close即意味着死亡，不存在重新连接的可能性
 	if (!reactor()->is_current_thread())
 	{
-		// udp_server_channel生命期一般比reactor短，所以加上引用计数
-		reactor()->start_async_task(std::bind(&udp_server_channel::start, this), this);
+		// udp_server_handler_origin生命期一般比reactor短，所以加上引用计数
+		reactor()->start_async_task(std::bind(&udp_server_handler_origin::start, this), this);
 		return true;
 	}
 
@@ -170,7 +165,7 @@ bool	udp_server_channel::start()
 }
 
 // 保证原子，考虑多线程环境下，buf最好是一个或若干完整包；可能触发错误/异常 on_error
-int32_t	udp_server_channel::send(const void* buf, const size_t len, const sockaddr_in& peer_addr)
+int32_t	udp_server_handler_origin::send(const void* buf, const size_t len, const sockaddr_in& peer_addr)
 {
 	if (!is_normal())
 	{
@@ -182,7 +177,7 @@ int32_t	udp_server_channel::send(const void* buf, const size_t len, const sockad
 	return ret;
 }
 
-void	udp_server_channel::close()
+void	udp_server_handler_origin::close()
 {	
 	if (!reactor())
 	{
@@ -193,15 +188,15 @@ void	udp_server_channel::close()
 	//线程调度，对于服务端的链接而言，close即意味着死亡，不存在重新连接的可能性
 	if (!reactor()->is_current_thread())
 	{
-		// udp_server_channel生命期一般比reactor短，所以加上引用计数
-		reactor()->start_async_task(std::bind(&udp_server_channel::close, this), this);
+		// udp_server_handler_origin生命期一般比reactor短，所以加上引用计数
+		reactor()->start_async_task(std::bind(&udp_server_handler_origin::close, this), this);
 		return;
 	}	
 
 	set_release();
 }
 
-bool	udp_server_channel::local_addr(std::string& addr)
+bool	udp_server_handler_origin::local_addr(std::string& addr)
 {
 	if (!is_normal())
 	{
@@ -214,7 +209,7 @@ bool	udp_server_channel::local_addr(std::string& addr)
 	return udp_channel_base::peer_addr(addr);
 }
 
-void	udp_server_channel::on_sockio_read(sockio_helper* sockio_id)
+void	udp_server_handler_origin::on_sockio_read(sockio_helper* sockio_id)
 {
 	if (!is_normal())
 	{
@@ -233,7 +228,7 @@ void	udp_server_channel::on_sockio_read(sockio_helper* sockio_id)
 	}
 }
 
-void	udp_server_channel::set_release()
+void	udp_server_handler_origin::set_release()
 {
 	if (is_release() || is_dead())
 	{
@@ -247,7 +242,7 @@ void	udp_server_channel::set_release()
 	on_closed();
 }
 
-int32_t	udp_server_channel::on_recv_buff(const void* buf, const size_t len, const sockaddr_in& peer_addr)
+int32_t	udp_server_handler_origin::on_recv_buff(const void* buf, const size_t len, const sockaddr_in& peer_addr)
 {
 	if (!is_normal())
 	{
@@ -260,10 +255,90 @@ int32_t	udp_server_channel::on_recv_buff(const void* buf, const size_t len, cons
 	return len;
 }
 
-void udp_server_channel::handle_close_strategy(CLOSE_MODE_STRATEGY cms)
+void udp_server_handler_origin::handle_close_strategy(CLOSE_MODE_STRATEGY cms)
 {
 	if (CMS_INNER_AUTO_CLOSE == cms)
 	{
 		close();	//内部会自动检查有效性
 	}
+}
+
+///////////////
+udp_server_handler_terminal::udp_server_handler_terminal(std::shared_ptr<reactor_loop> reactor) : udp_server_handler_base(reactor)
+{
+
+}
+
+udp_server_handler_terminal::~udp_server_handler_terminal()
+{
+	chain_final();
+}
+
+//override------------------
+void	udp_server_handler_terminal::on_chain_init()
+{
+
+}
+
+void	udp_server_handler_terminal::on_chain_final()
+{
+
+}
+
+void	udp_server_handler_terminal::on_ready()
+{
+
+}
+
+void	udp_server_handler_terminal::on_closed()
+{
+
+}
+
+//参考CHANNEL_ERROR_CODE定义
+CLOSE_MODE_STRATEGY	udp_server_handler_terminal::on_error(CHANNEL_ERROR_CODE code)
+{
+	return CMS_INNER_AUTO_CLOSE;
+}
+
+//这是一个待处理的完整包
+void	udp_server_handler_terminal::on_recv_pkg(const void* buf, const size_t len, const sockaddr_in& peer_addr)
+{
+
+}
+
+bool	udp_server_handler_terminal::start()
+{
+	return udp_server_handler_base::start();
+}
+
+int32_t	udp_server_handler_terminal::send(const void* buf, const size_t len, const sockaddr_in& peer_addr)
+{
+	return udp_server_handler_base::send(buf, len, peer_addr);
+}
+
+void	udp_server_handler_terminal::close()
+{
+	udp_server_handler_base::close();
+}
+
+bool	udp_server_handler_terminal::local_addr(std::string& addr)
+{
+	return udp_server_handler_base::local_addr(addr);
+}
+
+//override------------------
+void	udp_server_handler_terminal::chain_inref()
+{
+	this->shared_from_this().inref();
+}
+
+void	udp_server_handler_terminal::chain_deref()
+{
+	this->shared_from_this().deref();
+}
+
+void	udp_server_handler_terminal::on_release()
+{
+	//默认删除,屏蔽之
 }

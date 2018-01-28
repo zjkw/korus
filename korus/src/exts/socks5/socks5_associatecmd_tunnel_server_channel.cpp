@@ -25,21 +25,6 @@ void	socks5_associatecmd_tunnel_server_channel::on_chain_final()
 	_origin_channel = nullptr;
 }
 
-void	socks5_associatecmd_tunnel_server_channel::on_chain_zomby()
-{
-
-}
-
-long	socks5_associatecmd_tunnel_server_channel::chain_refcount()
-{
-	long ref = 0;
-	if (_origin_channel)
-	{
-		ref++;
-	}
-	return ref + udp_server_handler_base::chain_refcount();
-}
-
 void	socks5_associatecmd_tunnel_server_channel::on_ready()
 {
 	std::string addr;

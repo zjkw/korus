@@ -97,7 +97,7 @@ public:
 
 };
 
-class socks5_server_channel : public tcp_server_handler_base
+class socks5_server_channel : public tcp_server_handler_terminal
 {
 public:
 	socks5_server_channel(std::shared_ptr<reactor_loop> reactor, std::shared_ptr<socks5_server_auth> auth);
@@ -106,8 +106,6 @@ public:
 	//override------------------
 	virtual void	on_chain_init();
 	virtual void	on_chain_final();
-	virtual void	on_chain_zomby();
-	virtual long	chain_refcount();
 	virtual void	on_accept();
 	virtual void	on_closed();
 

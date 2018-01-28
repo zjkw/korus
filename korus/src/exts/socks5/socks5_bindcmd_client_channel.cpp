@@ -23,11 +23,6 @@ void	socks5_bindcmd_client_handler_base::on_chain_final()
 
 }
 
-void	socks5_bindcmd_client_handler_base::on_chain_zomby()
-{
-
-}
-
 //ctrl channel--------------
 // 下面四个函数可能运行在多线程环境下	
 int32_t	socks5_bindcmd_client_handler_base::ctrl_send(const void* buf, const size_t len)			// 保证原子, 认为是整包，返回值若<0参考CHANNEL_ERROR_CODE
@@ -239,95 +234,57 @@ void	socks5_bindcmd_client_handler_base::on_data_bindcmd_result(const CHANNEL_ER
 
 //////////////////////////////////
 
-socks5_bindcmd_client_channel::socks5_bindcmd_client_channel(std::shared_ptr<reactor_loop>	reactor, const std::string& proxy_addr, const std::string& server_addr,
+socks5_bindcmd_client_handler_origin::socks5_bindcmd_client_handler_origin(std::shared_ptr<reactor_loop>	reactor, const std::string& proxy_addr, const std::string& server_addr,
 	const std::string& socks_user/* = ""*/, const std::string& socks_psw/* = ""*/,	// 如果账号为空，将忽略密码，认为是无需鉴权
 	std::chrono::seconds connect_timeout/* = std::chrono::seconds(0)*/, std::chrono::seconds connect_retry_wait/* = std::chrono::seconds(-1)*/,
 	const uint32_t self_read_size/* = DEFAULT_READ_BUFSIZE*/, const uint32_t self_write_size/* = DEFAULT_WRITE_BUFSIZE*/, const uint32_t sock_read_size/* = 0*/, const uint32_t sock_write_size/* = 0*/)
-	: socks5_bindcmd_client_handler_base(reactor)
+	: _ctrl_channel(nullptr), _data_channel(nullptr), socks5_bindcmd_client_handler_base(reactor)
 {
 	//ctrl
-	std::shared_ptr<tcp_client_channel>							ctrl_origin_channel = std::make_shared<tcp_client_channel>(reactor, proxy_addr, connect_timeout, connect_retry_wait, self_read_size, self_write_size, sock_read_size, sock_write_size);
-	_ctrl_channel = std::make_shared<socks5_connectcmd_embedbind_client_channel>(reactor, server_addr, socks_user, socks_psw);
-	build_channel_chain_helper(std::dynamic_pointer_cast<tcp_client_handler_base>(_ctrl_channel), std::dynamic_pointer_cast<tcp_client_handler_base>(ctrl_origin_channel));
+	tcp_client_handler_origin*							ctrl_origin_channel = new tcp_client_handler_origin(reactor, proxy_addr, connect_timeout, connect_retry_wait, self_read_size, self_write_size, sock_read_size, sock_write_size);
+	_ctrl_channel = new socks5_connectcmd_embedbind_client_channel(reactor, server_addr, socks_user, socks_psw);
+	build_channel_chain_helper((tcp_client_handler_base*)ctrl_origin_channel, (tcp_client_handler_base*)_ctrl_channel);
 
 	//data
-	std::shared_ptr<tcp_client_channel>							data_origin_channel = std::make_shared<tcp_client_channel>(reactor, proxy_addr, connect_timeout, connect_retry_wait, self_read_size, self_write_size, sock_read_size, sock_write_size);
-	_data_channel = std::make_shared<socks5_bindcmd_originalbind_client_channel>(reactor, server_addr, socks_user, socks_psw);;
-	build_channel_chain_helper(std::dynamic_pointer_cast<tcp_client_handler_base>(_data_channel), std::dynamic_pointer_cast<tcp_client_handler_base>(data_origin_channel));	
+	tcp_client_handler_origin*							data_origin_channel = new tcp_client_handler_origin(reactor, proxy_addr, connect_timeout, connect_retry_wait, self_read_size, self_write_size, sock_read_size, sock_write_size);
+	_data_channel = new socks5_bindcmd_originalbind_client_channel(reactor, server_addr, socks_user, socks_psw);;
+	build_channel_chain_helper((tcp_client_handler_base*)data_origin_channel, (tcp_client_handler_base*)_data_channel);
 }
 
-socks5_bindcmd_client_channel::~socks5_bindcmd_client_channel()
+socks5_bindcmd_client_handler_origin::~socks5_bindcmd_client_handler_origin()
 {
 }
 
 //override------------------
-void	socks5_bindcmd_client_channel::on_chain_init()
+void	socks5_bindcmd_client_handler_origin::on_chain_init()
 {
 
 }
 
-void	socks5_bindcmd_client_channel::on_chain_final()
+void	socks5_bindcmd_client_handler_origin::on_chain_final()
 {
 
 }
 
-void	socks5_bindcmd_client_channel::on_chain_zomby()
+void	socks5_bindcmd_client_handler_origin::chain_final()
 {
-
-}
-
-long	socks5_bindcmd_client_channel::chain_refcount()
-{
-	long ref = 0;
-	if (_ctrl_channel)
-	{
-		ref += 1 + _ctrl_channel->chain_refcount();
-	}
-	if (_data_channel)
-	{
-		ref += 1 + _data_channel->chain_refcount();
-	}
-
-	return ref + socks5_bindcmd_client_handler_base::chain_refcount();
-}
-
-void	socks5_bindcmd_client_channel::chain_final()
-{
-	on_chain_final();
-
-	// 无需前置is_release判断，相信调用者
-	std::shared_ptr<socks5_connectcmd_embedbind_client_channel> ctrl_channel = _ctrl_channel;
-	std::shared_ptr<socks5_bindcmd_originalbind_client_channel> data_channel = _data_channel;
-	_ctrl_channel = nullptr;
-	_data_channel = nullptr;
-
-	if (ctrl_channel)
-	{
-		ctrl_channel->chain_final();
-	}
-	if (data_channel)
-	{
-		data_channel->chain_final();
-	}
-}
-
-void	socks5_bindcmd_client_channel::chain_zomby()
-{
-	on_chain_zomby();
+	socks5_bindcmd_client_handler_base::on_chain_final();
 
 	if (_ctrl_channel)
 	{
-		_ctrl_channel->chain_zomby();
+		delete _ctrl_channel;
+		_ctrl_channel = nullptr;
 	}
 	if (_data_channel)
 	{
-		_data_channel->chain_zomby();
+		delete _data_channel;
+		_data_channel = nullptr;
 	}
 }
 
 //ctrl channel--------------
 // 下面四个函数可能运行在多线程环境下	
-int32_t	socks5_bindcmd_client_channel::ctrl_send(const void* buf, const size_t len)			// 保证原子, 认为是整包，返回值若<0参考CHANNEL_ERROR_CODE
+int32_t	socks5_bindcmd_client_handler_origin::ctrl_send(const void* buf, const size_t len)			// 保证原子, 认为是整包，返回值若<0参考CHANNEL_ERROR_CODE
 {
 	if (!_ctrl_channel)
 	{
@@ -337,7 +294,7 @@ int32_t	socks5_bindcmd_client_channel::ctrl_send(const void* buf, const size_t l
 	return _ctrl_channel->send(buf, len);
 }
 
-void	socks5_bindcmd_client_channel::ctrl_close()
+void	socks5_bindcmd_client_handler_origin::ctrl_close()
 {
 	if (!_ctrl_channel)
 	{
@@ -347,7 +304,7 @@ void	socks5_bindcmd_client_channel::ctrl_close()
 	_ctrl_channel->close();
 }
 
-void	socks5_bindcmd_client_channel::ctrl_shutdown(int32_t howto)							// 参数参考全局函数 ::shutdown
+void	socks5_bindcmd_client_handler_origin::ctrl_shutdown(int32_t howto)							// 参数参考全局函数 ::shutdown
 {
 	if (!_ctrl_channel)
 	{
@@ -357,15 +314,14 @@ void	socks5_bindcmd_client_channel::ctrl_shutdown(int32_t howto)							// 参数参
 	_ctrl_channel->shutdown(howto);
 }
 
-void	socks5_bindcmd_client_channel::ctrl_connect()
+void	socks5_bindcmd_client_handler_origin::ctrl_connect()
 {
 	//构造函数中不能使用shared_from_this，因为对象还没构造出来
-	std::shared_ptr<socks5_bindcmd_client_channel> self = std::dynamic_pointer_cast<socks5_bindcmd_client_channel>(shared_from_this());
-	_ctrl_channel->set_integration(self);
-	_data_channel->set_integration(self);
+	_ctrl_channel->set_integration(this);
+	_data_channel->set_integration(this);
 }
 
-TCP_CLTCONN_STATE	socks5_bindcmd_client_channel::ctrl_state()
+TCP_CLTCONN_STATE	socks5_bindcmd_client_handler_origin::ctrl_state()
 {
 	if (!_ctrl_channel)
 	{
@@ -375,17 +331,17 @@ TCP_CLTCONN_STATE	socks5_bindcmd_client_channel::ctrl_state()
 	return _ctrl_channel->state();
 }
 
-void	socks5_bindcmd_client_channel::on_ctrl_connected()
+void	socks5_bindcmd_client_handler_origin::on_ctrl_connected()
 {
 	socks5_bindcmd_client_handler_base::on_ctrl_connected();
 }
 
-void	socks5_bindcmd_client_channel::on_ctrl_closed()
+void	socks5_bindcmd_client_handler_origin::on_ctrl_closed()
 {
 	socks5_bindcmd_client_handler_base::on_ctrl_closed();
 }
 
-CLOSE_MODE_STRATEGY	socks5_bindcmd_client_channel::on_ctrl_error(CHANNEL_ERROR_CODE code)		//参考CHANNEL_ERROR_CODE定义	
+CLOSE_MODE_STRATEGY	socks5_bindcmd_client_handler_origin::on_ctrl_error(CHANNEL_ERROR_CODE code)		//参考CHANNEL_ERROR_CODE定义	
 {
 	return CMS_INNER_AUTO_CLOSE;
 
@@ -393,7 +349,7 @@ CLOSE_MODE_STRATEGY	socks5_bindcmd_client_channel::on_ctrl_error(CHANNEL_ERROR_C
 
 //data channel--------------
 // 下面四个函数可能运行在多线程环境下	
-int32_t	socks5_bindcmd_client_channel::data_send(const void* buf, const size_t len)			// 保证原子, 认为是整包，返回值若<0参考CHANNEL_ERROR_CODE
+int32_t	socks5_bindcmd_client_handler_origin::data_send(const void* buf, const size_t len)			// 保证原子, 认为是整包，返回值若<0参考CHANNEL_ERROR_CODE
 {
 	if (!_data_channel)
 	{
@@ -403,7 +359,7 @@ int32_t	socks5_bindcmd_client_channel::data_send(const void* buf, const size_t l
 	return _data_channel->send(buf, len);
 }
 
-void	socks5_bindcmd_client_channel::data_close()
+void	socks5_bindcmd_client_handler_origin::data_close()
 {
 	if (!_data_channel)
 	{
@@ -413,7 +369,7 @@ void	socks5_bindcmd_client_channel::data_close()
 	_data_channel->close();
 }
 
-void	socks5_bindcmd_client_channel::data_shutdown(int32_t howto)							// 参数参考全局函数 ::shutdown
+void	socks5_bindcmd_client_handler_origin::data_shutdown(int32_t howto)							// 参数参考全局函数 ::shutdown
 {
 	if (!_data_channel)
 	{
@@ -423,7 +379,7 @@ void	socks5_bindcmd_client_channel::data_shutdown(int32_t howto)							// 参数参
 	_data_channel->shutdown(howto);
 }
 
-void	socks5_bindcmd_client_channel::data_connect()
+void	socks5_bindcmd_client_handler_origin::data_connect()
 {
 	if (!_data_channel)
 	{
@@ -433,7 +389,7 @@ void	socks5_bindcmd_client_channel::data_connect()
 	_data_channel->connect();
 }
 
-TCP_CLTCONN_STATE	socks5_bindcmd_client_channel::data_state()
+TCP_CLTCONN_STATE	socks5_bindcmd_client_handler_origin::data_state()
 {
 	if (!_data_channel)
 	{
@@ -443,23 +399,150 @@ TCP_CLTCONN_STATE	socks5_bindcmd_client_channel::data_state()
 	return _data_channel->state();
 }
 
-void	socks5_bindcmd_client_channel::on_data_connected()
+void	socks5_bindcmd_client_handler_origin::on_data_connected()
 {
 	socks5_bindcmd_client_handler_base::on_data_connected();
 }
 
-void	socks5_bindcmd_client_channel::on_data_closed()
+void	socks5_bindcmd_client_handler_origin::on_data_closed()
 {
 	socks5_bindcmd_client_handler_base::on_data_closed();
 }
 
-CLOSE_MODE_STRATEGY	socks5_bindcmd_client_channel::on_data_error(CHANNEL_ERROR_CODE code)		//参考CHANNEL_ERROR_CODE定义
+CLOSE_MODE_STRATEGY	socks5_bindcmd_client_handler_origin::on_data_error(CHANNEL_ERROR_CODE code)		//参考CHANNEL_ERROR_CODE定义
 {
 	return CMS_INNER_AUTO_CLOSE;
 }
 
-void	socks5_bindcmd_client_channel::on_data_bindcmd_result(const CHANNEL_ERROR_CODE code, const std::string& proxy_listen_target_addr)		//代理服务器用于监听“目标服务器过来的连接”地址
+void	socks5_bindcmd_client_handler_origin::on_data_bindcmd_result(const CHANNEL_ERROR_CODE code, const std::string& proxy_listen_target_addr)		//代理服务器用于监听“目标服务器过来的连接”地址
 {
 	//	_data_channel->server_addr(proxy_listen_target_addr);
 //	_data_channel->connect();
+}
+
+/////////////////////////
+socks5_bindcmd_client_handler_terminal::socks5_bindcmd_client_handler_terminal(std::shared_ptr<reactor_loop>	reactor) : socks5_bindcmd_client_handler_base(reactor)
+{
+
+}
+
+socks5_bindcmd_client_handler_terminal::~socks5_bindcmd_client_handler_terminal()
+{
+	chain_final();
+}
+
+//override------------------
+void	socks5_bindcmd_client_handler_terminal::on_chain_init()
+{
+
+}
+
+void	socks5_bindcmd_client_handler_terminal::on_chain_final()
+{
+
+}
+
+//ctrl channel--------------
+// 下面五个函数可能运行在多线程环境下	
+int32_t	socks5_bindcmd_client_handler_terminal::ctrl_send(const void* buf, const size_t len)			// 保证原子, 认为是整包，返回值若<0参考CHANNEL_ERROR_CODE
+{
+	return socks5_bindcmd_client_handler_base::ctrl_send(buf, len);
+}
+
+void	socks5_bindcmd_client_handler_terminal::ctrl_close()
+{
+	socks5_bindcmd_client_handler_base::ctrl_close();
+}
+
+void	socks5_bindcmd_client_handler_terminal::ctrl_shutdown(int32_t howto)							// 参数参考全局函数 ::shutdown
+{
+	socks5_bindcmd_client_handler_base::ctrl_shutdown(howto);
+}
+
+void	socks5_bindcmd_client_handler_terminal::ctrl_connect()
+{
+	socks5_bindcmd_client_handler_base::ctrl_connect();
+}
+
+TCP_CLTCONN_STATE	socks5_bindcmd_client_handler_terminal::ctrl_state()
+{
+	return socks5_bindcmd_client_handler_base::ctrl_state();
+}
+
+void	socks5_bindcmd_client_handler_terminal::on_ctrl_connected()
+{
+
+}
+
+void	socks5_bindcmd_client_handler_terminal::on_ctrl_closed()
+{
+
+}
+
+CLOSE_MODE_STRATEGY	socks5_bindcmd_client_handler_terminal::on_ctrl_error(CHANNEL_ERROR_CODE code)				//参考CHANNEL_ERROR_CODE定义	
+{
+	return CMS_INNER_AUTO_CLOSE;
+}
+
+//data channel--------------
+// 下面五个函数可能运行在多线程环境下	
+int32_t	socks5_bindcmd_client_handler_terminal::data_send(const void* buf, const size_t len)			// 保证原子, 认为是整包，返回值若<0参考CHANNEL_ERROR_CODE
+{
+	return socks5_bindcmd_client_handler_base::data_send(buf, len);
+}
+
+void	socks5_bindcmd_client_handler_terminal::data_close()
+{
+	socks5_bindcmd_client_handler_base::data_close();
+}
+
+void	socks5_bindcmd_client_handler_terminal::data_shutdown(int32_t howto)							// 参数参考全局函数 ::shutdown
+{
+	socks5_bindcmd_client_handler_base::data_shutdown(howto);
+}
+
+void	socks5_bindcmd_client_handler_terminal::data_connect()
+{
+	socks5_bindcmd_client_handler_base::data_connect();
+}
+
+TCP_CLTCONN_STATE	socks5_bindcmd_client_handler_terminal::data_state()
+{
+	return socks5_bindcmd_client_handler_base::data_state();
+}
+
+void	socks5_bindcmd_client_handler_terminal::on_data_connected()
+{
+
+}
+
+void	socks5_bindcmd_client_handler_terminal::on_data_closed()
+{
+
+}
+
+CLOSE_MODE_STRATEGY	socks5_bindcmd_client_handler_terminal::on_data_error(CHANNEL_ERROR_CODE code)		//参考CHANNEL_ERROR_CODE定义
+{
+	return CMS_INNER_AUTO_CLOSE;
+}
+
+void	socks5_bindcmd_client_handler_terminal::on_data_bindcmd_result(const CHANNEL_ERROR_CODE code, const std::string& proxy_listen_target_addr)		//代理服务器用于监听“目标服务器过来的连接”地址
+{
+
+}
+
+//override------------------
+void	socks5_bindcmd_client_handler_terminal::chain_inref()
+{
+	this->shared_from_this().inref();
+}
+
+void	socks5_bindcmd_client_handler_terminal::chain_deref()
+{
+	this->shared_from_this().deref();
+}
+
+void	socks5_bindcmd_client_handler_terminal::on_release()
+{
+	//默认删除,屏蔽之
 }

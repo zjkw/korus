@@ -6,7 +6,7 @@
 #include "korus/src/thread/thread_object.h"
 #include "udp_server_channel.h"
 
-// 对应用层可见类：udp_server_channel, udp_server_handler_base, reactor_loop, udp_server. 都可运行在多线程环境下，所以都要求用shared_ptr包装起来，解决生命期问题
+// 对应用层可见类：udp_server_handler_origin, udp_server_handler_base, reactor_loop, udp_server. 都可运行在多线程环境下，所以都要求用shared_ptr包装起来，解决生命期问题
 // udp_server不提供遍历channel的接口，这样减少内部复杂性，另外channel遍历需求也只是部分应用需求，上层自己搞定
 // 如果有多进程实例绑定相同本地ip端口，需要注意当某进程挂掉后，原先和之通信的对端对象将和现存某进程通信，当严格要求进程与逻辑对象映射时候，需要做转发或拒绝服务
 
@@ -113,18 +113,17 @@ private:
 	void common_thread_init(thread_object*	thread_obj, const udp_server_channel_factory_t& factory)
 	{
 		std::shared_ptr<reactor_loop>		reactor = std::make_shared<reactor_loop>();
-		std::shared_ptr<udp_server_channel>	origin_channel = std::make_shared<udp_server_channel>(reactor, _local_addr, _self_read_size, _self_write_size, _sock_read_size, _sock_write_size);
+		udp_server_handler_origin*	origin_channel = new udp_server_handler_origin(reactor, _local_addr, _self_read_size, _self_write_size, _sock_read_size, _sock_write_size);
 		std::shared_ptr<udp_server_handler_base>	terminal_channel = factory(reactor);
-		build_channel_chain_helper(std::dynamic_pointer_cast<udp_server_handler_base>(origin_channel), terminal_channel);
+		build_channel_chain_helper((udp_server_handler_base*)origin_channel, (udp_server_handler_base*)terminal_channel.get());
 	
-		thread_obj->add_exit_task(std::bind(&udp_server::common_thread_exit, this, thread_obj, reactor, origin_channel));
+		thread_obj->add_exit_task(std::bind(&udp_server::common_thread_exit, this, thread_obj, reactor, terminal_channel));
 		thread_obj->add_resident_task(std::bind(&reactor_loop::run_once, reactor));
 
 		origin_channel->start();
 	}
-	void common_thread_exit(thread_object*	thread_obj, std::shared_ptr<reactor_loop> reactor, std::shared_ptr<udp_server_channel>	channel)
+	void common_thread_exit(thread_object*	thread_obj, std::shared_ptr<reactor_loop> reactor, std::shared_ptr<udp_server_handler_base>	terminal_channel)
 	{
-		try_chain_final(channel, 1);
 		reactor->invalid();	//可能上层还保持间接或直接引用，这里使其失效：“只管功能失效化，不管生命期释放”
 	}
 };
@@ -144,7 +143,7 @@ public:
 
 	virtual ~udp_server()
 	{
-		try_chain_final(_channel, 1);
+
 	}
 	virtual void start()
 	{
@@ -159,9 +158,9 @@ public:
 		{
 			assert(_factory);
 
-			_channel = std::make_shared<udp_server_channel>(_reactor, _local_addr, _self_read_size, _self_write_size, _sock_read_size, _sock_write_size);
-			std::shared_ptr<udp_server_handler_base>	terminal_channel = _factory(_reactor);
-			build_channel_chain_helper(std::dynamic_pointer_cast<udp_server_handler_base>(_channel), terminal_channel);
+			udp_server_handler_origin* origin_channel = new udp_server_handler_origin(_reactor, _local_addr, _self_read_size, _self_write_size, _sock_read_size, _sock_write_size);
+			_channel = _factory(_reactor);
+			build_channel_chain_helper((udp_server_handler_base*)origin_channel, (udp_server_handler_base*)_channel.get());
 			_channel->start();
 		}
 	}
@@ -178,5 +177,5 @@ private:
 	uint32_t								_self_write_size;
 	uint32_t								_sock_read_size;
 	uint32_t								_sock_write_size;
-	std::shared_ptr<udp_server_channel>		_channel;
+	std::shared_ptr<udp_server_handler_base>		_channel;
 };

@@ -11,10 +11,10 @@
 class tcp_connectcmd_server_handler;
 
 //bindcmd
-class tcp_bindcmd_client_handler : public tcp_client_handler_base
+class tcp_bindcmd_client_handler : public tcp_client_handler_terminal
 {
 public:
-	tcp_bindcmd_client_handler(std::shared_ptr<reactor_loop> reactor, std::shared_ptr<tcp_connectcmd_server_handler> ctrl_channel) : _ctrl_channel(ctrl_channel), tcp_client_handler_base(reactor)
+	tcp_bindcmd_client_handler(std::shared_ptr<reactor_loop> reactor, std::shared_ptr<tcp_connectcmd_server_handler> ctrl_channel) : _ctrl_channel(ctrl_channel), tcp_client_handler_terminal(reactor)
 	{
 	}
 	virtual ~tcp_bindcmd_client_handler()
@@ -23,26 +23,6 @@ public:
 	}
 
 	//override------------------
-	virtual void	on_chain_init()
-	{
-	}
-	virtual void	on_chain_final()
-	{
-	}
-	virtual void	on_chain_zomby()
-	{
-		// 因为没有被其他对象引用，本对象可在框架要求下退出，可以主动与消去外界引用
-		
-	}
-	virtual long	chain_refcount()
-	{
-		long ref = 0;
-		if (_ctrl_channel)
-		{
-			ref += 1;
-		}
-		return ref + tcp_client_handler_base::chain_refcount();
-	}
 	virtual void	on_connected()	//连接已经建立
 	{
 		char szTest[] = "hello server, i am client!";
@@ -55,7 +35,8 @@ public:
 		printf("\nClosed\n");
 		if (_ctrl_channel)
 		{
-			_ctrl_channel->close();
+			//tbd for compile
+		//	_ctrl_channel->close();
 		}
 	}
 
@@ -89,35 +70,16 @@ private:
 };
 
 //connectcmd
-class tcp_connectcmd_server_handler : public tcp_server_handler_base
+class tcp_connectcmd_server_handler : public tcp_server_handler_terminal
 {
 public:
-	tcp_connectcmd_server_handler(std::shared_ptr<reactor_loop> reactor) : tcp_server_handler_base(reactor){}
+	tcp_connectcmd_server_handler(std::shared_ptr<reactor_loop> reactor) : tcp_server_handler_terminal(reactor){}
 	virtual ~tcp_connectcmd_server_handler()
 	{
 		printf("\nexit: 0x%p\n", this);
 	}
 
 	//override------------------
-	virtual void	on_chain_init()
-	{
-	}
-	virtual void	on_chain_final()
-	{
-	}
-	virtual void	on_chain_zomby()
-	{
-		// 因为没有被其他对象引用，本对象可在框架要求下退出，可以主动与消去外界引用
-	}
-	virtual long	chain_refcount()
-	{
-		long ref = 0;
-		if (_data_channel)
-		{
-			ref += 1;
-		}
-		return ref + tcp_server_handler_base::chain_refcount();
-	}
 	virtual void	on_accept()	//连接已经建立
 	{
 		char szTest[] = "hello client, i am server!";
@@ -165,9 +127,9 @@ private:
 		//ctrl
 		if (!_data_channel)
 		{
-			std::shared_ptr<tcp_client_channel>		data_origin_channel = std::make_shared<tcp_client_channel>(reactor(), server_addr);
+			tcp_client_handler_origin*		data_origin_channel = new tcp_client_handler_origin(reactor(), server_addr);
 			_data_channel = std::make_shared<tcp_bindcmd_client_handler>(reactor(), std::dynamic_pointer_cast<tcp_connectcmd_server_handler>(shared_from_this()));
-			build_channel_chain_helper(std::dynamic_pointer_cast<tcp_client_handler_base>(_data_channel), std::dynamic_pointer_cast<tcp_client_handler_base>(data_origin_channel));
+			build_channel_chain_helper((tcp_client_handler_base*)data_origin_channel, (tcp_client_handler_base*)_data_channel.get());
 		}
 		return true;
 	}

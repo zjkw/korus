@@ -10,10 +10,10 @@
 
 std::string	server_addr = "0.0.0.0:9099";
 
-class udp_client_handler : public udp_client_handler_base
+class udp_client_handler : public udp_client_handler_terminal
 {
 public:
-	udp_client_handler(std::shared_ptr<reactor_loop> reactor) : udp_client_handler_base(reactor){}
+	udp_client_handler(std::shared_ptr<reactor_loop> reactor) : udp_client_handler_terminal(reactor){}
 	virtual ~udp_client_handler(){}
 
 	//override------------------
@@ -22,14 +22,6 @@ public:
 	}
 	virtual void	on_chain_final()
 	{
-	}
-	virtual void	on_chain_zomby()
-	{
-		// 因为没有被其他对象引用，本对象可在框架要求下退出，可以主动与消去外界引用
-	}
-	virtual long	chain_refcount()
-	{
-		return udp_client_handler_base::chain_refcount();
 	}
 	virtual void	on_ready()
 	{

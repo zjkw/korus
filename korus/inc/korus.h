@@ -6,9 +6,9 @@
 #include "korus/src/reactor/idle_helper.h"
 #include "korus/src/reactor/reactor_loop.h"
 
-#include "korus/src/tcp/tcp_server_channel.h"
-#include "korus/src/tcp/tcp_server.h"
 #include "korus/src/tcp/tcp_client_channel.h"
+#include "korus/src/tcp/tcp_server.h"
+#include "korus/src/tcp/tcp_server_channel.h"
 #include "korus/src/tcp/tcp_client.h"
 
 #include "korus/src/udp/udp_server_channel.h"

@@ -17,10 +17,6 @@ tcp_server_channel_creator::~tcp_server_channel_creator()
 {
 	_reactor->stop_async_task(this);
 	_idle_helper.stop();
-	for (std::map<SOCKET, std::shared_ptr<tcp_server_channel>>::iterator it = _channel_list.begin(); it != _channel_list.end(); it++)
-	{
-		try_chain_final(it->second, 1);
-	}
 	_channel_list.clear();
 }
 
@@ -40,10 +36,11 @@ void tcp_server_channel_creator::on_newfd(const SOCKET fd, const struct sockaddr
 		}
 		else
 		{			
-			std::shared_ptr<tcp_server_channel>			origin_channel	=	std::make_shared<tcp_server_channel>(_reactor, fd, _self_read_size, _self_write_size, _sock_read_size, _sock_write_size);
-			std::shared_ptr<tcp_server_handler_base>	terminal_channel = _factory(_reactor);
-			build_channel_chain_helper(std::dynamic_pointer_cast<tcp_server_handler_base>(origin_channel), terminal_channel);
-			_channel_list[fd] = origin_channel;
+			tcp_server_handler_origin*	origin_channel = new tcp_server_handler_origin(_reactor, fd, _self_read_size, _self_write_size, _sock_read_size, _sock_write_size);
+			std::shared_ptr<tcp_server_handler_base>		terminal_channel = _factory(_reactor);
+			build_channel_chain_helper((tcp_server_handler_base*)origin_channel, (tcp_server_handler_base*)terminal_channel.get());
+			chain_object_sharedwrapper<tcp_server_handler_origin>	wrap(origin_channel);
+			_channel_list[fd] = wrap;
 			origin_channel->start();
 			origin_channel->on_accept();
 		}
@@ -61,7 +58,7 @@ void tcp_server_channel_creator::on_newfd(const SOCKET fd, const struct sockaddr
 void tcp_server_channel_creator::on_idle_recover(idle_helper* idle_id)
 {
 	//找到上次位置
-	std::map<SOCKET, std::shared_ptr<tcp_server_channel>>::iterator it = _channel_list.upper_bound(_last_recover_scan_fd);
+	std::map<SOCKET, chain_object_sharedwrapper<tcp_server_handler_origin>>::iterator it = _channel_list.upper_bound(_last_recover_scan_fd);
 	if (it == _channel_list.end())
 	{
 		it = _channel_list.begin();
@@ -71,7 +68,7 @@ void tcp_server_channel_creator::on_idle_recover(idle_helper* idle_id)
 		// 无效才可剔除，引用为1表示仅仅tcp_server_channel_creator引用这个channel，而channel是这个对象创建（同线程）
 		if (it->second->is_release())	//origin_channel_list + terminal
 		{
-			try_chain_final(it->second, 1);
+
 			_channel_list.erase(it++);
 		}
 		else

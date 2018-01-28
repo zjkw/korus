@@ -16,8 +16,6 @@ public:
 	//override------------------
 	virtual void	on_chain_init();
 	virtual void	on_chain_final();
-	virtual void	on_chain_zomby();
-	virtual long	chain_refcount();
 	virtual void	on_ready();
 	virtual void	on_closed();
 	//²Î¿¼CHANNEL_ERROR_CODE¶¨Òå

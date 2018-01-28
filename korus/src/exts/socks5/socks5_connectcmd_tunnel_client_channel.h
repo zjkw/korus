@@ -12,8 +12,6 @@ public:
 	//override------------------
 	virtual void	on_chain_init();
 	virtual void	on_chain_final();
-	virtual void	on_chain_zomby();
-	virtual long	chain_refcount();
 
 	virtual void	on_connected();
 	virtual void	on_closed();

@@ -6,7 +6,7 @@
 #include "domain_async_resolve_helper.h"
 #include "domain_cache_mgr.h"
 
-// 对应用层可见类：tcp_client_channel, tcp_client_handler_base, reactor_loop, tcp_client_domain. 都可运行在多线程环境下，所以都要求用shared_ptr包装起来，解决生命期问题
+// 对应用层可见类：tcp_client_handler_origin, tcp_client_handler_base, reactor_loop, tcp_client_domain. 都可运行在多线程环境下
 // tcp_client_domain不提供遍历channel的接口，这样减少内部复杂性，另外channel遍历需求也只是部分应用需求，上层自己搞定
 
 // 占坑
@@ -26,7 +26,6 @@ public:
 	// addr格式ip:port 或 domain:port
 	// 当thread_num为0表示默认核数
 	// 支持亲缘性绑定
-	// 外部使用 dynamic_pointer_cas 将派生类的智能指针转换成 std::shared_ptr<tcp_client_handler_base>
 	// connect_timeout 表示连接开始多久后多久没收到确定结果，0表示不要超时功能; 
 	// connect_retry_wait 表示知道连接失败或超时后还要等多久才开始重连，为0表立即，为-1表示不重连
 	tcp_client_domain(uint16_t thread_num, const std::string& server_addr, const tcp_client_channel_factory_t& factory,

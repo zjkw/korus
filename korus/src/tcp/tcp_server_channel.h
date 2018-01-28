@@ -2,7 +2,7 @@
 
 #include <assert.h>
 #include "tcp_channel_base.h"
-#include "korus/src/util/chain_sharedobj_base.h"
+#include "korus/src/util/chain_object.h"
 #include "korus/src/reactor/reactor_loop.h"
 #include "korus/src/reactor/sockio_helper.h"
 
@@ -25,7 +25,7 @@ using tcp_server_channel_factory_t = std::function<std::shared_ptr<tcp_server_ha
 
 // 可能处于多线程环境下
 // on_error不能纯虚 tbd，加上close默认处理
-class tcp_server_handler_base : public chain_sharedobj_base<tcp_server_handler_base>
+class tcp_server_handler_base : public chain_object_linkbase<tcp_server_handler_base>
 {
 public:
 	tcp_server_handler_base(std::shared_ptr<reactor_loop> reactor);
@@ -34,7 +34,6 @@ public:
 	//override------------------
 	virtual void	on_chain_init();
 	virtual void	on_chain_final();	
-	virtual void	on_chain_zomby();
 	virtual void	on_accept();
 	virtual void	on_closed();
 	//参考CHANNEL_ERROR_CODE定义
@@ -47,21 +46,21 @@ public:
 	virtual int32_t	send(const void* buf, const size_t len);
 	virtual void	close();
 	virtual void	shutdown(int32_t howto);
-	std::shared_ptr<reactor_loop>	reactor();
-
 	virtual bool	peer_addr(std::string& addr);
 	virtual bool	local_addr(std::string& addr);
+
+	std::shared_ptr<reactor_loop>	reactor();
 	
-private:
+protected:
 	std::shared_ptr<reactor_loop>		_reactor;
 };
 
 //有效性优先级：is_valid > INVALID_SOCKET,即所有函数都会先判断is_valid这是个原子操作
-class tcp_server_channel : public tcp_channel_base, public tcp_server_handler_base, public multiform_state
+class tcp_server_handler_origin : public tcp_channel_base, public tcp_server_handler_base, public multiform_state
 {
 public:
-	tcp_server_channel(std::shared_ptr<reactor_loop> reactor, SOCKET fd, const uint32_t self_read_size, const uint32_t self_write_size, const uint32_t sock_read_size, const uint32_t sock_write_size);
-	virtual ~tcp_server_channel();
+	tcp_server_handler_origin(std::shared_ptr<reactor_loop> reactor, SOCKET fd, const uint32_t self_read_size, const uint32_t self_write_size, const uint32_t sock_read_size, const uint32_t sock_write_size);
+	virtual ~tcp_server_handler_origin();
 
 	virtual bool		start();
 	// 下面三个函数可能运行在多线程环境下	
@@ -82,4 +81,36 @@ private:
 	virtual	int32_t	on_recv_buff(const void* buf, const size_t len, bool& left_partial_pkg);
 
 	void handle_close_strategy(CLOSE_MODE_STRATEGY cms);
+};
+
+class tcp_server_handler_terminal : public tcp_server_handler_base, public std::enable_shared_from_this<tcp_server_handler_terminal>
+{
+public:
+	tcp_server_handler_terminal(std::shared_ptr<reactor_loop> reactor);
+	virtual ~tcp_server_handler_terminal();
+
+	//override------------------
+	virtual void	on_chain_init();
+	virtual void	on_chain_final();
+	virtual void	on_accept();
+	virtual void	on_closed();
+	//参考CHANNEL_ERROR_CODE定义
+	virtual CLOSE_MODE_STRATEGY	on_error(CHANNEL_ERROR_CODE code);
+	//提取数据包：返回值 =0 表示包不完整； >0 完整的包(长)
+	virtual int32_t on_recv_split(const void* buf, const size_t len);
+	//这是一个待处理的完整包
+	virtual void	on_recv_pkg(const void* buf, const size_t len);
+
+	virtual int32_t	send(const void* buf, const size_t len);
+	virtual void	close();
+	virtual void	shutdown(int32_t howto);
+	virtual bool	peer_addr(std::string& addr);
+	virtual bool	local_addr(std::string& addr);
+
+	//override------------------
+	virtual void	chain_inref();
+	virtual void	chain_deref();
+
+protected:
+	virtual void	on_release();
 };

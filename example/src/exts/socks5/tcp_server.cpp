@@ -9,10 +9,10 @@
 #endif
 
 //connectcmd
-class tcp_connectcmd_server_handler : public tcp_server_handler_base
+class tcp_connectcmd_server_handler : public tcp_server_handler_terminal
 {
 public:
-	tcp_connectcmd_server_handler(std::shared_ptr<reactor_loop> reactor) : tcp_server_handler_base(reactor){}
+	tcp_connectcmd_server_handler(std::shared_ptr<reactor_loop> reactor) : tcp_server_handler_terminal(reactor){}
 	virtual ~tcp_connectcmd_server_handler()
 	{
 		printf("\nexit: 0x%p\n", this);
@@ -25,14 +25,7 @@ public:
 	virtual void	on_chain_final()
 	{
 	}
-	virtual void	on_chain_zomby()
-	{
-		// 因为没有被其他对象引用，本对象可在框架要求下退出，可以主动与消去外界引用
-	}
-	virtual long	chain_refcount()
-	{
-		return tcp_server_handler_base::chain_refcount();
-	}
+
 	virtual void	on_accept()	//连接已经建立
 	{
 		char szTest[] = "hello client, i am server!";

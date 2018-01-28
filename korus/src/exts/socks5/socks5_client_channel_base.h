@@ -27,7 +27,7 @@ protected:
 		SCS_NORMAL = 4,
 	};
 	SOCKS_CLIENT_STATE	_shakehand_state;
-
+	
 	int32_t			make_method_pkg(void* buf, const uint16_t size);
 	void			on_method_pkg(const void* buf, const uint16_t size);
 

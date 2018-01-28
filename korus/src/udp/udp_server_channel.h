@@ -1,7 +1,7 @@
 #pragma once
 
 #include "udp_channel_base.h"
-#include "korus/src/util/chain_sharedobj_base.h"
+#include "korus/src/util/chain_object.h"
 #include "korus/src/reactor/reactor_loop.h"
 #include "korus/src/reactor/sockio_helper.h"
 
@@ -24,7 +24,7 @@ using udp_server_channel_factory_t = std::function<std::shared_ptr<udp_server_ha
 
 // 可能处于多线程环境下
 // on_error不能纯虚 tbd，加上close默认处理
-class udp_server_handler_base : public chain_sharedobj_base<udp_server_handler_base>
+class udp_server_handler_base : public chain_object_linkbase<udp_server_handler_base>
 {
 public:
 	udp_server_handler_base(std::shared_ptr<reactor_loop> reactor);
@@ -33,7 +33,6 @@ public:
 	//override------------------
 	virtual void	on_chain_init();
 	virtual void	on_chain_final();
-	virtual void	on_chain_zomby();
 	virtual void	on_ready();
 	virtual void	on_closed();
 	//参考CHANNEL_ERROR_CODE定义
@@ -52,11 +51,11 @@ private:
 	std::shared_ptr<reactor_loop>	_reactor;
 };
 
-class udp_server_channel : public udp_channel_base, public udp_server_handler_base, public multiform_state
+class udp_server_handler_origin : public udp_channel_base, public udp_server_handler_base, public multiform_state
 {
 public:
-	udp_server_channel(std::shared_ptr<reactor_loop> reactor, const std::string& local_addr, const uint32_t self_read_size = DEFAULT_READ_BUFSIZE, const uint32_t self_write_size = DEFAULT_WRITE_BUFSIZE, const uint32_t sock_read_size = 0, const uint32_t sock_write_size = 0);
-	virtual ~udp_server_channel();
+	udp_server_handler_origin(std::shared_ptr<reactor_loop> reactor, const std::string& local_addr, const uint32_t self_read_size = DEFAULT_READ_BUFSIZE, const uint32_t self_write_size = DEFAULT_WRITE_BUFSIZE, const uint32_t sock_read_size = 0, const uint32_t sock_write_size = 0);
+	virtual ~udp_server_handler_origin();
 
 	// 下面四个函数可能运行在多线程环境下	
 	virtual bool	start();
@@ -74,4 +73,34 @@ private:
 	virtual	int32_t	on_recv_buff(const void* buf, const size_t len, const sockaddr_in& peer_addr);
 
 	void handle_close_strategy(CLOSE_MODE_STRATEGY cms);
+};
+
+//terminal实现
+class udp_server_handler_terminal : public udp_server_handler_base, public std::enable_shared_from_this<udp_server_handler_terminal>
+{
+public:
+	udp_server_handler_terminal(std::shared_ptr<reactor_loop> reactor);
+	virtual ~udp_server_handler_terminal();
+
+	//override------------------
+	virtual void	on_chain_init();
+	virtual void	on_chain_final();
+	virtual void	on_ready();
+	virtual void	on_closed();
+	//参考CHANNEL_ERROR_CODE定义
+	virtual CLOSE_MODE_STRATEGY	on_error(CHANNEL_ERROR_CODE code);
+	//这是一个待处理的完整包
+	virtual void	on_recv_pkg(const void* buf, const size_t len, const sockaddr_in& peer_addr);
+
+	virtual bool	start();
+	virtual int32_t	send(const void* buf, const size_t len, const sockaddr_in& peer_addr);
+	virtual void	close();
+	virtual bool	local_addr(std::string& addr);
+
+	//override------------------
+	virtual void	chain_inref();
+	virtual void	chain_deref();
+
+protected:
+	virtual void	on_release();
 };

@@ -2,7 +2,7 @@
 
 #include "socks5_client_channel_base.h"
 
-class socks5_bindcmd_client_channel;
+class socks5_bindcmd_client_handler_origin;
 
 class socks5_bindcmd_originalbind_client_channel : public socks5_client_channel_base
 {
@@ -13,9 +13,9 @@ public:
 	//override------------------
 	virtual void	on_chain_init();
 	virtual void	on_chain_final();
-	virtual long	chain_refcount();
-	virtual std::shared_ptr<chain_sharedobj_interface> chain_terminal();
-	void set_integration(std::shared_ptr<socks5_bindcmd_client_channel> integration) { _integration = integration; }
+	virtual void	chain_inref();
+	virtual void	chain_deref();
+	void set_integration(socks5_bindcmd_client_handler_origin* integration) { _integration = integration; }
 
 	virtual void	on_connected();
 	virtual void	on_closed();
@@ -26,7 +26,7 @@ public:
 
 private:
 	std::string _server_addr;
-	std::shared_ptr<socks5_bindcmd_client_channel> _integration;
+	socks5_bindcmd_client_handler_origin* _integration;
 	
 	virtual int32_t	make_tunnel_pkg(void* buf, const uint16_t size);
 	virtual void	on_tunnel_pkg(const void* buf, const uint16_t size);

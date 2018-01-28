@@ -4,7 +4,7 @@
 #include "socks5_associatecmd_client_channel.h"
 
 socks5_associatecmd_client_channel::socks5_associatecmd_client_channel(std::shared_ptr<reactor_loop> reactor, const std::string& local_port, const std::string& socks_user, const std::string& socks_psw, const udp_client_channel_factory_t& udp_factory)
-: _local_port(local_port), _udp_factory(udp_factory), _port(0), socks5_client_channel_base(reactor, socks_user, socks_psw)
+: _local_port(local_port), _udp_factory(udp_factory), _port(0), _channel(nullptr), socks5_client_channel_base(reactor, socks_user, socks_psw)
 {
 	_resolve.reactor(reactor.get());
 	_resolve.bind(std::bind(&socks5_associatecmd_client_channel::on_resolve_result, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
@@ -22,15 +22,6 @@ void	socks5_associatecmd_client_channel::on_chain_init()
 
 void	socks5_associatecmd_client_channel::on_chain_final()
 {
-}
-
-void	socks5_associatecmd_client_channel::on_chain_zomby()
-{
-	if (_channel)
-	{
-		try_chain_final(_channel, 1);
-		_channel = nullptr;
-	}
 }
 
 int32_t	socks5_associatecmd_client_channel::make_tunnel_pkg(void* buf, const uint16_t size)
@@ -174,10 +165,10 @@ bool socks5_associatecmd_client_channel::create_udp_client_channel(const sockadd
 		return true;
 	}
 	std::string bind_addr = std::string("0.0.0.0") + ":" + _local_port;
-	_channel = std::make_shared<udp_client_channel>(reactor(), bind_addr);
+	udp_client_handler_origin* origin_channel = new udp_client_handler_origin(reactor(), bind_addr);
+	_channel = _udp_factory(reactor());
+	build_channel_chain_helper((udp_client_handler_base*)origin_channel, (udp_client_handler_base*)_channel.get());
 	_channel->connect(si);
-	std::shared_ptr<udp_client_handler_base>	terminal_channel = _udp_factory(reactor());
-	build_channel_chain_helper(std::dynamic_pointer_cast<udp_client_handler_base>(_channel), terminal_channel);
 	_channel->start();
 
 	return true;

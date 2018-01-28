@@ -8,10 +8,10 @@
 #define min(a,b) (((a) < (b)) ? (a) : (b))  
 #endif
 
-class udp_server_handler : public udp_server_handler_base
+class udp_server_handler : public udp_server_handler_terminal
 {
 public:
-	udp_server_handler(std::shared_ptr<reactor_loop> reactor) : udp_server_handler_base(reactor){}
+	udp_server_handler(std::shared_ptr<reactor_loop> reactor) : udp_server_handler_terminal(reactor){}
 	virtual ~udp_server_handler(){}
 
 	//override------------------
@@ -21,14 +21,7 @@ public:
 	virtual void	on_chain_final()
 	{
 	}
-	virtual void	on_chain_zomby()
-	{
-		// 因为没有被其他对象引用，本对象可在框架要求下退出，可以主动与消去外界引用
-	}
-	virtual long	chain_refcount()
-	{
-		return udp_server_handler_base::chain_refcount();
-	}
+
 	virtual void	on_ready()	
 	{
 	}

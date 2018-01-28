@@ -15,11 +15,10 @@ public:
 	//override------------------
 	virtual void	on_chain_init();
 	virtual void	on_chain_final();
-	virtual void	on_chain_zomby();
 
 private:
 	std::string  _local_port;
-	std::shared_ptr<udp_client_channel>	_channel;
+	std::shared_ptr<udp_client_handler_base>	_channel;
 	udp_client_channel_factory_t _udp_factory;
 
 	uint16_t	_port;

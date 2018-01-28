@@ -20,11 +20,6 @@ void	udp_client_handler_base::on_chain_final()
 {
 }
 
-void	udp_client_handler_base::on_chain_zomby()
-{
-
-}
-
 void	udp_client_handler_base::on_ready()	
 { 
 	if (!_tunnel_next)
@@ -132,21 +127,20 @@ std::shared_ptr<reactor_loop>	udp_client_handler_base::reactor()
 }
 
 ////////////////////////channel
-udp_client_channel::udp_client_channel(std::shared_ptr<reactor_loop> reactor, const std::string& bind_addr/* = ""*/, const uint32_t self_read_size/* = DEFAULT_READ_BUFSIZE*/, const uint32_t self_write_size/* = DEFAULT_WRITE_BUFSIZE*/, const uint32_t sock_read_size/* = 0*/, const uint32_t sock_write_size/* = 0*/)
+udp_client_handler_origin::udp_client_handler_origin(std::shared_ptr<reactor_loop> reactor, const std::string& bind_addr/* = ""*/, const uint32_t self_read_size/* = DEFAULT_READ_BUFSIZE*/, const uint32_t self_write_size/* = DEFAULT_WRITE_BUFSIZE*/, const uint32_t sock_read_size/* = 0*/, const uint32_t sock_write_size/* = 0*/)
 	: udp_client_handler_base(reactor),
 	udp_channel_base(bind_addr, self_read_size, self_write_size, sock_read_size, sock_write_size)
-
 {
-	_sockio_helper.bind(std::bind(&udp_client_channel::on_sockio_read, this, std::placeholders::_1), nullptr);
+	_sockio_helper.bind(std::bind(&udp_client_handler_origin::on_sockio_read, this, std::placeholders::_1), nullptr);
 	set_prepare();
 }
 
 //析构需要发生在产生线程
-udp_client_channel::~udp_client_channel()
+udp_client_handler_origin::~udp_client_handler_origin()
 {
 }
 
-bool	udp_client_channel::start()
+bool	udp_client_handler_origin::start()
 {
 	if (!is_prepare())
 	{
@@ -162,8 +156,8 @@ bool	udp_client_channel::start()
 	//线程调度，对于服务端的链接而言，close即意味着死亡，不存在重新连接的可能性
 	if (!reactor()->is_current_thread())
 	{
-		// udp_client_channel生命期一般比reactor短，所以加上引用计数
-		reactor()->start_async_task(std::bind(&udp_client_channel::start, this), this);
+		// udp_client_handler_origin生命期一般比reactor短，所以加上引用计数
+		reactor()->start_async_task(std::bind(&udp_client_handler_origin::start, this), this);
 		return true;
 	}
 	
@@ -181,7 +175,7 @@ bool	udp_client_channel::start()
 }
 
 // 保证原子，考虑多线程环境下，buf最好是一个或若干完整包；可能触发错误/异常 on_error
-int32_t	udp_client_channel::send(const void* buf, const size_t len, const sockaddr_in& peer_addr)
+int32_t	udp_client_handler_origin::send(const void* buf, const size_t len, const sockaddr_in& peer_addr)
 {
 	if (!is_normal())
 	{
@@ -193,7 +187,7 @@ int32_t	udp_client_channel::send(const void* buf, const size_t len, const sockad
 	return ret;
 }
 
-int32_t	udp_client_channel::connect(const sockaddr_in& server_addr)								// 保证原子, 返回值若<0参考CHANNEL_ERROR_CODE
+int32_t	udp_client_handler_origin::connect(const sockaddr_in& server_addr)								// 保证原子, 返回值若<0参考CHANNEL_ERROR_CODE
 {
 	if (!is_normal())
 	{
@@ -205,7 +199,7 @@ int32_t	udp_client_channel::connect(const sockaddr_in& server_addr)								// 保
 	return ret;
 }
 
-int32_t	udp_client_channel::send(const void* buf, const size_t len)								// 保证原子, 认为是整包，返回值若<0参考CHANNEL_ERROR_CODE
+int32_t	udp_client_handler_origin::send(const void* buf, const size_t len)								// 保证原子, 认为是整包，返回值若<0参考CHANNEL_ERROR_CODE
 {
 	if (!is_normal())
 	{
@@ -217,7 +211,7 @@ int32_t	udp_client_channel::send(const void* buf, const size_t len)								// 保
 	return ret;
 }
 
-void	udp_client_channel::close()
+void	udp_client_handler_origin::close()
 {
 	if (!reactor())
 	{
@@ -228,15 +222,15 @@ void	udp_client_channel::close()
 	//线程调度，对于服务端的链接而言，close即意味着死亡，不存在重新连接的可能性
 	if (!reactor()->is_current_thread())
 	{
-		// udp_client_channel生命期一般比reactor短，所以加上引用计数
-		reactor()->start_async_task(std::bind(&udp_client_channel::close, this), this);
+		// udp_client_handler_origin生命期一般比reactor短，所以加上引用计数
+		reactor()->start_async_task(std::bind(&udp_client_handler_origin::close, this), this);
 		return;
 	}
 
 	set_release();
 }
 
-void	udp_client_channel::on_sockio_read(sockio_helper* sockio_id)
+void	udp_client_handler_origin::on_sockio_read(sockio_helper* sockio_id)
 {
 	if (!is_normal())
 	{
@@ -255,7 +249,7 @@ void	udp_client_channel::on_sockio_read(sockio_helper* sockio_id)
 	}
 }
 
-void	udp_client_channel::set_release()
+void	udp_client_handler_origin::set_release()
 {
 	if (is_release() || is_dead())
 	{
@@ -270,7 +264,7 @@ void	udp_client_channel::set_release()
 	on_closed();
 }
 
-int32_t	udp_client_channel::on_recv_buff(const void* buf, const size_t len, const sockaddr_in& peer_addr)
+int32_t	udp_client_handler_origin::on_recv_buff(const void* buf, const size_t len, const sockaddr_in& peer_addr)
 {
 	if (!is_normal())
 	{
@@ -283,10 +277,95 @@ int32_t	udp_client_channel::on_recv_buff(const void* buf, const size_t len, cons
 	return len;
 }
 
-void udp_client_channel::handle_close_strategy(CLOSE_MODE_STRATEGY cms)
+void udp_client_handler_origin::handle_close_strategy(CLOSE_MODE_STRATEGY cms)
 {
 	if (CMS_INNER_AUTO_CLOSE == cms)
 	{
 		close();	//内部会自动检查有效性
 	}
+}
+
+/////////////////
+udp_client_handler_terminal::udp_client_handler_terminal(std::shared_ptr<reactor_loop> reactor) : udp_client_handler_base(reactor)
+{
+
+}
+
+udp_client_handler_terminal::~udp_client_handler_terminal()
+{
+	chain_final();
+}
+
+//override------------------
+void	udp_client_handler_terminal::on_chain_init()
+{
+
+}
+
+void	udp_client_handler_terminal::on_chain_final()
+{
+
+}
+
+void	udp_client_handler_terminal::on_ready()
+{
+
+}
+
+void	udp_client_handler_terminal::on_closed()
+{
+
+}
+
+//参考CHANNEL_ERROR_CODE定义
+CLOSE_MODE_STRATEGY	udp_client_handler_terminal::on_error(CHANNEL_ERROR_CODE code)
+{
+	return CMS_INNER_AUTO_CLOSE;
+}
+
+//这是一个待处理的完整包
+void	udp_client_handler_terminal::on_recv_pkg(const void* buf, const size_t len, const sockaddr_in& peer_addr)
+{
+
+}
+
+bool	udp_client_handler_terminal::start()
+{
+
+}
+
+int32_t	udp_client_handler_terminal::send(const void* buf, const size_t len, const sockaddr_in& peer_addr)
+{
+	return udp_client_handler_terminal::send(buf, len, peer_addr);
+}
+
+int32_t	udp_client_handler_terminal::connect(const sockaddr_in& server_addr)								// 保证原子, 返回值若<0参考CHANNEL_ERROR_CODE
+{
+	return udp_client_handler_terminal::connect(server_addr);
+}
+
+int32_t	udp_client_handler_terminal::send(const void* buf, const size_t len)
+{
+	return udp_client_handler_terminal::send(buf, len);
+}
+
+void	udp_client_handler_terminal::close()
+{
+
+}
+
+//override------------------
+void	udp_client_handler_terminal::chain_inref()
+{
+	this->shared_from_this().inref();
+}
+
+void	udp_client_handler_terminal::chain_deref()
+{
+	this->shared_from_this().deref();
+}
+
+void	udp_client_handler_terminal::on_release()
+{
+	//默认删除,屏蔽之
 }

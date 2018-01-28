@@ -8,10 +8,10 @@
 #define min(a,b) (((a) < (b)) ? (a) : (b))  
 #endif
 
-class tcp_client_handler : public socks5_bindcmd_client_handler_base
+class tcp_client_handler : public socks5_bindcmd_client_handler_terminal
 {
 public:
-	tcp_client_handler(std::shared_ptr<reactor_loop> reactor) : socks5_bindcmd_client_handler_base(reactor){}
+	tcp_client_handler(std::shared_ptr<reactor_loop> reactor) : socks5_bindcmd_client_handler_terminal(reactor){}
 	virtual ~tcp_client_handler()
 	{
 		printf("\nexit: 0x%p\n", this);
@@ -23,23 +23,6 @@ public:
 	}
 	virtual void	on_chain_final()
 	{
-	}
-	virtual void	on_chain_zomby()
-	{
-		// 因为没有被其他对象引用，本对象可在框架要求下退出，可以主动与消去外界引用
-	}
-	virtual long	chain_refcount()
-	{
-		return socks5_bindcmd_client_handler_base::chain_refcount();
-	}
-
-	virtual void	chain_final()
-	{
-
-	}
-	virtual void	chain_zomby()
-	{
-
 	}
 
 	//ctrl channel--------------
@@ -104,7 +87,7 @@ std::shared_ptr<socks5_bindcmd_client_handler_base> channel_factory(std::shared_
 {
 	std::shared_ptr<tcp_client_handler> handler = std::make_shared<tcp_client_handler>(reactor);
 	std::shared_ptr<socks5_bindcmd_client_handler_base> cb = std::dynamic_pointer_cast<socks5_bindcmd_client_handler_base>(handler);
-	return nullptr;
+	return cb;
 }
 
 int main(int argc, char* argv[]) 

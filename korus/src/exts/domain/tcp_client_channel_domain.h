@@ -14,7 +14,7 @@
 //			----next-->			----next-->
 //
 
-class tcp_client_channel_domain : public tcp_client_channel
+class tcp_client_channel_domain : public tcp_client_handler_origin
 {
 public:
 	tcp_client_channel_domain(std::shared_ptr<reactor_loop> reactor, const std::string& server_addr, std::chrono::seconds connect_timeout = std::chrono::seconds(0), std::chrono::seconds connect_retry_wait = std::chrono::seconds(-1),

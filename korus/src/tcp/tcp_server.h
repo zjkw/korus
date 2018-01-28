@@ -9,7 +9,7 @@
 #define DEFAULT_LISTEN_BACKLOG	20
 #define DEFAULT_DEFER_ACCEPT	3
 
-// 对应用层可见类：tcp_server_channel, tcp_server_handler_base, reactor_loop, tcp_server. 都可运行在多线程环境下，所以都要求用shared_ptr包装起来，解决生命期问题
+// 对应用层可见类：tcp_server_handler_origin, tcp_server_handler_base, reactor_loop, tcp_server. 都可运行在多线程环境下，所以都要求用shared_ptr包装起来，解决生命期问题
 // tcp_server不提供遍历channel的接口，这样减少内部复杂性，另外channel遍历需求也只是部分应用需求，上层自己搞定
 // 如果有多进程实例绑定相同本地ip端口，需要注意当某进程挂掉后，原先和之通信的对端对象将和现存进程通信，当严格要求进程与逻辑对象映射时候，需要做转发或拒绝服务
 

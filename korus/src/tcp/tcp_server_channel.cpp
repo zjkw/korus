@@ -23,11 +23,6 @@ void	tcp_server_handler_base::on_chain_final()
 {
 }
 
-void	tcp_server_handler_base::on_chain_zomby()
-{
-
-}
-
 void	tcp_server_handler_base::on_accept()	
 {
 	if (!_tunnel_next)
@@ -148,23 +143,23 @@ bool	tcp_server_handler_base::local_addr(std::string& addr)
 }
 
 ///////////////////////////channel
-tcp_server_channel::tcp_server_channel(std::shared_ptr<reactor_loop> reactor, SOCKET fd, const uint32_t self_read_size, const uint32_t self_write_size, const uint32_t sock_read_size, const uint32_t sock_write_size)
+tcp_server_handler_origin::tcp_server_handler_origin(std::shared_ptr<reactor_loop> reactor, SOCKET fd, const uint32_t self_read_size, const uint32_t self_write_size, const uint32_t sock_read_size, const uint32_t sock_write_size)
 	: tcp_server_handler_base(reactor), tcp_channel_base(fd, self_read_size, self_write_size, sock_read_size, sock_write_size)
 										
 {
 	assert(INVALID_SOCKET != fd);
 	_sockio_helper.set(fd);
-	_sockio_helper.bind(std::bind(&tcp_server_channel::on_sockio_read, this, std::placeholders::_1), std::bind(&tcp_server_channel::on_sockio_write, this, std::placeholders::_1));
+	_sockio_helper.bind(std::bind(&tcp_server_handler_origin::on_sockio_read, this, std::placeholders::_1), std::bind(&tcp_server_handler_origin::on_sockio_write, this, std::placeholders::_1));
 
 	set_prepare();
 }
 
 //析构需要发生在产生线程
-tcp_server_channel::~tcp_server_channel()
+tcp_server_handler_origin::~tcp_server_handler_origin()
 {
 }
 
-bool tcp_server_channel::start()
+bool tcp_server_handler_origin::start()
 {
 	if (!is_prepare())
 	{
@@ -186,7 +181,7 @@ bool tcp_server_channel::start()
 }
 
 // 保证原子，考虑多线程环境下，buf最好是一个或若干完整包；可能触发错误/异常 on_error
-int32_t	tcp_server_channel::send(const void* buf, const size_t len)
+int32_t	tcp_server_handler_origin::send(const void* buf, const size_t len)
 {
 	if (!is_normal())
 	{
@@ -198,7 +193,7 @@ int32_t	tcp_server_channel::send(const void* buf, const size_t len)
 	return ret;
 }
 
-void	tcp_server_channel::close()
+void	tcp_server_handler_origin::close()
 {	
 	if (is_dead())
 	{
@@ -208,7 +203,7 @@ void	tcp_server_channel::close()
 	//线程调度，对于服务端的链接而言，close即意味着死亡，不存在重新连接的可能性
 	if (!reactor()->is_current_thread())
 	{
-		reactor()->start_async_task(std::bind(&tcp_server_channel::close, this), this);
+		reactor()->start_async_task(std::bind(&tcp_server_handler_origin::close, this), this);
 		return;
 	}	
 
@@ -216,7 +211,7 @@ void	tcp_server_channel::close()
 }
 
 // 参数参考全局函数 ::shutdown
-void	tcp_server_channel::shutdown(int32_t howto)
+void	tcp_server_handler_origin::shutdown(int32_t howto)
 {
 	if (!is_prepare() && !is_normal())
 	{
@@ -225,14 +220,14 @@ void	tcp_server_channel::shutdown(int32_t howto)
 
 	if (!reactor()->is_current_thread())
 	{
-		reactor()->start_async_task(std::bind(&tcp_server_channel::shutdown, this, howto), this);
+		reactor()->start_async_task(std::bind(&tcp_server_handler_origin::shutdown, this, howto), this);
 		return;
 	}
 	tcp_channel_base::shutdown(howto);
 }
 
 //////////////////////////////////
-void	tcp_server_channel::on_sockio_write(sockio_helper* sockio_id)
+void	tcp_server_handler_origin::on_sockio_write(sockio_helper* sockio_id)
 {
 	if (!is_normal())
 	{
@@ -247,7 +242,7 @@ void	tcp_server_channel::on_sockio_write(sockio_helper* sockio_id)
 	}
 }
 
-void	tcp_server_channel::on_sockio_read(sockio_helper* sockio_id)
+void	tcp_server_handler_origin::on_sockio_read(sockio_helper* sockio_id)
 {
 	if (!is_normal())
 	{
@@ -265,7 +260,7 @@ void	tcp_server_channel::on_sockio_read(sockio_helper* sockio_id)
 	}
 }
 
-void	tcp_server_channel::set_release()
+void	tcp_server_handler_origin::set_release()
 {
 	if (is_dead())
 	{
@@ -280,7 +275,7 @@ void	tcp_server_channel::set_release()
 	on_closed();
 }
 
-int32_t	tcp_server_channel::on_recv_buff(const void* buf, const size_t len, bool& left_partial_pkg)
+int32_t	tcp_server_handler_origin::on_recv_buff(const void* buf, const size_t len, bool& left_partial_pkg)
 {
 	if (!is_normal())
 	{
@@ -325,7 +320,7 @@ int32_t	tcp_server_channel::on_recv_buff(const void* buf, const size_t len, bool
 	return size;
 }
 
-void tcp_server_channel::handle_close_strategy(CLOSE_MODE_STRATEGY cms)
+void tcp_server_handler_origin::handle_close_strategy(CLOSE_MODE_STRATEGY cms)
 {
 	if (CMS_INNER_AUTO_CLOSE == cms)
 	{
@@ -333,7 +328,7 @@ void tcp_server_channel::handle_close_strategy(CLOSE_MODE_STRATEGY cms)
 	}
 }
 
-bool	tcp_server_channel::peer_addr(std::string& addr)
+bool	tcp_server_handler_origin::peer_addr(std::string& addr)
 {
 	if (!is_normal())
 	{
@@ -346,7 +341,7 @@ bool	tcp_server_channel::peer_addr(std::string& addr)
 	return tcp_channel_base::peer_addr(addr);
 }
 
-bool	tcp_server_channel::local_addr(std::string& addr)
+bool	tcp_server_handler_origin::local_addr(std::string& addr)
 {
 	if (!is_normal())
 	{
@@ -357,4 +352,96 @@ bool	tcp_server_channel::local_addr(std::string& addr)
 		return false;
 	}
 	return tcp_channel_base::local_addr(addr);
+}
+
+//////////////
+tcp_server_handler_terminal::tcp_server_handler_terminal(std::shared_ptr<reactor_loop> reactor) : tcp_server_handler_base(reactor)
+{
+
+}
+
+tcp_server_handler_terminal::~tcp_server_handler_terminal()
+{
+
+}
+
+//override------------------
+void	tcp_server_handler_terminal::on_chain_init()
+{
+
+}
+
+void	tcp_server_handler_terminal::on_chain_final()
+{
+	chain_final();
+}
+
+void	tcp_server_handler_terminal::on_accept()
+{
+
+}
+
+void	tcp_server_handler_terminal::on_closed()
+{
+
+}
+
+//参考CHANNEL_ERROR_CODE定义
+CLOSE_MODE_STRATEGY	tcp_server_handler_terminal::on_error(CHANNEL_ERROR_CODE code)
+{
+
+}
+
+//提取数据包：返回值 =0 表示包不完整； >0 完整的包(长)
+int32_t tcp_server_handler_terminal::on_recv_split(const void* buf, const size_t len)
+{
+
+}
+
+//这是一个待处理的完整包
+void	tcp_server_handler_terminal::on_recv_pkg(const void* buf, const size_t len)
+{
+
+}
+
+int32_t	tcp_server_handler_terminal::send(const void* buf, const size_t len)
+{
+	return tcp_server_handler_base::send(buf, len);
+}
+
+void	tcp_server_handler_terminal::close()
+{
+	tcp_server_handler_base::close();
+}
+
+void	tcp_server_handler_terminal::shutdown(int32_t howto)
+{
+	tcp_server_handler_base::shutdown(howto);
+}
+
+
+bool	tcp_server_handler_terminal::peer_addr(std::string& addr)
+{
+	return tcp_server_handler_base::peer_addr(addr);
+}
+
+bool	tcp_server_handler_terminal::local_addr(std::string& addr)
+{
+	return tcp_server_handler_base::local_addr(addr);
+}
+
+//override------------------
+void	tcp_server_handler_terminal::chain_inref()
+{
+	this->shared_from_this().inref();
+}
+
+void	tcp_server_handler_terminal::chain_deref()
+{
+	this->shared_from_this().deref();
+}
+
+void	tcp_server_handler_terminal::on_release()
+{
+	//默认删除,屏蔽之
 }

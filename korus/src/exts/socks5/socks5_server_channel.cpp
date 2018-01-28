@@ -4,7 +4,7 @@
 
 socks5_server_channel::socks5_server_channel(std::shared_ptr<reactor_loop> reactor, std::shared_ptr<socks5_server_auth> auth)
 : _tunnel_channel_type(TCT_NONE), _shakehand_state(SSS_NONE), _auth(auth), _bindcmd_server(nullptr), 
-	tcp_server_handler_base(reactor)
+tcp_server_handler_terminal(reactor)
 {
 }
 
@@ -24,29 +24,6 @@ void	socks5_server_channel::on_chain_final()
 	_connectcmd_tunnel_client_channel = nullptr;
 	_bindcmd_tunnel_server_channel = nullptr;
 	_associatecmd_server_channel = nullptr;
-}
-
-void	socks5_server_channel::on_chain_zomby()
-{
-	// 因为没有被其他对象引用，本对象可在框架要求下退出，可以主动与消去外界引用
-}
-
-long	socks5_server_channel::chain_refcount()
-{
-	long ref = 0;
-	if (_connectcmd_tunnel_client_channel)
-	{
-		ref++;
-	}
-	if (_bindcmd_tunnel_server_channel)
-	{
-		ref++;
-	}
-	if (_associatecmd_server_channel)
-	{
-		ref++;
-	}
-	return ref + tcp_server_handler_base::chain_refcount();
 }
 
 void	socks5_server_channel::on_accept()	//连接已经建立
@@ -485,10 +462,10 @@ bool	socks5_server_channel::build_connectcmd_tunnel(uint32_t ip, uint16_t port)
 	char addr[256];
 	snprintf(addr, sizeof(addr), "%u:%u", ip, port);
 
+	tcp_client_handler_origin*		origin_channel = new tcp_client_handler_origin(reactor(), addr);
 	std::shared_ptr<socks5_server_channel> self = std::dynamic_pointer_cast<socks5_server_channel>(shared_from_this());
 	_connectcmd_tunnel_client_channel = std::make_shared<socks5_connectcmd_tunnel_client_channel>(reactor(), self);
-	std::shared_ptr<tcp_client_channel>		origin_channel = std::make_shared<tcp_client_channel>(reactor(), addr);
-	build_channel_chain_helper(std::dynamic_pointer_cast<tcp_client_handler_base>(origin_channel), std::dynamic_pointer_cast<tcp_client_handler_base>(_connectcmd_tunnel_client_channel));
+	build_channel_chain_helper((tcp_client_handler_base*)origin_channel, (tcp_client_handler_base*)_connectcmd_tunnel_client_channel.get());
 
 	_connectcmd_tunnel_client_channel->connect();
 
@@ -501,10 +478,10 @@ bool	socks5_server_channel::build_connectcmd_tunnel(const std::string& ip, uint1
 	char addr[256];
 	snprintf(addr, sizeof(addr), "%s:%u", ip.c_str(), port);
 
+	tcp_client_channel_domain*		origin_channel = new tcp_client_channel_domain(reactor(), addr);
 	std::shared_ptr<socks5_server_channel> self = std::dynamic_pointer_cast<socks5_server_channel>(shared_from_this());
 	_connectcmd_tunnel_client_channel = std::make_shared<socks5_connectcmd_tunnel_client_channel>(reactor(), self);
-	std::shared_ptr<tcp_client_channel_domain>		origin_channel = std::make_shared<tcp_client_channel_domain>(reactor(), addr);
-	build_channel_chain_helper(std::dynamic_pointer_cast<tcp_client_handler_base>(origin_channel), std::dynamic_pointer_cast<tcp_client_handler_base>(_connectcmd_tunnel_client_channel));
+	build_channel_chain_helper((tcp_client_handler_base*)origin_channel, (tcp_client_handler_base*)_connectcmd_tunnel_client_channel.get());
 
 	_connectcmd_tunnel_client_channel->connect();
 
@@ -540,11 +517,11 @@ bool	socks5_server_channel::build_associatecmd_tunnel(uint32_t ip_digit, uint16_
 {
 	assert(!_associatecmd_server_channel);
 
+	udp_server_handler_origin*		origin_channel = new udp_server_handler_origin(reactor(), "0.0.0.0:0");
 	std::shared_ptr<socks5_server_channel>	self = std::dynamic_pointer_cast<socks5_server_channel>(shared_from_this());
 	_associatecmd_server_channel = std::make_shared<socks5_associatecmd_tunnel_server_channel>(reactor(), self, ip_digit, port_digit);
-
-	std::shared_ptr<udp_server_channel>		origin_channel = std::make_shared<udp_server_channel>(reactor(), "0.0.0.0:0");
-	build_channel_chain_helper(std::dynamic_pointer_cast<tcp_client_handler_base>(origin_channel), std::dynamic_pointer_cast<tcp_client_handler_base>(_associatecmd_server_channel));
+	
+	build_channel_chain_helper((tcp_client_handler_base*)origin_channel, (tcp_client_handler_base*)_associatecmd_server_channel.get());
 
 	_associatecmd_server_channel->start();
 

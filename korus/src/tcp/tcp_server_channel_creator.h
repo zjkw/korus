@@ -23,7 +23,7 @@ private:
 	uint32_t	_sock_read_size;
 	uint32_t	_sock_write_size;
 
-	std::map<SOCKET, std::shared_ptr<tcp_server_channel>>	_channel_list;
+	std::map<SOCKET, chain_object_sharedwrapper<tcp_server_handler_origin>> _channel_list;
 	SOCKET		_last_recover_scan_fd;	//上次扫描到的位置
 	idle_helper	_idle_helper;
 	void on_idle_recover(idle_helper* idle_id);

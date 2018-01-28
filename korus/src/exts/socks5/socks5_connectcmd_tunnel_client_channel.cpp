@@ -22,22 +22,6 @@ void	socks5_connectcmd_tunnel_client_channel::on_chain_final()
 	_server_channel = nullptr;
 }
 
-void	socks5_connectcmd_tunnel_client_channel::on_chain_zomby()
-{
-
-}
-
-long	socks5_connectcmd_tunnel_client_channel::chain_refcount()
-{
-	long ref = 0;
-	if (_server_channel)
-	{
-		ref++;
-	}
-
-	return ref + tcp_client_handler_base::chain_refcount();
-}
-
 void	socks5_connectcmd_tunnel_client_channel::on_connected()
 {
 	assert(_server_channel);

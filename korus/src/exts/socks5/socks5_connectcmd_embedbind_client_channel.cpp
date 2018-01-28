@@ -3,7 +3,7 @@
 #include "socks5_connectcmd_embedbind_client_channel.h"
 
 socks5_connectcmd_embedbind_client_channel::socks5_connectcmd_embedbind_client_channel(std::shared_ptr<reactor_loop> reactor, const std::string& server_addr, const std::string& socks_user, const std::string& socks_psw)
-	: socks5_connectcmd_client_channel(reactor, server_addr, socks_user, socks_psw)
+: _integration(nullptr), socks5_connectcmd_client_channel(reactor, server_addr, socks_user, socks_psw)
 {
 
 }
@@ -23,26 +23,14 @@ void	socks5_connectcmd_embedbind_client_channel::on_chain_final()
 	socks5_connectcmd_client_channel::on_chain_final();
 }
 
-long	socks5_connectcmd_embedbind_client_channel::chain_refcount()
+void	socks5_connectcmd_embedbind_client_channel::chain_inref()
 {
-	long ref = 0;
-	if (_integration)
-	{
-		ref++;
-	}
-
-	return ref + socks5_connectcmd_client_channel::chain_refcount();
+	_integration->chain_inref();
 }
 
-std::shared_ptr<chain_sharedobj_interface> socks5_connectcmd_embedbind_client_channel::chain_terminal()
+void	socks5_connectcmd_embedbind_client_channel::chain_deref()
 {
-	if (!_integration)
-	{
-		assert(false);
-		return nullptr;
-	}
-
-	return _integration->chain_terminal();
+	_integration->chain_deref();
 }
 
 void	socks5_connectcmd_embedbind_client_channel::on_connected()

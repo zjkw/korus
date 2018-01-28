@@ -7,7 +7,7 @@
 #include "korus/src/reactor/reactor_loop.h"
 #include "tcp_client_channel.h"
 
-// 对应用层可见类：tcp_client_channel, tcp_client_handler_base, reactor_loop, tcp_client. 都可运行在多线程环境下，所以都要求用shared_ptr包装起来，解决生命期问题
+// 对应用层可见类：tcp_client_handler_origin, tcp_client_handler_base, reactor_loop, tcp_client. 都可运行在多线程环境下，所以都要求用shared_ptr包装起来，解决生命期问题
 // tcp_client不提供遍历channel的接口，这样减少内部复杂性，另外channel遍历需求也只是部分应用需求，上层自己搞定
 
 // 占坑
@@ -87,10 +87,9 @@ protected:
 		}
 		srand(time(NULL));
 	}
-	std::shared_ptr<tcp_client_channel>			create_origin_channel(std::shared_ptr<reactor_loop> reactor)
+	tcp_client_handler_origin*			create_origin_channel(std::shared_ptr<reactor_loop> reactor)
 	{
-		std::shared_ptr<tcp_client_channel>			channel = std::make_shared<tcp_client_channel>(reactor, _server_addr, _connect_timeout, _connect_retry_wait, _self_read_size, _self_write_size, _sock_read_size, _sock_write_size);
-		return channel;
+		return new tcp_client_handler_origin(reactor, _server_addr, _connect_timeout, _connect_retry_wait, _self_read_size, _self_write_size, _sock_read_size, _sock_write_size);
 	}
 	std::shared_ptr<tcp_client_handler_base>	create_terminal_channel(std::shared_ptr<reactor_loop> reactor)
 	{
@@ -101,14 +100,14 @@ protected:
 		std::shared_ptr<tcp_client_handler_base>	channel = _factory(reactor);
 		return channel;
 	}
-	virtual std::shared_ptr<chain_sharedobj_interface> build_channel_chain(std::shared_ptr<reactor_loop> reactor)	
+	virtual std::shared_ptr<tcp_client_handler_base> build_channel_chain(std::shared_ptr<reactor_loop> reactor)
 	{
-		std::shared_ptr<tcp_client_channel>			origin_channel	=	create_origin_channel(reactor);
+		tcp_client_handler_origin*			origin_channel	=	create_origin_channel(reactor);
 		std::shared_ptr<tcp_client_handler_base>	terminal_channel = create_terminal_channel(reactor);
-		build_channel_chain_helper(std::dynamic_pointer_cast<tcp_client_handler_base>(origin_channel), terminal_channel);
+		build_channel_chain_helper((tcp_client_handler_base*)origin_channel, (tcp_client_handler_base*)terminal_channel.get());
 		origin_channel->connect();
 
-		return std::dynamic_pointer_cast<chain_sharedobj_interface>(origin_channel);
+		return terminal_channel;
 	}
 
 	std::thread::id							_tid;
@@ -124,19 +123,16 @@ protected:
 	uint32_t								_sock_read_size;
 	uint32_t								_sock_write_size;
 	
-	void thread_init(thread_object*	thread_obj)
+	virtual void thread_init(thread_object*	thread_obj)
 	{
 		std::shared_ptr<reactor_loop>		reactor = std::make_shared<reactor_loop>();
-
-		std::shared_ptr<chain_sharedobj_interface>	origin_channel = build_channel_chain(reactor);
+		std::shared_ptr<tcp_client_handler_base>	terminal_channel = build_channel_chain(reactor);
 		
-		thread_obj->add_exit_task(std::bind(&tcp_client::thread_exit, this, thread_obj, reactor, origin_channel));
+		thread_obj->add_exit_task(std::bind(&tcp_client::thread_exit, this, thread_obj, reactor, terminal_channel));
 		thread_obj->add_resident_task(std::bind(&reactor_loop::run_once, reactor));
 	}
-	void thread_exit(thread_object*	thread_obj, std::shared_ptr<reactor_loop> reactor, std::shared_ptr<chain_sharedobj_interface>	origin_channel_list)
+	void thread_exit(thread_object*	thread_obj, std::shared_ptr<reactor_loop> reactor, std::shared_ptr<tcp_client_handler_base>	terminal_channel)
 	{
-		try_chain_final(origin_channel_list, 1);
-
 		reactor->invalid();
 	}
 };
@@ -158,10 +154,7 @@ public:
 
 	virtual ~tcp_client()
 	{
-		if(_channels)
-		{
-			try_chain_final(_channels, 1);
-		}
+
 	}
 	
 	virtual void start()
@@ -176,15 +169,20 @@ public:
 		if (!_start.test_and_set())
 		{
 			// 构造中执行::connect，无需外部手动调用
-			_channels = build_channel_chain(_reactor);
+			init_object(_reactor);
+			
 		}
 	}
 	
 protected:
-	std::shared_ptr<tcp_client_channel>			create_origin_channel(std::shared_ptr<reactor_loop> reactor)
+	virtual void init_object(std::shared_ptr<reactor_loop> reactor)
 	{
-		std::shared_ptr<tcp_client_channel>			channel = std::make_shared<tcp_client_channel>(reactor, _server_addr, _connect_timeout, _connect_retry_wait, _self_read_size, _self_write_size, _sock_read_size, _sock_write_size);
-		return channel;
+		_channels = build_channel_chain(_reactor);
+	}
+
+	tcp_client_handler_origin*			create_origin_channel(std::shared_ptr<reactor_loop> reactor)
+	{
+		return new tcp_client_handler_origin(reactor, _server_addr, _connect_timeout, _connect_retry_wait, _self_read_size, _self_write_size, _sock_read_size, _sock_write_size);
 	}
 	std::shared_ptr<tcp_client_handler_base>	create_terminal_channel(std::shared_ptr<reactor_loop> reactor)
 	{
@@ -195,14 +193,14 @@ protected:
 		std::shared_ptr<tcp_client_handler_base>	channel = _factory(reactor);
 		return channel;
 	}
-	virtual std::shared_ptr<chain_sharedobj_interface> build_channel_chain(std::shared_ptr<reactor_loop> reactor)
+	std::shared_ptr<tcp_client_handler_base> build_channel_chain(std::shared_ptr<reactor_loop> reactor)
 	{
-		std::shared_ptr<tcp_client_channel>			origin_channel = create_origin_channel(reactor);
+		tcp_client_handler_origin*			origin_channel = create_origin_channel(reactor);
 		std::shared_ptr<tcp_client_handler_base>	terminal_channel = create_terminal_channel(reactor);
-		build_channel_chain_helper(std::dynamic_pointer_cast<tcp_client_handler_base>(origin_channel), terminal_channel);
-		origin_channel->connect();
+		build_channel_chain_helper((tcp_client_handler_base*)origin_channel, (tcp_client_handler_base*)terminal_channel.get());
+		terminal_channel->connect();
 
-		return std::dynamic_pointer_cast<chain_sharedobj_interface>(origin_channel);
+		return terminal_channel;
 	}
 
 	std::shared_ptr<reactor_loop>			_reactor;
@@ -217,5 +215,5 @@ protected:
 	uint32_t								_sock_read_size;
 	uint32_t								_sock_write_size;
 
-	std::shared_ptr<chain_sharedobj_interface>		_channels;
+	std::shared_ptr<tcp_client_handler_base>		_channels;
 };
