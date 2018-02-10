@@ -2,12 +2,11 @@
 ##  before build, please:
 #### 1, search file "shared_ptr_base.h", cmd just as: "find /usr/ -name shared_ptr.h"
 #### 2, edit "shared_ptr_base.h", add code just below in public scope of template class "__shared_ptr":
-####        //korus 20180107 for manual ref 
-####        void inref() noexcept
-####        {       _M_refcount._M_add_ref_lock();  }
-####        //korus 20180107 for manual ref 
-####        void deref() noexcept
-####        {       _M_refcount._M_release();      }
+######        //korus 20180107 for manual ref 
+######        void inref() noexcept
+######        {       _M_refcount._M_add_ref_lock();  }
+######        void deref() noexcept
+######        {       _M_refcount._M_release();      }
         
 ##  now feb 2018, only demo, without strength test yet
 
