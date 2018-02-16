@@ -1,0 +1,109 @@
+//--------------------------------------connect cmd-------------------------------------------------------------------------------------
+// 角色解释
+// source_client <---> proxy_server <---> target_server
+// 1，socks5例子中的socks5_connectcmd_client.cpp的tcp_client_handler，作为source_client的应用层处理器
+// 2，tcp_client_handler_origin和socks5_connectcmd_client_channel 作为 source_client底层角色，承担应用的实际网络层连接和数据传输职责
+// 3，socks5_server_init_channel 作为proxy_server中接收socks5_connectcmd_client_channel请求的角色，收到请求后创建出socks5_connectcmd_tunnel_client_channel，连接到实际的target_server服务
+//		socks5_connectcmd_client_channel 与 socks5_connectcmd_tunnel_client_channel 共轭
+// 4，socks5例子中的tcp_server.cpp例子中的tcp_connectcmd_server_handler,作为target_server的应用层处理器
+
+//connectcmd 示意图，省略了一些步骤如connect，close，shudown等，下同:
+//	source_client													socks5_proxy												target_server
+//		|																|																|					
+//		|-----------------------tunnel_req----------------------------->|																|
+//		|															----|																|					
+//		|								构造socks5_server_init_channel	|																|
+//		|															--->|																|					
+//		|																|----															|
+//		|																|	|构造socks5_connectcmd_tunnel_client_channel，并connect---->|					
+//		|																|----															|
+//		|																|																|
+//		|																|----															|
+//		|																|	|connect结果												|					
+//		|																|<---															|					
+//		|<----------------------tunnel_ack------------------------------|																|					
+//		|																|																|		
+//		|-----------------------send----------------------------------->|																|
+//		|															----|																|					
+//		|							socks5_server_init_channel	on_recv	|																|
+//		|															--->|																|					
+//		|																|																|
+//		|																|----socks5_connectcmd_tunnel_client_channel	send----------->|	
+//		|																|																|		
+//		|																|<---send-------------------------------------------------------|	
+//		|																|----															|					
+//		|																|	|socks5_connectcmd_tunnel_client_channel    on_recv			|					
+//		|																|<---															|		
+//		|<-----------------------socks5_server_init_channel	send--------|																|
+
+
+
+//--------------------------------------bind cmd----------------------------------------------------------------------------------------
+// 角色解释
+// source_client <---> proxy_server <---> target_server
+// 1，socks5例子中的socks5_bindcmd_client.cpp的tcp_client_handler，作为source_client的应用层处理器
+// 2，socks5_bindcmd_client_handler_origin 作为 source_client最底层角色，承担应用的实际网络层连接和数据传输职责
+// 3，socks5_server_init_channel 作为proxy_server中接收source_client请求的角色，收到请求后创建出socks5_bindcmd_tunnel_listen，监听来自target_server的connect请求，当请求到来，创建socks5_bindcmd_tunnel_server_channel
+// 4，socks5例子中的ftp_server.cpp例子中的tcp_bindcmd_client_handler,作为target_server的应用层处理器
+
+//connectcmd:(其中connectcmd如上，下面仅为实际数据通道的bindcmd)
+//	source_client													socks5_proxy												target_server
+//		|																|																|					
+//		|-----------------------tunnel_req----------------------------->|																|
+//		|															----|																|					
+//		|								构造socks5_server_init_channel	|																|
+//		|															--->|																|						
+//		|																|----															|					
+//		|																|	|构造socks5_bindcmd_tunnel_listen，执行listen				|					
+//		|																|<---															|	
+//		|<----------------------tunnel_ack_1----------------------------|																|	
+//		|																|<---主动connect	socks5_bindcmd_tunnel_listen----------------|	
+//		|																|----															|					
+//		|																|	|构造socks5_bindcmd_tunnel_server_channel					|					
+//		|																|<---															|					
+//		|<----------------------tunnel_ack_2----------------------------|																|					
+//		|																|																|		
+//		|-----------------------send----------------------------------->|																|
+//		|															----|																|					
+//		|							socks5_server_init_channel	on_recv	|																|
+//		|															--->|																|		
+//		|																|----socks5_bindcmd_tunnel_server_channel	send--------------->|	
+//		|																|																|		
+//		|																|																|		
+//		|																|<---send-------------------------------------------------------|	
+//		|																|----															|					
+//		|																|	|socks5_bindcmd_tunnel_server_channel on_recv				|					
+//		|																|<---															|		
+//		|<----------------------socks5_server_init_channel	send--------|																|
+
+//--------------------------------------associate cmd----------------------------------------------------------------------------------------
+// 角色解释
+// source_client <---> proxy_server <---> target_server
+// 1，socks5例子中的socks5_associatecmd_client.cpp的udp_client_handler，作为source_client的应用层处理器
+// 2，udp_client_handler_origin 作为 source_client最底层角色，承担应用的实际网络层连接和数据传输职责
+// 3，socks5_server_init_channel 作为proxy_server中接收source_client请求的角色，收到请求后创建出socks5_associatecmd_tunnel_server_channel，接受来自source_client/target_server的数据send并转发到另外一侧
+// 4，socks5例子中的udp_server.cpp例子中的udp_associatecmd_server_handler,作为target_server的应用层处理器
+//associatecmd:
+//	source_client													socks5_proxy												target_server
+//		|																|																|					
+//		|-----------------------tunnel_req----------------------------->|																|
+//		|															----|																|					
+//		|								构造socks5_server_init_channel	|																|
+//		|															--->|																|			
+//		|																|----															|					
+//		|																|	|构造socks5_associatecmd_tunnel_server_channel，执行bind	|					
+//		|																|<---															|	
+//		|<----------------------tunnel_ack------------------------------|																|					
+//		|																|																|					
+//		|-----------------------send----------------------------------->|																|
+//		|																|----															|					
+//		|																|	|socks5_associatecmd_tunnel_server_channel on_recv			|					
+//		|																|<---															|		
+//		|																|--ocks5_associatecmd_tunnel_server_channel	   send(udp)------->|	
+//		|																|																|		
+//		|																|																|		
+//		|																|<---data_trans(udp)--------------------------------------------|	
+//		|																|----															|					
+//		|																|	|socks5_associatecmd_tunnel_server_channel on_recv			|					
+//		|																|<---															|		
+//		|<---socks5_associatecmd_tunnel_server_channel	send(udp)-------|																|

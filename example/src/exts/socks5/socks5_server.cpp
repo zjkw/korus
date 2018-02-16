@@ -8,64 +8,28 @@
 #define min(a,b) (((a) < (b)) ? (a) : (b))  
 #endif
 
-class tcp_client_handler : public tcp_client_handler_terminal
+class socks5_server_auth_imp : public socks5_server_auth
 {
 public:
-	tcp_client_handler(std::shared_ptr<reactor_loop> reactor) : tcp_client_handler_terminal(reactor){}
-	virtual ~tcp_client_handler()
+	socks5_server_auth_imp() {}
+	~socks5_server_auth_imp() {}
+	virtual bool				chacke_userpsw(const std::string& user, const std::string& psw)
 	{
-		printf("\nexit: 0x%p\n", this);
+		return user == "test" && psw == "123";
 	}
+	virtual	SOCKS_METHOD_TYPE	select_method(const std::vector<SOCKS_METHOD_TYPE>&	method_list)
+	{
+		for (std::vector<SOCKS_METHOD_TYPE>::const_iterator it = method_list.begin(); it != method_list.end(); it++)
+		{
+			if (*it == SMT_USERPSW)
+			{
+				return SMT_USERPSW;
+			}
+		}
 
-	//override------------------
-	virtual void	on_chain_init()
-	{
-	}
-	virtual void	on_chain_final()
-	{
-	}
-
-	virtual void	on_connected()	//连接已经建立
-	{
-		char szTest[] = "hello server, i am client!";
-		int32_t ret = send(szTest, strlen(szTest));
-		printf("\nConnected, then Send %s, ret: %d\n", szTest, ret);
-	}
-
-	virtual void	on_closed()
-	{
-		printf("\nClosed\n");
-	}
-
-	//参考CHANNEL_ERROR_CODE定义
-	virtual CLOSE_MODE_STRATEGY	on_error(CHANNEL_ERROR_CODE code)
-	{
-		printf("\nError code: %d\n", (int32_t)code);
-		return CMS_INNER_AUTO_CLOSE;
-	}
-
-	//提取数据包：返回值 =0 表示包不完整； >0 完整的包(长)
-	virtual int32_t on_recv_split(const void* buf, const size_t len)
-	{
-		printf("\non_recv_split len: %u\n", len);
-		return (int32_t)len;
-	}
-
-	//这是一个待处理的完整包
-	virtual void	on_recv_pkg(const void* buf, const size_t len)
-	{
-		char szTest[1024] = {0};
-		memcpy(szTest, buf, min(len, 1023));
-		printf("\non_recv_pkg: %s, len: %u\n", szTest, len);
+		return SMT_NONE;
 	}
 };
-
-std::shared_ptr<tcp_client_handler_base> channel_factory(std::shared_ptr<reactor_loop> reactor)
-{
-	std::shared_ptr<tcp_client_handler> handler = std::make_shared<tcp_client_handler>(reactor);
-	std::shared_ptr<tcp_client_handler_base> cb = std::dynamic_pointer_cast<tcp_client_handler_base>(handler);
-	return nullptr;
-}
 
 int main(int argc, char* argv[]) 
 {
@@ -82,8 +46,9 @@ int main(int argc, char* argv[])
 	addr = std::string("127.0.0.1:") + argv[1];
 	thread_num = (uint16_t)atoi(argv[2]);
 		
-	socks5_connectcmd_client<uint16_t> client(thread_num, addr, addr, channel_factory);
-	client.start();
+	std::shared_ptr<socks5_server_auth_imp> auth = std::make_shared<socks5_server_auth_imp>();
+	socks5_server<uint16_t> server(thread_num, addr, auth);
+	server.start();
 	for (;;)
 	{
 		sleep(1);

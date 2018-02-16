@@ -2,11 +2,12 @@
 
 #include "korus/src/tcp/tcp_client_channel.h"
 
-class socks5_server_channel;
+class socks5_connectcmd_server_channel;
+
 class socks5_connectcmd_tunnel_client_channel : public tcp_client_handler_base, public multiform_state
 {
 public:
-	socks5_connectcmd_tunnel_client_channel(std::shared_ptr<reactor_loop> reactor, std::shared_ptr<socks5_server_channel> server_channel);
+	socks5_connectcmd_tunnel_client_channel(std::shared_ptr<reactor_loop> reactor, std::weak_ptr<socks5_connectcmd_server_channel> server_channel);
 	virtual ~socks5_connectcmd_tunnel_client_channel();
 
 	//override------------------
@@ -23,6 +24,6 @@ public:
 	virtual void	on_recv_pkg(const void* buf, const size_t len);
 
 private:
-	std::shared_ptr<socks5_server_channel> _server_channel;
+	std::weak_ptr<socks5_connectcmd_server_channel> _server_channel;
 };
 

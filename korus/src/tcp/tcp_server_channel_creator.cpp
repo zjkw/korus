@@ -55,6 +55,16 @@ void tcp_server_channel_creator::on_newfd(const SOCKET fd, const struct sockaddr
 	}
 }
 
+void tcp_server_channel_creator::on_delfd(const SOCKET fd)
+{
+	_channel_list.erase(fd);
+
+	if (!_channel_list.size())
+	{
+		_idle_helper.stop();
+	}
+}
+
 void tcp_server_channel_creator::on_idle_recover(idle_helper* idle_id)
 {
 	//找到上次位置
@@ -68,7 +78,6 @@ void tcp_server_channel_creator::on_idle_recover(idle_helper* idle_id)
 		// 无效才可剔除，引用为1表示仅仅tcp_server_channel_creator引用这个channel，而channel是这个对象创建（同线程）
 		if (it->second->is_release())	//origin_channel_list + terminal
 		{
-
 			_channel_list.erase(it++);
 		}
 		else

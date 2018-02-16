@@ -2,7 +2,7 @@
 
 #include "korus/src/tcp/tcp_server.h"
 #include "socks5_bindcmd_tunnel_server_channel.h"
-#include "socks5_server_channel.h"
+#include "socks5_server_init_channel.h"
 
 // Õ¼¿Ó
 template<typename T>
@@ -34,7 +34,7 @@ private:
 
 	std::shared_ptr<tcp_server_handler_base> channel_factory(std::shared_ptr<reactor_loop> reactor)
 	{
-		std::shared_ptr<socks5_server_channel> channel = std::make_shared<socks5_server_channel>(reactor, _auth);
+		std::shared_ptr<socks5_server_init_channel> channel = std::make_shared<socks5_server_init_channel>(reactor, _auth);
 		std::shared_ptr<tcp_server_handler_base> cb = std::dynamic_pointer_cast<tcp_server_handler_base>(channel);
 		return cb;
 	}
@@ -61,7 +61,7 @@ private:
 
 	std::shared_ptr<tcp_server_handler_base> channel_factory(std::shared_ptr<reactor_loop> reactor)
 	{
-		std::shared_ptr<socks5_server_channel> channel = std::make_shared<socks5_server_channel>(reactor, _auth);
+		std::shared_ptr<socks5_server_init_channel> channel = std::make_shared<socks5_server_init_channel>(reactor, _auth);
 		std::shared_ptr<tcp_server_handler_base> cb = std::dynamic_pointer_cast<tcp_server_handler_base>(channel);
 		return cb;
 	}

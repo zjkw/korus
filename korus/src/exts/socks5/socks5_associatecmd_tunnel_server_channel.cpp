@@ -1,10 +1,10 @@
 #include <assert.h>
 #include "korus/src/util/net_serialize.h"
 #include "korus/src/util/socket_ops.h"
-#include "socks5_server_channel.h"
+#include "socks5_associatecmd_server_channel.h"
 #include "socks5_associatecmd_tunnel_server_channel.h"
 
-socks5_associatecmd_tunnel_server_channel::socks5_associatecmd_tunnel_server_channel(std::shared_ptr<reactor_loop> reactor, std::shared_ptr<socks5_server_channel> channel, uint32_t ip_digit, uint16_t digit_port)
+socks5_associatecmd_tunnel_server_channel::socks5_associatecmd_tunnel_server_channel(std::shared_ptr<reactor_loop> reactor, std::weak_ptr<socks5_associatecmd_server_channel> channel, uint32_t ip_digit, uint16_t digit_port)
 : _origin_channel(channel), _client_ip(ip_digit), _client_port(digit_port), udp_server_handler_base(reactor)
 {
 
@@ -22,20 +22,22 @@ void	socks5_associatecmd_tunnel_server_channel::on_chain_init()
 
 void	socks5_associatecmd_tunnel_server_channel::on_chain_final()
 {
-	_origin_channel = nullptr;
 }
 
 void	socks5_associatecmd_tunnel_server_channel::on_ready()
 {
-	std::string addr;
-	local_addr(addr);
-
-	_origin_channel->on_associatecmd_tunnel_ready(addr);
+	std::shared_ptr<socks5_associatecmd_server_channel>	channel = _origin_channel.lock();
+	if (channel)
+	{
+		std::string addr;
+		local_addr(addr);
+		channel->on_tunnel_ready(addr);
+	}
 }
 
 void	socks5_associatecmd_tunnel_server_channel::on_closed()
 {
-	_origin_channel->on_associatecmd_tunnel_close();
+
 }
 
 //²Î¿¼CHANNEL_ERROR_CODE¶¨Òå

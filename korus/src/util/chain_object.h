@@ -72,6 +72,19 @@ public:
 
 		assert(false);
 	}
+	virtual void	chain_insert(T* tunnel_new)
+	{
+		if (_tunnel_next)
+		{
+			_tunnel_next->chain_prev_assign(tunnel_new);
+		}
+		tunnel_new->chain_next_assign(_tunnel_next);
+		if (_tunnel_prev)
+		{
+			_tunnel_prev->chain_next_assign(tunnel_new);
+		}
+		tunnel_new->chain_prev_assign(_tunnel_prev);
+	}
 	virtual void	chain_init(T* tunnel_prev, T* tunnel_next)
 	{
 		_tunnel_prev = tunnel_prev;
@@ -94,6 +107,15 @@ public:
 		on_release();
 	}
 
+	void chain_next_assign(T* tunnel_obj)
+	{
+		_tunnel_next = tunnel_obj;
+	}
+	void chain_prev_assign(T* tunnel_obj)
+	{
+		_tunnel_prev = tunnel_obj;
+	}
+
 protected:
 	T* _tunnel_prev;
 	T* _tunnel_next;
@@ -103,6 +125,33 @@ protected:
 		//默认删除
 		delete this;
 	}
+};
+
+class chain_threadnosafe_ref
+{
+public:
+	chain_threadnosafe_ref() : _ref_counter(0)
+	{
+	}
+	virtual ~chain_threadnosafe_ref()
+	{
+		//assert(1 == _ref_counter)
+	}
+
+	int32_t	incr_ref()
+	{
+		return ++_ref_counter;
+	}
+	int32_t	decr_ref()
+	{
+		return --_ref_counter;
+	}
+	int32_t	get_ref()
+	{
+		return _ref_counter;
+	}
+private:
+	int32_t	_ref_counter;
 };
 
 //裸对象引用计数包装

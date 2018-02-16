@@ -106,11 +106,11 @@ public:
 	virtual void	shutdown(int32_t howto);
 	virtual bool	peer_addr(std::string& addr);
 	virtual bool	local_addr(std::string& addr);
-
+		
 	//override------------------
 	virtual void	chain_inref();
 	virtual void	chain_deref();
-
+	virtual void	transfer_ref(const int32_t& ref);
 protected:
 	virtual void	on_release();
 };

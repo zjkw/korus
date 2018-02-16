@@ -441,7 +441,26 @@ void	tcp_server_handler_terminal::chain_deref()
 	this->shared_from_this().deref();
 }
 
+void	tcp_server_handler_terminal::transfer_ref(const int32_t& ref)
+{
+	if (ref > 0)
+	{
+		for (int32_t i = 0; i < ref; i++)
+		{
+			this->shared_from_this().inref();
+		}
+	}
+	else if(ref < 0)
+	{
+		for (int32_t i = 0; i > ref; i--)
+		{
+			this->shared_from_this().deref();
+		}
+	}
+}
+
 void	tcp_server_handler_terminal::on_release()
 {
 	//Ä¬ÈÏÉ¾³ı,ÆÁ±ÎÖ®
 }
+

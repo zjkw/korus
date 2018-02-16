@@ -13,7 +13,7 @@ tcp_client_channel_domain::tcp_client_channel_domain(std::shared_ptr<reactor_loo
 	_resolve.bind(std::bind(&tcp_client_channel_domain::on_resolve_result, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 }
 
-tcp_client_handler_base::~tcp_client_handler_base()
+tcp_client_channel_domain::~tcp_client_channel_domain()
 { 
 }
 

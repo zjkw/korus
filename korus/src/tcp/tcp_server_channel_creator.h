@@ -14,6 +14,7 @@ public:
 	virtual ~tcp_server_channel_creator();
 	
 	void on_newfd(const SOCKET fd, const struct sockaddr_in& addr);
+	void on_delfd(const SOCKET fd);
 
 private:
 	std::shared_ptr<reactor_loop>			_reactor;
