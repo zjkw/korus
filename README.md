@@ -1,12 +1,19 @@
 # korus (means chorus)
 ##  before build, please:
 #### 1, search file "shared_ptr_base.h", cmd just as: "find /usr/ -name shared_ptr.h"
-#### 2, edit "shared_ptr_base.h", add code just below in public scope of template class "__shared_ptr":
+#### 2, edit "shared_ptr_base.h"。
+#####         A，add code just below in public scope of template class "__shared_ptr":
 ######        //korus 20180107 for manual ref 
 ######        void inref() noexcept
-######        {       _M_refcount._M_add_ref_lock();  }
+######        { _M_refcount._M_add_ref_lock();  }
 ######        void deref() noexcept
-######        {       _M_refcount._M_release();      }
+######        { _M_refcount._M_release();      }
+#####         B， add code just below in public scope of template class "__shared_count":
+######        //korus 20180107 for manual ref      
+######        void _M_add_ref_lock() const noexcept
+######        { if(_M_pi) _M_pi->_M_add_ref_lock();     }
+######        void _M_release() const noexcept
+######        { if(_M_pi) _M_pi->_M_release();  }
         
 ##  now feb 2018, only demo, without strength test yet
 
