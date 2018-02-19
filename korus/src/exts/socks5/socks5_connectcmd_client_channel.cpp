@@ -37,7 +37,7 @@ int32_t	socks5_connectcmd_client_channel::make_tunnel_pkg(void* buf, const uint1
 		assert(false);
 		return -1;
 	}
-	SOCK_ADDR_TYPE	sat = addrtype_from_string(host);
+	SOCK_ADDR_TYPE	sat = addrtype_from_string(_server_addr);
 	if (sat == SAT_DOMAIN)
 	{
 		codec << static_cast<uint8_t>(0x03);
@@ -51,6 +51,7 @@ int32_t	socks5_connectcmd_client_channel::make_tunnel_pkg(void* buf, const uint1
 
 		codec << static_cast<uint8_t>(0x01);
 		codec << static_cast<uint32_t>(ntohl(ia.s_addr));
+		codec << static_cast<uint16_t>(strtoul(port.c_str(), NULL, 10));
 	}
 	else
 	{

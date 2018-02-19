@@ -26,7 +26,7 @@ void	tcp_client_channel_domain::connect()
 		return;
 	}
 
-	SOCK_ADDR_TYPE	sat = addrtype_from_string(host);
+	SOCK_ADDR_TYPE	sat = addrtype_from_string(_server_addr_tmp);
 	if (sat == SAT_DOMAIN)
 	{
 		std::string ip;

@@ -4,6 +4,7 @@
 #include <assert.h>
 #include <memory>
 #include <vector>
+#include "basic_defines.h"
 
 //
 //			<---prev---			<---prev---
@@ -127,15 +128,15 @@ protected:
 	}
 };
 
-class chain_threadnosafe_ref
+class obj_refbase
 {
 public:
-	chain_threadnosafe_ref() : _ref_counter(0)
+	obj_refbase() : _ref_counter(0)
 	{
 	}
-	virtual ~chain_threadnosafe_ref()
+	virtual ~obj_refbase()
 	{
-		//assert(1 == _ref_counter)
+		assert(0 == _ref_counter);
 	}
 
 	int32_t	incr_ref()
@@ -144,13 +145,19 @@ public:
 	}
 	int32_t	decr_ref()
 	{
-		return --_ref_counter;
+		int32_t	ref_counter = --_ref_counter;
+		if (0 == ref_counter)
+		{
+			delete this;
+		}
+		return ref_counter;
 	}
 	int32_t	get_ref()
 	{
 		return _ref_counter;
 	}
-private:
+
+protected:
 	int32_t	_ref_counter;
 };
 

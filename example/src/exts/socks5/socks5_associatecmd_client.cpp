@@ -82,7 +82,7 @@ int main(int argc, char* argv[])
 	std::string	server_addr = std::string("127.0.0.1:") + argv[2];
 	thread_num = (uint16_t)atoi(argv[3]);
 	
-	socks5_associatecmd_client<uint16_t> client(thread_num, proxy_addr, server_addr, channel_factory);
+	socks5_associatecmd_client<uint16_t> client(thread_num, proxy_addr, server_addr, channel_factory, "test", "123");
 	
 	client.start();
 	for (;;)

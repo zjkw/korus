@@ -9,12 +9,12 @@ class socks5_server_auth : public std::enable_shared_from_this<socks5_server_aut
 public:
 	socks5_server_auth() {}
 	~socks5_server_auth() {}
-	virtual bool				chacke_userpsw(const std::string& user, const std::string& psw) = 0;
+	virtual bool				check_userpsw(const std::string& user, const std::string& psw) = 0;
 	virtual	SOCKS_METHOD_TYPE	select_method(const std::vector<SOCKS_METHOD_TYPE>&	method_list) = 0;
 };
 
 //中继角色，根据状态切换
-class socks5_server_init_channel : public tcp_server_handler_base, public chain_threadnosafe_ref
+class socks5_server_init_channel : public tcp_server_handler_base, public obj_refbase
 {
 public:
 	socks5_server_init_channel(std::shared_ptr<reactor_loop> reactor, std::shared_ptr<socks5_server_auth> auth);

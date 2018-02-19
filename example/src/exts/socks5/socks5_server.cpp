@@ -13,7 +13,7 @@ class socks5_server_auth_imp : public socks5_server_auth
 public:
 	socks5_server_auth_imp() {}
 	~socks5_server_auth_imp() {}
-	virtual bool				chacke_userpsw(const std::string& user, const std::string& psw)
+	virtual bool				check_userpsw(const std::string& user, const std::string& psw)
 	{
 		return user == "test" && psw == "123";
 	}

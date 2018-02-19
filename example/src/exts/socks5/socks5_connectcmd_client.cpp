@@ -64,7 +64,7 @@ std::shared_ptr<tcp_client_handler_base> channel_factory(std::shared_ptr<reactor
 {
 	std::shared_ptr<tcp_client_handler> handler = std::make_shared<tcp_client_handler>(reactor);
 	std::shared_ptr<tcp_client_handler_base> cb = std::dynamic_pointer_cast<tcp_client_handler_base>(handler);
-	return nullptr;
+	return cb;
 }
 
 int main(int argc, char* argv[]) 
@@ -82,7 +82,7 @@ int main(int argc, char* argv[])
 	std::string	server_addr = std::string("127.0.0.1:") + argv[2];
 	thread_num = (uint16_t)atoi(argv[3]);
 		
-	socks5_connectcmd_client<uint16_t> client(thread_num, proxy_addr, server_addr, channel_factory);
+	socks5_connectcmd_client<uint16_t> client(thread_num, proxy_addr, server_addr, channel_factory, "test", "123");
 	client.start();
 	for (;;)
 	{

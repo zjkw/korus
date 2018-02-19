@@ -180,10 +180,10 @@ static	bool	bin2method(std::vector<SOCKS_METHOD_TYPE>&	method_list, uint8_t* met
 	{
 		switch (methods[i])
 		{
-		case 0x05:
+		case 0x000:
 			method_list.push_back(SMT_NOAUTH);
 			break;
-		case 0x01:
+		case 0x02:
 			method_list.push_back(SMT_USERPSW);
 			break;
 		}
@@ -196,10 +196,10 @@ static	bool	method2bin(uint8_t* methods, const SOCKS_METHOD_TYPE&	method_type)
 	switch (method_type)
 	{
 	case SMT_NOAUTH:
-		*methods = 0x05;
+		*methods = 0x00;
 		return true;
 	case SMT_USERPSW:
-		*methods = 0x01;
+		*methods = 0x02;
 		return true;
 	default:
 		return false;
@@ -362,7 +362,7 @@ void	socks5_server_init_channel::on_recv_pkg(const void* buf, const size_t size)
 				uint8_t buf_ret[2];
 				net_serialize	codec(buf_ret, sizeof(buf_ret));
 				codec << static_cast<uint8_t>(0x01);
-				if (_auth->chacke_userpsw(user, psw))
+				if (_auth->check_userpsw(user, psw))
 				{
 					codec << static_cast<uint8_t>(0x00);
 					send(buf_ret, codec.wpos());

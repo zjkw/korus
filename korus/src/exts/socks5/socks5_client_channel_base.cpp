@@ -77,9 +77,9 @@ int32_t socks5_client_channel_base::on_recv_split(const void* buf, const size_t 
 			switch (u8atyp)
 			{
 			case 0x01:
-				if (size >= 8)
+				if (size >= 10)
 				{
-					return 8;
+					return 10;
 				}
 				break;
 			case 0x03:
@@ -94,9 +94,9 @@ int32_t socks5_client_channel_base::on_recv_split(const void* buf, const size_t 
 				}
 				break;
 			case 0x04:
-				if (size >= 20)
+				if (size >= 22)
 				{
-					return 20;
+					return 22;
 				}
 				break;
 			default:
@@ -153,8 +153,8 @@ int32_t	socks5_client_channel_base::make_method_pkg(void* buf, const uint16_t si
 	else
 	{
 		codec << static_cast<uint8_t>(2);
-		codec << static_cast<uint8_t>(0x05);
-		codec << static_cast<uint8_t>(0x03);
+		codec << static_cast<uint8_t>(0x00);
+		codec << static_cast<uint8_t>(0x02);
 	}
 	return (int32_t)codec.wpos();
 }
@@ -178,31 +178,56 @@ void	socks5_client_channel_base::on_method_pkg(const void* buf, const uint16_t s
 		return;
 	}
 
-	if (0xff == u8method)
+	switch (u8method)
 	{
+	case 0x00:   //auth: none
+		{
+			// send
+			uint8_t	send_buf[2048];
+			int32_t	ret = make_tunnel_pkg(send_buf, sizeof(send_buf));
+			if (ret <= 0)
+			{
+				close();
+				return;
+			}
+
+			if (send(send_buf, ret) < 0)
+			{
+				close();
+				return;
+			}
+
+			_shakehand_state = SCS_TUNNEL;
+		}
+		break;
+	case 0x02:	//auth: user+psw
+		{
+			// send
+			uint8_t	send_buf[2048];
+			int32_t	ret = make_auth_pkg(send_buf, sizeof(send_buf));
+			if (ret <= 0)
+			{
+				close();
+				return;
+			}
+
+			if (send(send_buf, ret) < 0)
+			{
+				close();
+				return;
+			}
+
+			_shakehand_state = SCS_AUTH;
+		}
+		break;
+	case 0xff:  //fall through
+	default:
 		if (CMS_INNER_AUTO_CLOSE == on_error(CEC_SOCKS5_METHOD_NOSUPPORTED))
 		{
 			close();
 		}
-		return;
+		break;
 	}
-
-	// send
-	uint8_t	send_buf[2048];
-	int32_t	ret = make_auth_pkg(send_buf, sizeof(send_buf));
-	if (ret <= 0)
-	{
-		close();
-		return;
-	}
-
-	if (send(send_buf, ret) < 0)
-	{
-		close();
-		return;
-	}
-
-	_shakehand_state = SCS_AUTH;
 }
 
 int32_t	socks5_client_channel_base::make_auth_pkg(void* buf, const uint16_t size)

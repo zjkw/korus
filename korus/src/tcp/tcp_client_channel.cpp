@@ -215,16 +215,16 @@ void	tcp_client_handler_origin::close()
 		return;
 	}
 
-	printf("stop_sockio, %d\n", __LINE__);
+	//printf("stop_sockio, %d\n", __LINE__);
 	_sockio_helper_connect.stop();
 	_sockio_helper_connect.set(INVALID_SOCKET);
 	_sockio_helper.stop();
 	_sockio_helper.set(INVALID_SOCKET);
-	printf("close fd, %d, Line: %d\n", _fd, __LINE__);
+	//printf("close fd, %d, Line: %d\n", _fd, __LINE__);
 	tcp_channel_base::close();
 	if (INVALID_SOCKET != _conn_fd)
 	{
-		printf("close fd, %d, Line: %d\n", _conn_fd, __LINE__);
+		//printf("close fd, %d, Line: %d\n", _conn_fd, __LINE__);
 		::close(_conn_fd);
 		_conn_fd = INVALID_SOCKET;
 	}
@@ -322,7 +322,7 @@ void	tcp_client_handler_origin::connect()
 		_sockio_helper.set(_conn_fd);
 		_conn_fd = INVALID_SOCKET;
 		_conn_state = CNS_CONNECTED;
-		printf("start_sockio, %d\n", __LINE__);
+		//printf("start_sockio, %d\n", __LINE__);
 		_sockio_helper.start(SIT_READWRITE);
 		set_normal();
 		on_connected();
@@ -332,7 +332,7 @@ void	tcp_client_handler_origin::connect()
 		if (errno == EINPROGRESS)
 		{
 			_conn_state = CNS_CONNECTING;	//start_sockio将会获取fd
-			printf("start_sockio, %d\n", __LINE__);
+			//printf("start_sockio, %d\n", __LINE__);
 			_sockio_helper_connect.set(_conn_fd);
 			_sockio_helper_connect.start(SIT_WRITE);
 			if (_connect_timeout.count())
@@ -342,7 +342,7 @@ void	tcp_client_handler_origin::connect()
 		}
 		else
 		{
-			printf("close fd, %d, Line: %d\n", _conn_fd, __LINE__);
+			//printf("close fd, %d, Line: %d\n", _conn_fd, __LINE__);
 			::close(_conn_fd);
 			_conn_fd = INVALID_SOCKET;
 
@@ -357,11 +357,11 @@ void	tcp_client_handler_origin::connect()
 //触发时机：执行connect且等待状态下；当connect结果在超时前出来，将关掉定时器；触发动作：强行切换到CLOSED
 void	tcp_client_handler_origin::on_timer_connect_timeout(timer_helper* timer_id)
 {
-	printf("stop_sockio, %d\n", __LINE__);
+	//printf("stop_sockio, %d\n", __LINE__);
 	_sockio_helper_connect.stop();
 	_timer_connect_timeout.stop();
 
-	printf("close fd, %d, Line: %d\n", _conn_fd, __LINE__);
+	//printf("close fd, %d, Line: %d\n", _conn_fd, __LINE__);
 	::close(_conn_fd);
 	_conn_fd = INVALID_SOCKET;
 	_sockio_helper_connect.set(INVALID_SOCKET);
@@ -385,14 +385,14 @@ void tcp_client_handler_origin::on_sockio_write_connect(sockio_helper* sockio_id
 		assert(false);
 		return;
 	}
-	printf("on_sockio_write _conn_state %d, Line: %d\n", (int)_conn_state, __LINE__);
+	//printf("on_sockio_write _conn_state %d, Line: %d\n", (int)_conn_state, __LINE__);
 	if (CNS_CONNECTING != _conn_state)
 	{
 		assert(false);
 		return;
 	}
 
-	printf("stopt_sockio, %d\n", __LINE__);
+	//printf("stopt_sockio, %d\n", __LINE__);
 	_sockio_helper_connect.stop();
 	_sockio_helper_connect.set(INVALID_SOCKET);
 	_timer_connect_timeout.stop();
@@ -401,7 +401,7 @@ void tcp_client_handler_origin::on_sockio_write_connect(sockio_helper* sockio_id
 	socklen_t len = sizeof(int32_t);
 	if (getsockopt(_conn_fd, SOL_SOCKET, SO_ERROR, (void *)&err, &len) < 0 || err != 0)
 	{
-		printf("close fd, %d, Line: %d\n", _conn_fd, __LINE__);
+		//printf("close fd, %d, Line: %d\n", _conn_fd, __LINE__);
 		::close(_conn_fd);
 		_conn_fd = INVALID_SOCKET;
 		_conn_state = CNS_CLOSED;
@@ -412,7 +412,7 @@ void tcp_client_handler_origin::on_sockio_write_connect(sockio_helper* sockio_id
 		_sockio_helper.set(_conn_fd);
 		_conn_fd = INVALID_SOCKET;
 		_conn_state = CNS_CONNECTED;
-		printf("start_sockio, %d\n", __LINE__);
+		//printf("start_sockio, %d\n", __LINE__);
 
 		_sockio_helper.start(SIT_READWRITE);
 		set_normal();
@@ -427,7 +427,7 @@ void	tcp_client_handler_origin::on_sockio_write(sockio_helper* sockio_id)
 		assert(false);
 		return;
 	}
-	printf("on_sockio_write _conn_state %d, Line: %d\n", (int)_conn_state, __LINE__);
+	//printf("on_sockio_write _conn_state %d, Line: %d\n", (int)_conn_state, __LINE__);
 	if (CNS_CONNECTED != _conn_state)
 	{
 		assert(false);
@@ -449,7 +449,7 @@ void	tcp_client_handler_origin::on_sockio_read(sockio_helper* sockio_id)
 		assert(false);
 		return;
 	}
-	printf("on_sockio_read _conn_state %d, Line: %d\n", (int)_conn_state, __LINE__);
+	//printf("on_sockio_read _conn_state %d, Line: %d\n", (int)_conn_state, __LINE__);
 	if (CNS_CONNECTED != _conn_state)
 	{
 		return;
@@ -477,7 +477,7 @@ void	tcp_client_handler_origin::set_release()
 
 	_timer_connect_timeout.stop();
 	_timer_connect_retry_wait.stop();
-	printf("stopt_sockio, %d\n", __LINE__);
+	//printf("stopt_sockio, %d\n", __LINE__);
 	_sockio_helper_connect.clear();
 	_sockio_helper.clear();
 	reactor()->stop_async_task(this);

@@ -32,10 +32,43 @@ public:
 	// serialize access
 	host_serialize& write(const void* data, uint32_t size);
 	host_serialize& read(void* data, uint32_t size);
+
 	template <typename T>
-	host_serialize& operator << (const T& t);
+	host_serialize& operator << (const T& t)
+	{
+		if (_is_valid)
+		{
+			if (_write_pos + sizeof(T) > _size)
+			{
+				_is_valid = false;
+			}
+			else
+			{
+				*reinterpret_cast<T*>((uint8_t*)_data + _write_pos) = t;
+				_write_pos += sizeof(T);
+			}
+		}
+		return *this;
+	}
+
 	template <typename T>
-	host_serialize& operator >> (T& t);
+	host_serialize& operator >> (T& t)
+	{
+		if (_is_valid)
+		{
+			if (_read_pos + sizeof(T) > _size)
+			{
+				_is_valid = false;
+			}
+			else
+			{
+				t = *reinterpret_cast<const T*>((uint8_t*)_data + _read_pos);
+				_read_pos += sizeof(T);
+			}
+		}
+		return *this;
+	}
+
 
 private:
 	bool		_is_valid;

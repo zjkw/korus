@@ -10,7 +10,7 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 
 #add_definitions(-DREUSEPORT_OPTION)
-#add_definitions(-std=c++11)
+add_definitions(-std=c++11)
 #set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 
 message("CMAKE_BUILD_TYPE = ${CMAKE_BUILD_TYPE}")

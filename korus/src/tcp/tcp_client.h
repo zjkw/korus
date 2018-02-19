@@ -93,10 +93,6 @@ protected:
 	}
 	std::shared_ptr<tcp_client_handler_base>	create_terminal_channel(std::shared_ptr<reactor_loop> reactor)
 	{
-		if (!_factory)
-		{
-			return nullptr;
-		}
 		std::shared_ptr<tcp_client_handler_base>	channel = _factory(reactor);
 		return channel;
 	}
@@ -186,10 +182,6 @@ protected:
 	}
 	std::shared_ptr<tcp_client_handler_base>	create_terminal_channel(std::shared_ptr<reactor_loop> reactor)
 	{
-		if (!_factory)
-		{
-			return nullptr;
-		}
 		std::shared_ptr<tcp_client_handler_base>	channel = _factory(reactor);
 		return channel;
 	}

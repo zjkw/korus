@@ -26,7 +26,7 @@ public:
 		std::chrono::seconds connect_timeout = std::chrono::seconds(0), std::chrono::seconds connect_retry_wait = std::chrono::seconds(-1),
 		const uint32_t self_read_size = DEFAULT_READ_BUFSIZE, const uint32_t self_write_size = DEFAULT_WRITE_BUFSIZE, const uint32_t sock_read_size = 0, const uint32_t sock_write_size = 0)
 		: tcp_client(thread_num, proxy_addr, factory, connect_timeout, connect_retry_wait, self_read_size, self_write_size, sock_read_size, sock_write_size),
-		_server_addr(_server_addr), _socks_user(socks_user), _socks_psw(socks_psw)
+		_server_addr(server_addr), _socks_user(socks_user), _socks_psw(socks_psw)
 	{
 	}
 	virtual ~socks5_connectcmd_client()
@@ -61,7 +61,7 @@ public:
 		std::chrono::seconds connect_timeout = std::chrono::seconds(0), std::chrono::seconds connect_retry_wait = std::chrono::seconds(-1),
 		const uint32_t self_read_size = DEFAULT_READ_BUFSIZE, const uint32_t self_write_size = DEFAULT_WRITE_BUFSIZE, const uint32_t sock_read_size = 0, const uint32_t sock_write_size = 0)
 		: tcp_client(reactor, proxy_addr, factory, connect_timeout, connect_retry_wait, self_read_size, self_write_size, sock_read_size, sock_write_size),
-		_server_addr(_server_addr), _socks_user(socks_user), _socks_psw(socks_psw)
+		_server_addr(server_addr), _socks_user(socks_user), _socks_psw(socks_psw)
 	{
 
 	}
@@ -202,7 +202,7 @@ public:
 		const std::string& socks_user = "", const std::string& socks_psw = "",	// 如果账号为空，将忽略密码，认为是无需鉴权
 		std::chrono::seconds connect_timeout = std::chrono::seconds(0), std::chrono::seconds connect_retry_wait = std::chrono::seconds(-1),
 		const uint32_t self_read_size = DEFAULT_READ_BUFSIZE, const uint32_t self_write_size = DEFAULT_WRITE_BUFSIZE, const uint32_t sock_read_size = 0, const uint32_t sock_write_size = 0)
-		: _server_addr(_server_addr), _socks_user(socks_user), _socks_psw(socks_psw), _udp_client_channel_factory(factory),
+		: _server_addr(server_addr), _socks_user(socks_user), _socks_psw(socks_psw), _udp_client_channel_factory(factory),
 		tcp_client(thread_num, proxy_addr, std::bind(&socks5_associatecmd_client::socks5_channel_factory, this, std::placeholders::_1), connect_timeout, connect_retry_wait, self_read_size, self_write_size, sock_read_size, sock_write_size)
 	{
 	}
@@ -241,7 +241,7 @@ public:
 		const std::string& socks_user = "", const std::string& socks_psw = "",	// 如果账号为空，将忽略密码，认为是无需鉴权
 		std::chrono::seconds connect_timeout = std::chrono::seconds(0), std::chrono::seconds connect_retry_wait = std::chrono::seconds(-1),
 		const uint32_t self_read_size = DEFAULT_READ_BUFSIZE, const uint32_t self_write_size = DEFAULT_WRITE_BUFSIZE, const uint32_t sock_read_size = 0, const uint32_t sock_write_size = 0)
-		: _server_addr(_server_addr), _socks_user(socks_user), _socks_psw(socks_psw), _udp_client_channel_factory(factory),
+		: _server_addr(server_addr), _socks_user(socks_user), _socks_psw(socks_psw), _udp_client_channel_factory(factory),
 		tcp_client(reactor, proxy_addr, std::bind(&socks5_associatecmd_client::socks5_channel_factory, this, std::placeholders::_1), connect_timeout, connect_retry_wait, self_read_size, self_write_size, sock_read_size, sock_write_size)
 	{
 	}

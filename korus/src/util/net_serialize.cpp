@@ -314,16 +314,16 @@ net_serialize& net_serialize::buildin_read(T& t)
 			switch (sizeof(T))
 			{
 			case 1:
-				t = *reinterpret_cast<T*>((uint8_t*)_data + _write_pos);
+				t = *reinterpret_cast<T*>((uint8_t*)_data + _read_pos);
 				break;
 			case 2:
-				t = ntohs(*reinterpret_cast<T*>((uint8_t*)_data + _write_pos));
+				t = ntohs(*reinterpret_cast<T*>((uint8_t*)_data + _read_pos));
 				break;
 			case 4:
-				t = ntohl(*reinterpret_cast<T*>((uint8_t*)_data + _write_pos));
+				t = ntohl(*reinterpret_cast<T*>((uint8_t*)_data + _read_pos));
 				break;
 			case 8:
-				t = ntohl64(*reinterpret_cast<T*>((uint8_t*)_data + _write_pos));
+				t = ntohl64(*reinterpret_cast<T*>((uint8_t*)_data + _read_pos));
 				break;
 			default:
 				assert(false);

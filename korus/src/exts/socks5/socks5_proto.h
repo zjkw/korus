@@ -20,7 +20,7 @@ enum SOCKS_METHOD_TYPE
 //	1,	method_req:	u8ver + u8nmethod * u8method										客户端能支持的认证集合，让代理服务器选一个
 //						u8ver = 0x05
 //						u8method:
-//							0x05		不需要认证
+//							0x00		不需要认证
 //							0x01		GSSAPI
 //							0x02		用户名 / 密码
 //							0x03--0x7F	由IANA分配
