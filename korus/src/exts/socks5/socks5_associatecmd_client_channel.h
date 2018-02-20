@@ -18,7 +18,7 @@ public:
 
 private:
 	std::string  _local_port;
-	std::shared_ptr<udp_client_handler_base>	_channel;
+	complex_ptr<udp_client_handler_base>	_channel;
 	udp_client_channel_factory_t _udp_factory;
 
 	uint16_t	_port;

@@ -130,7 +130,7 @@ void	socks5_client_channel_base::on_recv_pkg(const void* buf, const size_t size)
 		on_tunnel_pkg(buf, size);
 		break;
 	case SCS_NORMAL:
-		on_recv_pkg(buf, size);
+		tcp_client_handler_base::on_recv_pkg(buf, size);
 		break;
 	case SCS_NONE:
 	default:

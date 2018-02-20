@@ -128,6 +128,7 @@ protected:
 	}
 };
 
+template<typename T>
 class obj_refbase
 {
 public:
@@ -159,6 +160,154 @@ public:
 
 protected:
 	int32_t	_ref_counter;
+};
+
+template<typename T>
+class obj_smartptr
+{
+public:
+	obj_smartptr(T* obj = nullptr) : _obj(nullptr)
+	{
+		if (obj)
+		{
+			obj->incr_ref();
+		}
+		_obj = obj;
+	}
+	obj_smartptr(const obj_smartptr<T>& rhs) : _obj(nullptr)
+	{
+		assign(rhs);
+	}
+	obj_smartptr<T>& operator= (const obj_smartptr<T> rhs)
+	{
+		assign(rhs);
+		return *this;
+	}
+	virtual ~obj_smartptr()
+	{
+		if (_obj)
+		{
+			_obj->decr_ref();
+		}
+	}
+	T* get()
+	{
+		return _obj;
+	}
+	bool operator!= (const obj_smartptr& l) const
+	{
+		return  _obj != l._obj;
+	}
+	explicit operator bool() const
+	{	// test if shared_ptr object owns no resource
+		return _obj != nullptr;
+	}
+
+protected:
+	T*	_obj;
+
+	void assign(const obj_smartptr<T>& rhs)
+	{
+		if (rhs && rhs._obj)
+		{
+			rhs._obj->incr_ref();
+		}
+		if (_obj)
+		{
+			_obj->decr_ref();
+		}
+		_obj = rhs ? rhs._obj : nullptr;
+	}
+};
+
+template<typename T>
+class complex_ptr
+{
+public:
+	complex_ptr(T* obj = nullptr)
+	{
+		_unknown = obj;
+		_shared = nullptr;
+	}
+	complex_ptr(const std::shared_ptr<T> shared)
+	{
+		_unknown = nullptr;
+		_shared = shared;
+	}
+	complex_ptr(const obj_smartptr<T> unknown)
+	{
+		_shared = nullptr;
+		_unknown = unknown;
+	}
+	complex_ptr(const complex_ptr<T>& rhs)
+	{
+		_shared = rhs._shared;
+		_unknown = rhs._unknown;
+	}
+	virtual ~complex_ptr()
+	{
+	}
+	T* get()
+	{
+		if (_unknown)
+		{
+			return _unknown.get();
+		}
+		else if (_shared)
+		{
+			return _shared.get();
+		}
+		return nullptr;
+	}
+	complex_ptr<T>& operator= (T* obj)
+	{
+		_unknown = obj;
+		_shared = nullptr;
+		return *this;
+	}
+	complex_ptr<T>& operator= (const std::shared_ptr<T>& shared)
+	{
+		_unknown = nullptr;
+		_shared = shared;
+		return *this;
+	}
+	complex_ptr<T>& operator= (const obj_smartptr<T>& unknown)
+	{
+		_shared = nullptr;
+		_unknown = unknown;
+		return *this;
+	}
+	complex_ptr<T>& operator= (const complex_ptr<T>& rhs)
+	{
+		_shared = rhs._shared;
+		_unknown = rhs._unknown;
+		return *this;
+	}
+	bool operator!= (const complex_ptr& l) const
+	{
+		if (_unknown || l._unknown)
+		{
+			return _unknown != l._unknown;
+		}
+		else if (_shared || l._shared)
+		{
+			return _shared != l._shared;
+		}
+		return true;
+	}
+	explicit operator bool() const
+	{	// test if shared_ptr object owns no resource
+		return _unknown != nullptr || _shared != nullptr;
+	}
+	T*	operator->()
+	{
+		T* obj = get();
+		return obj;
+	}
+
+protected:
+	std::shared_ptr<T>		_shared;
+	obj_smartptr<T>			_unknown;
 };
 
 //裸对象引用计数包装

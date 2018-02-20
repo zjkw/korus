@@ -114,7 +114,7 @@ private:
 	{
 		std::shared_ptr<reactor_loop>		reactor = std::make_shared<reactor_loop>();
 		udp_server_handler_origin*	origin_channel = new udp_server_handler_origin(reactor, _local_addr, _self_read_size, _self_write_size, _sock_read_size, _sock_write_size);
-		std::shared_ptr<udp_server_handler_base>	terminal_channel = factory(reactor);
+		complex_ptr<udp_server_handler_base>	terminal_channel = factory(reactor);
 		build_channel_chain_helper((udp_server_handler_base*)origin_channel, (udp_server_handler_base*)terminal_channel.get());
 	
 		thread_obj->add_exit_task(std::bind(&udp_server::common_thread_exit, this, thread_obj, reactor, terminal_channel));
@@ -122,7 +122,7 @@ private:
 
 		origin_channel->start();
 	}
-	void common_thread_exit(thread_object*	thread_obj, std::shared_ptr<reactor_loop> reactor, std::shared_ptr<udp_server_handler_base>	terminal_channel)
+	void common_thread_exit(thread_object*	thread_obj, std::shared_ptr<reactor_loop> reactor, complex_ptr<udp_server_handler_base>	terminal_channel)
 	{
 		reactor->invalid();	//可能上层还保持间接或直接引用，这里使其失效：“只管功能失效化，不管生命期释放”
 	}
@@ -177,5 +177,5 @@ private:
 	uint32_t								_self_write_size;
 	uint32_t								_sock_read_size;
 	uint32_t								_sock_write_size;
-	std::shared_ptr<udp_server_handler_base>		_channel;
+	complex_ptr<udp_server_handler_base>	_channel;
 };

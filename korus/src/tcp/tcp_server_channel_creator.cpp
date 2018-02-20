@@ -37,7 +37,7 @@ void tcp_server_channel_creator::on_newfd(const SOCKET fd, const struct sockaddr
 		else
 		{			
 			tcp_server_handler_origin*	origin_channel = new tcp_server_handler_origin(_reactor, fd, _self_read_size, _self_write_size, _sock_read_size, _sock_write_size);
-			std::shared_ptr<tcp_server_handler_base>		terminal_channel = _factory(_reactor);
+			complex_ptr<tcp_server_handler_base>		terminal_channel = _factory(_reactor);
 			build_channel_chain_helper((tcp_server_handler_base*)origin_channel, (tcp_server_handler_base*)terminal_channel.get());
 			chain_object_sharedwrapper<tcp_server_handler_origin>	wrap(origin_channel);
 			_channel_list[fd] = wrap;

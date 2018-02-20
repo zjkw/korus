@@ -34,11 +34,11 @@ public:
 	}
 
 private:
-	virtual std::shared_ptr<tcp_client_handler_base> build_channel_chain(std::shared_ptr<reactor_loop> reactor)
+	virtual complex_ptr<tcp_client_handler_base> build_channel_chain(std::shared_ptr<reactor_loop> reactor)
 	{
 		tcp_client_handler_origin*					origin_channel = create_origin_channel(reactor);
 		socks5_connectcmd_client_channel*	sock5_channel = new socks5_connectcmd_client_channel(reactor, _server_addr, _socks_user, _socks_psw);
-		std::shared_ptr<tcp_client_handler_base>			terminal_channel = create_terminal_channel(reactor);
+		complex_ptr<tcp_client_handler_base>			terminal_channel = create_terminal_channel(reactor);
 		
 		build_channel_chain_helper((tcp_client_handler_base*)origin_channel, (tcp_client_handler_base*)sock5_channel, (tcp_client_handler_base*)terminal_channel.get());
 		origin_channel->connect();
@@ -70,11 +70,11 @@ public:
 	{
 	}
 private:
-	virtual std::shared_ptr<tcp_client_handler_base> build_channel_chain(std::shared_ptr<reactor_loop> reactor)
+	virtual complex_ptr<tcp_client_handler_base> build_channel_chain(std::shared_ptr<reactor_loop> reactor)
 	{
 		tcp_client_handler_origin*					origin_channel = create_origin_channel(reactor);
 		socks5_connectcmd_client_channel*	sock5_channel = new socks5_connectcmd_client_channel(reactor, _server_addr, _socks_user, _socks_psw);
-		std::shared_ptr<tcp_client_handler_base>			terminal_channel = create_terminal_channel(reactor);
+		complex_ptr<tcp_client_handler_base>			terminal_channel = create_terminal_channel(reactor);
 
 		build_channel_chain_helper((tcp_client_handler_base*)origin_channel, (tcp_client_handler_base*)sock5_channel, (tcp_client_handler_base*)terminal_channel.get());
 		origin_channel->connect();
@@ -118,19 +118,19 @@ private:
 	virtual void thread_init(thread_object*	thread_obj)
 	{
 		std::shared_ptr<reactor_loop>		reactor = std::make_shared<reactor_loop>();
-		std::shared_ptr<socks5_bindcmd_client_handler_base>	terminal_channel = build_channel_chain2(reactor);
+		complex_ptr<socks5_bindcmd_client_handler_base>	terminal_channel = build_channel_chain2(reactor);
 
 		thread_obj->add_exit_task(std::bind(&socks5_bindcmd_client::thread_exit2, this, thread_obj, reactor, terminal_channel));
 		thread_obj->add_resident_task(std::bind(&reactor_loop::run_once, reactor));
 	}
-	void thread_exit2(thread_object*	thread_obj, std::shared_ptr<reactor_loop> reactor, std::shared_ptr<socks5_bindcmd_client_handler_base>	terminal_channel)
+	void thread_exit2(thread_object*	thread_obj, std::shared_ptr<reactor_loop> reactor, complex_ptr<socks5_bindcmd_client_handler_base>	terminal_channel)
 	{
 		reactor->invalid();
 	}
-	std::shared_ptr<socks5_bindcmd_client_handler_base> build_channel_chain2(std::shared_ptr<reactor_loop> reactor)
+	complex_ptr<socks5_bindcmd_client_handler_base> build_channel_chain2(std::shared_ptr<reactor_loop> reactor)
 	{
 		socks5_bindcmd_client_handler_origin*		origin_channel = new socks5_bindcmd_client_handler_origin(reactor, _proxy_addr, _server_addr, _socks_user, _socks_psw, _connect_timeout, _connect_retry_wait, _self_read_size, _self_write_size, _sock_read_size, _sock_write_size);
-		std::shared_ptr<socks5_bindcmd_client_handler_base>	terminal_channel = _factory(reactor);
+		complex_ptr<socks5_bindcmd_client_handler_base>	terminal_channel = _factory(reactor);
 		build_channel_chain_helper((socks5_bindcmd_client_handler_base*)origin_channel, (socks5_bindcmd_client_handler_base*)terminal_channel.get());
 		origin_channel->ctrl_connect();
 
@@ -166,10 +166,10 @@ private:
 	{
 		_socks5_channel = build_channel_chain2(_reactor);
 	}
-	std::shared_ptr<socks5_bindcmd_client_handler_base> build_channel_chain2(std::shared_ptr<reactor_loop> reactor)
+	complex_ptr<socks5_bindcmd_client_handler_base> build_channel_chain2(std::shared_ptr<reactor_loop> reactor)
 	{
 		socks5_bindcmd_client_handler_origin*		origin_channel = new socks5_bindcmd_client_handler_origin(reactor, _proxy_addr, _server_addr, _socks_user, _socks_psw, _connect_timeout, _connect_retry_wait, _self_read_size, _self_write_size, _sock_read_size, _sock_write_size);
-		std::shared_ptr<socks5_bindcmd_client_handler_base>	terminal_channel = _factory(reactor);
+		complex_ptr<socks5_bindcmd_client_handler_base>	terminal_channel = _factory(reactor);
 		build_channel_chain_helper((socks5_bindcmd_client_handler_base*)origin_channel, (socks5_bindcmd_client_handler_base*)terminal_channel.get());
 		origin_channel->ctrl_connect();
 
@@ -181,7 +181,7 @@ private:
 	std::string _socks_psw;
 	socks5_bindcmd_client_channel_factory_t _factory;
 
-	std::shared_ptr<socks5_bindcmd_client_handler_base>	_socks5_channel;
+	complex_ptr<socks5_bindcmd_client_handler_base>	_socks5_channel;
 };
 
 ///////////////////////////////////// assocate_cmd_mode
@@ -216,10 +216,10 @@ private:
 		std::shared_ptr<socks5_associatecmd_client_channel>	channel = std::make_shared<socks5_associatecmd_client_channel>(reactor, _server_addr, _socks_user, _socks_psw, _udp_client_channel_factory);
 		std::dynamic_pointer_cast<tcp_client_handler_base>(channel);
 	}
-	virtual std::shared_ptr<tcp_client_handler_base> build_channel_chain(std::shared_ptr<reactor_loop> reactor)
+	virtual complex_ptr<tcp_client_handler_base> build_channel_chain(std::shared_ptr<reactor_loop> reactor)
 	{
 		tcp_client_handler_origin*			origin_channel = create_origin_channel(reactor);
-		std::shared_ptr<tcp_client_handler_base>	terminal_channel = create_terminal_channel(reactor);
+		complex_ptr<tcp_client_handler_base>	terminal_channel = create_terminal_channel(reactor);
 		build_channel_chain_helper((tcp_client_handler_base*)origin_channel, (tcp_client_handler_base*)terminal_channel.get());
 		origin_channel->connect();
 
@@ -256,10 +256,10 @@ private:
 		std::shared_ptr<socks5_associatecmd_client_channel>	channel = std::make_shared<socks5_associatecmd_client_channel>(reactor, _server_addr, _socks_user, _socks_psw, _udp_client_channel_factory);
 		std::dynamic_pointer_cast<tcp_client_handler_base>(channel);
 	}
-	virtual std::shared_ptr<tcp_client_handler_base> build_channel_chain(std::shared_ptr<reactor_loop> reactor)
+	virtual complex_ptr<tcp_client_handler_base> build_channel_chain(std::shared_ptr<reactor_loop> reactor)
 	{
 		tcp_client_handler_origin*			origin_channel = create_origin_channel(reactor);
-		std::shared_ptr<tcp_client_handler_base>	terminal_channel = create_terminal_channel(reactor);
+		complex_ptr<tcp_client_handler_base>	terminal_channel = create_terminal_channel(reactor);
 		build_channel_chain_helper((tcp_client_handler_base*)origin_channel, (tcp_client_handler_base*)terminal_channel.get());
 		origin_channel->connect();
 

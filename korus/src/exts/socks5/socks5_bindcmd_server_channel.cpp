@@ -129,8 +129,7 @@ void	socks5_bindcmd_server_channel::on_tunnel_accept(std::shared_ptr<socks5_bind
 	_is_valid = true;
 }
 
-
-std::shared_ptr<tcp_server_handler_base> socks5_bindcmd_server_channel::binccmd_channel_factory(std::shared_ptr<reactor_loop> reactor)
+complex_ptr<tcp_server_handler_base> socks5_bindcmd_server_channel::binccmd_channel_factory(std::shared_ptr<reactor_loop> reactor)
 {	
 	std::shared_ptr<socks5_bindcmd_tunnel_server_channel> channel = std::make_shared<socks5_bindcmd_tunnel_server_channel>(reactor, std::dynamic_pointer_cast<socks5_bindcmd_server_channel>(shared_from_this()));
 	std::shared_ptr<tcp_server_handler_base> cb = std::dynamic_pointer_cast<tcp_server_handler_base>(channel);

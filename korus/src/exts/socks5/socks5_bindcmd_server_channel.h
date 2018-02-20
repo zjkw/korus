@@ -32,5 +32,5 @@ private:
 	std::weak_ptr<socks5_bindcmd_tunnel_server_channel>			_bindcmd_tunnel_server_channel;	
 	bool														_is_valid;//能否正常传输
 	
-	std::shared_ptr<tcp_server_handler_base> binccmd_channel_factory(std::shared_ptr<reactor_loop> reactor);
+	complex_ptr<tcp_server_handler_base> binccmd_channel_factory(std::shared_ptr<reactor_loop> reactor);
 };

@@ -19,7 +19,7 @@
 
 class tcp_client_handler_base;
 
-using tcp_client_channel_factory_t = std::function<std::shared_ptr<tcp_client_handler_base>(std::shared_ptr<reactor_loop>)>;
+using tcp_client_channel_factory_t = std::function<complex_ptr<tcp_client_handler_base>(std::shared_ptr<reactor_loop>)>;
 
 enum TCP_CLTCONN_STATE
 {
@@ -35,7 +35,7 @@ enum TCP_CLTCONN_STATE
 
 // 可能处于多线程环境下
 // on_error不能纯虚 tbd，加上close默认处理
-class tcp_client_handler_base : public chain_object_linkbase<tcp_client_handler_base>
+class tcp_client_handler_base : public chain_object_linkbase<tcp_client_handler_base>, public obj_refbase<tcp_client_handler_base>
 {
 public:
 	tcp_client_handler_base(std::shared_ptr<reactor_loop> reactor);

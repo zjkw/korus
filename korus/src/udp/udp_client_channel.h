@@ -14,7 +14,7 @@
 
 class udp_client_handler_base;
 
-using udp_client_channel_factory_t = std::function<std::shared_ptr<udp_client_handler_base>(std::shared_ptr<reactor_loop> reactor)>;
+using udp_client_channel_factory_t = std::function<complex_ptr<udp_client_handler_base>(std::shared_ptr<reactor_loop> reactor)>;
 
 //这个类用户可以操作，而且是可能多线程环境下操作，对外是shared_ptr，需要保证线程安全
 //考虑到send可能在工作线程，close在主线程，应排除同时进行操作，所以仅仅此两个进行了互斥，带来的坏处：
@@ -25,7 +25,7 @@ using udp_client_channel_factory_t = std::function<std::shared_ptr<udp_client_ha
 
 // 可能处于多线程环境下
 // on_error不能纯虚 tbd，加上close默认处理
-class udp_client_handler_base : public chain_object_linkbase<udp_client_handler_base>
+class udp_client_handler_base : public chain_object_linkbase<udp_client_handler_base>, public obj_refbase<udp_client_handler_base>
 {
 public:
 	udp_client_handler_base(std::shared_ptr<reactor_loop> reactor);

@@ -11,7 +11,7 @@
 // 3，socks5_connectcmd_embedbind_client_channel 发送请求，要求目标服务器连接 X
 // 4，代理服务器返回 目标服务器连接的ip和端口
 
-class socks5_bindcmd_client_handler_base : public chain_object_linkbase<socks5_bindcmd_client_handler_base>
+class socks5_bindcmd_client_handler_base : public chain_object_linkbase<socks5_bindcmd_client_handler_base>, public obj_refbase<socks5_bindcmd_client_handler_base>
 {
 public:
 	socks5_bindcmd_client_handler_base(std::shared_ptr<reactor_loop> reactor);
@@ -141,6 +141,6 @@ protected:
 	virtual void	on_release();
 };
 
-using socks5_bindcmd_client_channel_factory_t = std::function<std::shared_ptr<socks5_bindcmd_client_handler_base>(std::shared_ptr<reactor_loop>)>;
+using socks5_bindcmd_client_channel_factory_t = std::function<complex_ptr<socks5_bindcmd_client_handler_base>(std::shared_ptr<reactor_loop>)>;
 
 

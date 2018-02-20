@@ -91,15 +91,15 @@ protected:
 	{
 		return new tcp_client_handler_origin(reactor, _server_addr, _connect_timeout, _connect_retry_wait, _self_read_size, _self_write_size, _sock_read_size, _sock_write_size);
 	}
-	std::shared_ptr<tcp_client_handler_base>	create_terminal_channel(std::shared_ptr<reactor_loop> reactor)
+	complex_ptr<tcp_client_handler_base>	create_terminal_channel(std::shared_ptr<reactor_loop> reactor)
 	{
-		std::shared_ptr<tcp_client_handler_base>	channel = _factory(reactor);
+		complex_ptr<tcp_client_handler_base>	channel = _factory(reactor);
 		return channel;
 	}
-	virtual std::shared_ptr<tcp_client_handler_base> build_channel_chain(std::shared_ptr<reactor_loop> reactor)
+	virtual complex_ptr<tcp_client_handler_base> build_channel_chain(std::shared_ptr<reactor_loop> reactor)
 	{
 		tcp_client_handler_origin*			origin_channel	=	create_origin_channel(reactor);
-		std::shared_ptr<tcp_client_handler_base>	terminal_channel = create_terminal_channel(reactor);
+		complex_ptr<tcp_client_handler_base>	terminal_channel = create_terminal_channel(reactor);
 		build_channel_chain_helper((tcp_client_handler_base*)origin_channel, (tcp_client_handler_base*)terminal_channel.get());
 		origin_channel->connect();
 
@@ -122,12 +122,12 @@ protected:
 	virtual void thread_init(thread_object*	thread_obj)
 	{
 		std::shared_ptr<reactor_loop>		reactor = std::make_shared<reactor_loop>();
-		std::shared_ptr<tcp_client_handler_base>	terminal_channel = build_channel_chain(reactor);
+		complex_ptr<tcp_client_handler_base>	terminal_channel = build_channel_chain(reactor);
 		
 		thread_obj->add_exit_task(std::bind(&tcp_client::thread_exit, this, thread_obj, reactor, terminal_channel));
 		thread_obj->add_resident_task(std::bind(&reactor_loop::run_once, reactor));
 	}
-	void thread_exit(thread_object*	thread_obj, std::shared_ptr<reactor_loop> reactor, std::shared_ptr<tcp_client_handler_base>	terminal_channel)
+	void thread_exit(thread_object*	thread_obj, std::shared_ptr<reactor_loop> reactor, complex_ptr<tcp_client_handler_base>	terminal_channel)
 	{
 		reactor->invalid();
 	}
@@ -180,15 +180,15 @@ protected:
 	{
 		return new tcp_client_handler_origin(reactor, _server_addr, _connect_timeout, _connect_retry_wait, _self_read_size, _self_write_size, _sock_read_size, _sock_write_size);
 	}
-	std::shared_ptr<tcp_client_handler_base>	create_terminal_channel(std::shared_ptr<reactor_loop> reactor)
+	complex_ptr<tcp_client_handler_base>	create_terminal_channel(std::shared_ptr<reactor_loop> reactor)
 	{
-		std::shared_ptr<tcp_client_handler_base>	channel = _factory(reactor);
+		complex_ptr<tcp_client_handler_base>	channel = _factory(reactor);
 		return channel;
 	}
-	std::shared_ptr<tcp_client_handler_base> build_channel_chain(std::shared_ptr<reactor_loop> reactor)
+	complex_ptr<tcp_client_handler_base> build_channel_chain(std::shared_ptr<reactor_loop> reactor)
 	{
 		tcp_client_handler_origin*			origin_channel = create_origin_channel(reactor);
-		std::shared_ptr<tcp_client_handler_base>	terminal_channel = create_terminal_channel(reactor);
+		complex_ptr<tcp_client_handler_base>	terminal_channel = create_terminal_channel(reactor);
 		build_channel_chain_helper((tcp_client_handler_base*)origin_channel, (tcp_client_handler_base*)terminal_channel.get());
 		terminal_channel->connect();
 
@@ -207,5 +207,5 @@ protected:
 	uint32_t								_sock_read_size;
 	uint32_t								_sock_write_size;
 
-	std::shared_ptr<tcp_client_handler_base>		_channels;
+	complex_ptr<tcp_client_handler_base>		_channels;
 };

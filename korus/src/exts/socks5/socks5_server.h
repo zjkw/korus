@@ -32,11 +32,10 @@ public:
 private:
 	std::shared_ptr<socks5_server_auth> _auth;
 
-	std::shared_ptr<tcp_server_handler_base> channel_factory(std::shared_ptr<reactor_loop> reactor)
+	complex_ptr<tcp_server_handler_base> channel_factory(std::shared_ptr<reactor_loop> reactor)
 	{
-		std::shared_ptr<socks5_server_init_channel> channel = std::make_shared<socks5_server_init_channel>(reactor, _auth);
-		std::shared_ptr<tcp_server_handler_base> cb = std::dynamic_pointer_cast<tcp_server_handler_base>(channel);
-		return cb;
+		socks5_server_init_channel* channel = new socks5_server_init_channel(reactor, _auth);
+		return (tcp_server_handler_base*)channel;
 	}
 };
 
@@ -59,10 +58,9 @@ public:
 private:
 	std::shared_ptr<socks5_server_auth> _auth;
 
-	std::shared_ptr<tcp_server_handler_base> channel_factory(std::shared_ptr<reactor_loop> reactor)
+	complex_ptr<tcp_server_handler_base> channel_factory(std::shared_ptr<reactor_loop> reactor)
 	{
-		std::shared_ptr<socks5_server_init_channel> channel = std::make_shared<socks5_server_init_channel>(reactor, _auth);
-		std::shared_ptr<tcp_server_handler_base> cb = std::dynamic_pointer_cast<tcp_server_handler_base>(channel);
-		return cb;
+		socks5_server_init_channel* channel = new socks5_server_init_channel(reactor, _auth);
+		return (tcp_server_handler_base*)channel;
 	}
 };

@@ -362,7 +362,7 @@ tcp_server_handler_terminal::tcp_server_handler_terminal(std::shared_ptr<reactor
 
 tcp_server_handler_terminal::~tcp_server_handler_terminal()
 {
-
+	chain_final();
 }
 
 //override------------------
@@ -373,7 +373,7 @@ void	tcp_server_handler_terminal::on_chain_init()
 
 void	tcp_server_handler_terminal::on_chain_final()
 {
-	chain_final();
+
 }
 
 void	tcp_server_handler_terminal::on_accept()

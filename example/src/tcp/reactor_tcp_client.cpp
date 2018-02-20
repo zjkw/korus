@@ -57,7 +57,7 @@ public:
 	}
 };
 
-std::shared_ptr<tcp_client_handler_base> channel_factory(std::shared_ptr<reactor_loop> reactor)
+complex_ptr<tcp_client_handler_base> channel_factory(std::shared_ptr<reactor_loop> reactor)
 {
 	std::shared_ptr<tcp_client_handler> handler = std::make_shared<tcp_client_handler>(reactor);
 	std::shared_ptr<tcp_client_handler_base> cb = std::dynamic_pointer_cast<tcp_client_handler_base>(handler);

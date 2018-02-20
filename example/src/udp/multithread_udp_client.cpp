@@ -60,7 +60,7 @@ public:
 	}
 };
 
-std::shared_ptr<udp_client_handler_base> channel_factory(std::shared_ptr<reactor_loop> reactor)
+complex_ptr<udp_client_handler_base> channel_factory(std::shared_ptr<reactor_loop> reactor)
 {
 	std::shared_ptr<udp_client_handler> handler = std::make_shared<udp_client_handler>(reactor);
 	std::shared_ptr<udp_client_handler_base> cb = std::dynamic_pointer_cast<udp_client_handler_base>(handler);

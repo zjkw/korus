@@ -14,7 +14,7 @@ public:
 };
 
 //中继角色，根据状态切换
-class socks5_server_init_channel : public tcp_server_handler_base, public obj_refbase
+class socks5_server_init_channel : public tcp_server_handler_base
 {
 public:
 	socks5_server_init_channel(std::shared_ptr<reactor_loop> reactor, std::shared_ptr<socks5_server_auth> auth);
