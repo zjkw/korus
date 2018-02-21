@@ -88,6 +88,28 @@ int32_t	udp_server_handler_base::send(const void* buf, const size_t len, const s
 	return _tunnel_prev->send(buf, len, peer_addr);
 }
 
+int32_t	udp_server_handler_base::connect(const sockaddr_in& server_addr)
+{
+	if (!_tunnel_prev)
+	{
+		assert(false);
+		return 0;
+	}
+
+	return _tunnel_prev->connect(server_addr);
+}
+
+int32_t	udp_server_handler_base::send(const void* buf, const size_t len)
+{
+	if (!_tunnel_prev)
+	{
+		assert(false);
+		return 0;
+	}
+
+	return _tunnel_prev->send(buf, len);
+}
+
 void	udp_server_handler_base::close()
 { 
 	if (!_tunnel_prev)
@@ -177,6 +199,30 @@ int32_t	udp_server_handler_origin::send(const void* buf, const size_t len, const
 	return ret;
 }
 
+int32_t	udp_server_handler_origin::connect(const sockaddr_in& server_addr)								// 保证原子, 返回值若<0参考CHANNEL_ERROR_CODE
+{
+	if (!is_normal())
+	{
+		assert(false);
+		return CEC_INVALID_SOCKET;
+	}
+
+	int32_t ret = udp_channel_base::connect(server_addr);
+	return ret;
+}
+
+int32_t	udp_server_handler_origin::send(const void* buf, const size_t len)								// 保证原子, 认为是整包，返回值若<0参考CHANNEL_ERROR_CODE
+{
+	if (!is_normal())
+	{
+		assert(false);
+		return CEC_INVALID_SOCKET;
+	}
+
+	int32_t ret = udp_channel_base::send(buf, len);
+	return ret;
+}
+
 void	udp_server_handler_origin::close()
 {	
 	if (!reactor())
@@ -206,7 +252,7 @@ bool	udp_server_handler_origin::local_addr(std::string& addr)
 	{
 		return false;
 	}
-	return udp_channel_base::peer_addr(addr);
+	return udp_channel_base::local_addr(addr);
 }
 
 void	udp_server_handler_origin::on_sockio_read(sockio_helper* sockio_id)
@@ -315,6 +361,16 @@ bool	udp_server_handler_terminal::start()
 int32_t	udp_server_handler_terminal::send(const void* buf, const size_t len, const sockaddr_in& peer_addr)
 {
 	return udp_server_handler_base::send(buf, len, peer_addr);
+}
+
+int32_t	udp_server_handler_terminal::connect(const sockaddr_in& server_addr)								// 保证原子, 返回值若<0参考CHANNEL_ERROR_CODE
+{
+	return udp_server_handler_base::connect(server_addr);
+}
+
+int32_t	udp_server_handler_terminal::send(const void* buf, const size_t len)
+{
+	return udp_server_handler_base::send(buf, len);
 }
 
 void	udp_server_handler_terminal::close()

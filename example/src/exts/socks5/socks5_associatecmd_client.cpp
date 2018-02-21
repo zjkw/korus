@@ -10,11 +10,11 @@
 
 std::string	server_addr = "0.0.0.0:9099";
 
-class udp_client_handler : public udp_client_handler_terminal
+class udp_server_handler : public udp_server_handler_terminal
 {
 public:
-	udp_client_handler(std::shared_ptr<reactor_loop> reactor) : udp_client_handler_terminal(reactor){}
-	virtual ~udp_client_handler(){}
+	udp_server_handler(std::shared_ptr<reactor_loop> reactor) : udp_server_handler_terminal(reactor){}
+	virtual ~udp_server_handler(){}
 
 	//override------------------
 	virtual void	on_chain_init()
@@ -25,8 +25,6 @@ public:
 	}
 	virtual void	on_ready()
 	{
-		udp_client_handler_base::on_ready();
-
 		char szTest[] = "hello server, i am client!";
 
 		struct sockaddr_in	si;
@@ -59,10 +57,10 @@ public:
 	}
 };
 
-complex_ptr<udp_client_handler_base> channel_factory(std::shared_ptr<reactor_loop> reactor)
+complex_ptr<udp_server_handler_base> channel_factory(std::shared_ptr<reactor_loop> reactor)
 {
-	std::shared_ptr<udp_client_handler> handler = std::make_shared<udp_client_handler>(reactor);
-	std::shared_ptr<udp_client_handler_base> cb = std::dynamic_pointer_cast<udp_client_handler_base>(handler);
+	std::shared_ptr<udp_server_handler> handler = std::make_shared<udp_server_handler>(reactor);
+	std::shared_ptr<udp_server_handler_base> cb = std::dynamic_pointer_cast<udp_server_handler_base>(handler);
 	return cb;
 }
 
@@ -79,7 +77,7 @@ int main(int argc, char* argv[])
 	}
 
 	std::string	proxy_addr = std::string("127.0.0.1:") + argv[1];
-	std::string	server_addr = std::string("127.0.0.1:") + argv[2];
+	server_addr = std::string("127.0.0.1:") + argv[2];
 	thread_num = (uint16_t)atoi(argv[3]);
 	
 	socks5_associatecmd_client<uint16_t> client(thread_num, proxy_addr, server_addr, channel_factory, "test", "123");

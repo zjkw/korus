@@ -336,22 +336,22 @@ bool	udp_client_handler_terminal::start()
 
 int32_t	udp_client_handler_terminal::send(const void* buf, const size_t len, const sockaddr_in& peer_addr)
 {
-	return udp_client_handler_terminal::send(buf, len, peer_addr);
+	return udp_client_handler_base::send(buf, len, peer_addr);
 }
 
 int32_t	udp_client_handler_terminal::connect(const sockaddr_in& server_addr)								// 保证原子, 返回值若<0参考CHANNEL_ERROR_CODE
 {
-	return udp_client_handler_terminal::connect(server_addr);
+	return udp_client_handler_base::connect(server_addr);
 }
 
 int32_t	udp_client_handler_terminal::send(const void* buf, const size_t len)
 {
-	return udp_client_handler_terminal::send(buf, len);
+	return udp_client_handler_base::send(buf, len);
 }
 
 void	udp_client_handler_terminal::close()
 {
-
+	udp_client_handler_base::close();
 }
 
 //override------------------

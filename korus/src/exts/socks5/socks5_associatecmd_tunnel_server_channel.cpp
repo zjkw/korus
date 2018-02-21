@@ -84,7 +84,7 @@ void	socks5_associatecmd_tunnel_server_channel::on_recv_pkg(const void* buf, con
 		temp_buf.resize(size + 10);
 		net_serialize	codec(temp_buf.data(), temp_buf.size());
 
-		codec << static_cast<uint16_t>(0x0000) << static_cast<uint8_t>(0x00) << static_cast<uint8_t>(0x01) << static_cast<uint32_t>(ntohl(peer_addr.sin_addr.s_addr)) << static_cast<uint16_t>(peer_addr.sin_port);
+		codec << static_cast<uint16_t>(0x0000) << static_cast<uint8_t>(0x00) << static_cast<uint8_t>(0x01) << static_cast<uint32_t>(ntohl(peer_addr.sin_addr.s_addr)) << static_cast<uint16_t>(htons(peer_addr.sin_port));
 		codec.write(buf, size);
 		if (!codec)
 		{

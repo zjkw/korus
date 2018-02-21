@@ -42,6 +42,8 @@ public:
 
 	virtual bool	start();
 	virtual int32_t	send(const void* buf, const size_t len, const sockaddr_in& peer_addr);
+	virtual int32_t	connect(const sockaddr_in& server_addr);
+	virtual int32_t	send(const void* buf, const size_t len);								// 外部数据发送
 	virtual void	close();
 	virtual bool	local_addr(std::string& addr);
 
@@ -60,6 +62,8 @@ public:
 	// 下面四个函数可能运行在多线程环境下	
 	virtual bool	start();
 	virtual int32_t	send(const void* buf, const size_t len, const sockaddr_in& peer_addr);// 保证原子, 认为是整包，返回值若<0参考CHANNEL_ERROR_CODE
+	virtual int32_t	connect(const sockaddr_in& server_addr);
+	virtual int32_t	send(const void* buf, const size_t len);								// 外部数据发送
 	virtual void	close();
 	virtual bool	local_addr(std::string& addr);
 
@@ -94,6 +98,8 @@ public:
 
 	virtual bool	start();
 	virtual int32_t	send(const void* buf, const size_t len, const sockaddr_in& peer_addr);
+	virtual int32_t	connect(const sockaddr_in& server_addr);
+	virtual int32_t	send(const void* buf, const size_t len);								// 外部数据发送
 	virtual void	close();
 	virtual bool	local_addr(std::string& addr);
 

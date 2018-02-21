@@ -198,11 +198,11 @@ template <>
 class socks5_associatecmd_client<uint16_t> : public tcp_client<uint16_t>
 {
 public:
-	socks5_associatecmd_client(uint16_t thread_num, const std::string& proxy_addr, const std::string& server_addr, const udp_client_channel_factory_t& factory,
+	socks5_associatecmd_client(uint16_t thread_num, const std::string& proxy_addr, const std::string& server_addr, const udp_server_channel_factory_t& factory,
 		const std::string& socks_user = "", const std::string& socks_psw = "",	// 如果账号为空，将忽略密码，认为是无需鉴权
 		std::chrono::seconds connect_timeout = std::chrono::seconds(0), std::chrono::seconds connect_retry_wait = std::chrono::seconds(-1),
 		const uint32_t self_read_size = DEFAULT_READ_BUFSIZE, const uint32_t self_write_size = DEFAULT_WRITE_BUFSIZE, const uint32_t sock_read_size = 0, const uint32_t sock_write_size = 0)
-		: _server_addr(server_addr), _socks_user(socks_user), _socks_psw(socks_psw), _udp_client_channel_factory(factory),
+		: _server_addr(server_addr), _socks_user(socks_user), _socks_psw(socks_psw), _udp_server_channel_factory(factory),
 		tcp_client(thread_num, proxy_addr, std::bind(&socks5_associatecmd_client::socks5_channel_factory, this, std::placeholders::_1), connect_timeout, connect_retry_wait, self_read_size, self_write_size, sock_read_size, sock_write_size)
 	{
 	}
@@ -211,16 +211,20 @@ public:
 	}
 
 private:
-	std::shared_ptr<tcp_client_handler_base>	socks5_channel_factory(std::shared_ptr<reactor_loop> reactor)	//原生channel
+	complex_ptr<tcp_client_handler_base>	socks5_channel_factory(std::shared_ptr<reactor_loop> reactor)	//原生channel
 	{
-		std::shared_ptr<socks5_associatecmd_client_channel>	channel = std::make_shared<socks5_associatecmd_client_channel>(reactor, _server_addr, _socks_user, _socks_psw, _udp_client_channel_factory);
-		std::dynamic_pointer_cast<tcp_client_handler_base>(channel);
+		//哨兵，严格说是可以不要的，socks5_associatecmd_client_channel改造成terminal，但由于改动太大，故此
+		std::shared_ptr<tcp_client_handler_terminal> handler = std::make_shared<tcp_client_handler_terminal>(reactor);
+		std::shared_ptr<tcp_client_handler_base> cb = std::dynamic_pointer_cast<tcp_client_handler_base>(handler);
+		return cb;
 	}
 	virtual complex_ptr<tcp_client_handler_base> build_channel_chain(std::shared_ptr<reactor_loop> reactor)
 	{
 		tcp_client_handler_origin*			origin_channel = create_origin_channel(reactor);
+		socks5_associatecmd_client_channel*	sock5_channel = new socks5_associatecmd_client_channel(reactor, _socks_user, _socks_psw, _udp_server_channel_factory);
 		complex_ptr<tcp_client_handler_base>	terminal_channel = create_terminal_channel(reactor);
-		build_channel_chain_helper((tcp_client_handler_base*)origin_channel, (tcp_client_handler_base*)terminal_channel.get());
+
+		build_channel_chain_helper((tcp_client_handler_base*)origin_channel, (tcp_client_handler_base*)sock5_channel, (tcp_client_handler_base*)terminal_channel.get());
 		origin_channel->connect();
 
 		return terminal_channel;
@@ -229,7 +233,7 @@ private:
 	std::string _server_addr;
 	std::string _socks_user;
 	std::string _socks_psw;
-	udp_client_channel_factory_t _udp_client_channel_factory;
+	udp_server_channel_factory_t _udp_server_channel_factory;
 };
 
 template <>
@@ -237,11 +241,11 @@ class socks5_associatecmd_client<reactor_loop> : public tcp_client<reactor_loop>
 {
 public:
 	// addr格式ip:port
-	socks5_associatecmd_client(std::shared_ptr<reactor_loop> reactor, const std::string& proxy_addr, const std::string& server_addr, const udp_client_channel_factory_t& factory,
+	socks5_associatecmd_client(std::shared_ptr<reactor_loop> reactor, const std::string& proxy_addr, const std::string& server_addr, const udp_server_channel_factory_t& factory,
 		const std::string& socks_user = "", const std::string& socks_psw = "",	// 如果账号为空，将忽略密码，认为是无需鉴权
 		std::chrono::seconds connect_timeout = std::chrono::seconds(0), std::chrono::seconds connect_retry_wait = std::chrono::seconds(-1),
 		const uint32_t self_read_size = DEFAULT_READ_BUFSIZE, const uint32_t self_write_size = DEFAULT_WRITE_BUFSIZE, const uint32_t sock_read_size = 0, const uint32_t sock_write_size = 0)
-		: _server_addr(server_addr), _socks_user(socks_user), _socks_psw(socks_psw), _udp_client_channel_factory(factory),
+		: _server_addr(server_addr), _socks_user(socks_user), _socks_psw(socks_psw), _udp_server_channel_factory(factory),
 		tcp_client(reactor, proxy_addr, std::bind(&socks5_associatecmd_client::socks5_channel_factory, this, std::placeholders::_1), connect_timeout, connect_retry_wait, self_read_size, self_write_size, sock_read_size, sock_write_size)
 	{
 	}
@@ -251,16 +255,21 @@ public:
 	}
 
 private:
-	std::shared_ptr<tcp_client_handler_base>	socks5_channel_factory(std::shared_ptr<reactor_loop> reactor)	//原生channel
+	complex_ptr<tcp_client_handler_base>	socks5_channel_factory(std::shared_ptr<reactor_loop> reactor)	//原生channel
 	{
-		std::shared_ptr<socks5_associatecmd_client_channel>	channel = std::make_shared<socks5_associatecmd_client_channel>(reactor, _server_addr, _socks_user, _socks_psw, _udp_client_channel_factory);
-		std::dynamic_pointer_cast<tcp_client_handler_base>(channel);
+		//哨兵，严格说是可以不要的，socks5_associatecmd_client_channel改造成terminal，但由于改动太大，故此
+		std::shared_ptr<tcp_client_handler_terminal> handler = std::make_shared<tcp_client_handler_terminal>(reactor);
+		std::shared_ptr<tcp_client_handler_base> cb = std::dynamic_pointer_cast<tcp_client_handler_base>(handler);
+		return cb;
 	}
 	virtual complex_ptr<tcp_client_handler_base> build_channel_chain(std::shared_ptr<reactor_loop> reactor)
 	{
 		tcp_client_handler_origin*			origin_channel = create_origin_channel(reactor);
+		socks5_associatecmd_client_channel*	sock5_channel = new socks5_associatecmd_client_channel(reactor, _socks_user, _socks_psw, _udp_server_channel_factory);
 		complex_ptr<tcp_client_handler_base>	terminal_channel = create_terminal_channel(reactor);
-		build_channel_chain_helper((tcp_client_handler_base*)origin_channel, (tcp_client_handler_base*)terminal_channel.get());
+
+		build_channel_chain_helper((tcp_client_handler_base*)origin_channel, (tcp_client_handler_base*)sock5_channel, (tcp_client_handler_base*)terminal_channel.get());
+
 		origin_channel->connect();
 
 		return terminal_channel;
@@ -269,5 +278,5 @@ private:
 	std::string _server_addr;
 	std::string _socks_user;
 	std::string _socks_psw;
-	udp_client_channel_factory_t _udp_client_channel_factory;
+	udp_server_channel_factory_t _udp_server_channel_factory;
 };

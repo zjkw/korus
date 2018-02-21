@@ -99,6 +99,26 @@ bool string_from_sockaddr(std::string& address, const struct sockaddr_in& si)
 	return true;
 }
 
+bool string_from_ipport(std::string& address, const std::string& ip, const uint16_t port)
+{
+	char addr[128] = {0};
+	snprintf(addr, sizeof(addr), "%s:%u", ip.c_str(), port);
+
+	address = addr;
+	return true;
+}
+
+bool string_from_ipport(std::string& address, const uint32_t& ip, const uint16_t port)
+{
+	struct sockaddr_in si;
+	if (!sockaddr_from_string(ip, port, si))
+	{
+		return false;
+	}
+
+	return string_from_sockaddr(address, si);
+}
+
 bool sockaddr_from_string(const std::string& ip, const uint16_t port, struct sockaddr_in& si)
 {
 	si.sin_family = AF_INET;
@@ -203,7 +223,8 @@ bool	peeraddr_from_fd(SOCKET fd, std::string& addr)
 	{
 		struct sockaddr_in si;
 		socklen_t addrlen = sizeof(si);
-		if (!getpeername(fd, (struct sockaddr*)&addr, &addrlen) == -1)
+
+		if (!getpeername(fd, (struct sockaddr*)&si, &addrlen))
 		{
 			if (string_from_sockaddr(addr, si))
 			{
@@ -221,7 +242,8 @@ bool	localaddr_from_fd(SOCKET fd, std::string& addr)
 	{
 		struct sockaddr_in si;
 		socklen_t addrlen = sizeof(si);
-		if (!getsockname(fd, (struct sockaddr*)&addr, &addrlen) == -1)
+
+		if (!getsockname(fd, (struct sockaddr*)&si, &addrlen))
 		{
 			if (string_from_sockaddr(addr, si))
 			{

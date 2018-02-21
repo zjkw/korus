@@ -3,8 +3,8 @@
 #include "korus/src/util/socket_ops.h"
 #include "socks5_associatecmd_client_channel.h"
 
-socks5_associatecmd_client_channel::socks5_associatecmd_client_channel(std::shared_ptr<reactor_loop> reactor, const std::string& local_port, const std::string& socks_user, const std::string& socks_psw, const udp_client_channel_factory_t& udp_factory)
-: _local_port(local_port), _udp_factory(udp_factory), _port(0), _channel(nullptr), socks5_client_channel_base(reactor, socks_user, socks_psw)
+socks5_associatecmd_client_channel::socks5_associatecmd_client_channel(std::shared_ptr<reactor_loop> reactor, const std::string& socks_user, const std::string& socks_psw, const udp_server_channel_factory_t& udp_factory)
+: _proxy_udp_port(0), _filter_channel(nullptr), _udp_factory(udp_factory), _terminal_channel(nullptr), socks5_client_channel_base(reactor, socks_user, socks_psw)
 {
 	_resolve.reactor(reactor.get());
 	_resolve.bind(std::bind(&socks5_associatecmd_client_channel::on_resolve_result, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
@@ -26,16 +26,29 @@ void	socks5_associatecmd_client_channel::on_chain_final()
 
 int32_t	socks5_associatecmd_client_channel::make_tunnel_pkg(void* buf, const uint16_t size)
 {
+	//创建udp
+	if (!create_udp_server_channel())
+	{
+		return -1;
+	}
+	std::string local_addr;
+	_terminal_channel->local_addr(local_addr);
+	std::string host;
+	uint16_t port = 0;
+	if (!split_hostport(local_addr, host, port))
+	{
+		return -1;
+	}
+	
 	net_serialize	codec(buf, size);
 
 	codec << static_cast<uint8_t>(SOCKS5_V);
-	codec << static_cast<uint8_t>(0x01);
+	codec << static_cast<uint8_t>(0x03);
 	codec << static_cast<uint8_t>(0x00);
 
 	codec << static_cast<uint8_t>(0x01);
-	codec << static_cast<uint32_t>(0x00);
-	uint16_t port = strtoul(_local_port.c_str(), NULL, 10);
-	codec << static_cast<uint32_t>(port);
+	codec << static_cast<uint32_t>(0x00);//严格说，需要与udp具体监听地址一样，但我们监听是先从"0.0.0.0:0"这里开启
+	codec << port;
 
 	return (int32_t)codec.wpos();
 }
@@ -72,81 +85,86 @@ void	socks5_associatecmd_client_channel::on_tunnel_pkg(const void* buf, const ui
 		return;
 	}
 
+	struct sockaddr_in si;
+
 	// strict check ?
 	switch (u8atyp)
 	{
 	case 0x01:
-	{
-		uint32_t	u32ip = 0;
-		uint16_t	u16port = 0;
-		decodec >> u32ip >> u16port;
-		if (!decodec)
 		{
-			close();
-			return;
-		}
-
-		struct sockaddr_in si;
-		si.sin_family = AF_INET;
-		si.sin_addr.s_addr = u32ip;
-		si.sin_port = u16port;
-		char ip[16];
-		if (!inet_ntop(si.sin_family, &si.sin_addr, ip, sizeof(ip)))
-		{
-			close();
-			return;
-		}
-
-		printf("socks5 ipv4: %s:%d\n", ip, ntohs(u16port));
-		if (!create_udp_client_channel(si))
-		{
-			close();
-			return;
-		}
-	}
-	break;
-	case 0x03:
-	{
-		uint8_t	u8domainlen = 0;
-		decodec >> u8domainlen;
-		char    szdomain[257];
-		decodec.read(szdomain, u8domainlen);
-		decodec >> _port;
-		if (!decodec)
-		{
-			close();
-			return;
-		}
-		szdomain[u8domainlen] = 0;
-
-		printf("socks5 domain: %s:%d\n", szdomain, ntohs(_port));
-
-		// tbd
-		std::string ip;
-		DOMAIN_RESOLVE_STATE state = _resolve.start(szdomain, ip);	//无视成功，强制更新
-		if (DRS_SUCCESS == state)
-		{
-			sockaddr_in si;
-			if (!sockaddr_from_string(ip, ntohs(_port), si))
+			uint32_t	u32ip = 0;
+			uint16_t	u16port = 0;
+			decodec >> u32ip >> u16port;
+			if (!decodec)
 			{
 				close();
 				return;
 			}
-			create_udp_client_channel(si);
+			std::string addr;
+			if (!string_from_ipport(addr, u32ip, u16port))
+			{
+				close();
+				return;
+			}
+			if (!sockaddr_from_string(addr, si))
+			{
+				close();
+				return;
+			}
+
+			printf("socks5 ipv4: %s\n", addr.c_str());
 		}
-		else if (DRS_PENDING != state)
+		break;
+	case 0x03:
+		{
+			uint8_t	u8domainlen = 0;
+			decodec >> u8domainlen;
+			char    szdomain[257];
+			decodec.read(szdomain, u8domainlen);
+			decodec >> _proxy_udp_port;
+			if (!decodec)
+			{
+				close();
+				return;
+			}
+			szdomain[u8domainlen] = 0;
+
+			printf("socks5 domain: %s:%d\n", szdomain, _proxy_udp_port);
+
+			// tbd
+			std::string ip;
+			DOMAIN_RESOLVE_STATE state = _resolve.start(szdomain, ip);	//无视成功，强制更新
+			if (DRS_SUCCESS == state)
+			{
+				std::string addr;
+				if (!string_from_ipport(addr, ip, _proxy_udp_port))
+				{
+					close();
+					return;
+				}
+				if (!sockaddr_from_string(addr, si))
+				{
+					close();
+					return;
+				}
+			}
+			else if (DRS_PENDING != state)
+			{
+				close();
+				return;
+			}
+			else
+			{
+				return;//waiting
+			}
+		}
+		break;
+	case 0x04:
 		{
 			close();
 			return;
 		}
-	}
-	break;
-	case 0x04:
-	{
-		close();
-		return;
-	}
-	break;
+		break;
 	default:
 		break;
 	}
@@ -156,20 +174,24 @@ void	socks5_associatecmd_client_channel::on_tunnel_pkg(const void* buf, const ui
 
 	//通知外层
 	tcp_client_handler_base::on_connected();
+	
+	_filter_channel->switch_normal(si);
+	_filter_channel->on_ready();
 }
 
-bool socks5_associatecmd_client_channel::create_udp_client_channel(const sockaddr_in& si)
+bool socks5_associatecmd_client_channel::create_udp_server_channel()
 {
-	if (_channel)
+	if (_terminal_channel)
 	{
 		return true;
 	}
-	std::string bind_addr = std::string("0.0.0.0") + ":" + _local_port;
-	udp_client_handler_origin* origin_channel = new udp_client_handler_origin(reactor(), bind_addr);
-	_channel = _udp_factory(reactor());
-	build_channel_chain_helper((udp_client_handler_base*)origin_channel, (udp_client_handler_base*)_channel.get());
-	_channel->connect(si);
-	_channel->start();
+	std::string bind_addr = std::string("0.0.0.0:0");
+	udp_server_handler_origin* origin_channel = new udp_server_handler_origin(reactor(), bind_addr);
+	_filter_channel = new socks5_associatecmd_filter_server_channel(reactor());
+	_terminal_channel = _udp_factory(reactor());
+	build_channel_chain_helper((udp_server_handler_base*)origin_channel, (udp_server_handler_base*)_filter_channel, (udp_server_handler_base*)_terminal_channel.get());
+
+	_terminal_channel->start();
 
 	return true;
 }
@@ -178,13 +200,25 @@ void	socks5_associatecmd_client_channel::on_resolve_result(DOMAIN_RESOLVE_STATE 
 {
 	if (result == DRS_SUCCESS)
 	{
-		struct sockaddr_in si;
-		if (!sockaddr_from_string(ip, _port, si))
+		std::string addr;
+		if (!string_from_ipport(addr, ip, _proxy_udp_port))
 		{
 			close();
 			return;
 		}
-		create_udp_client_channel(si);
+		struct sockaddr_in si;
+		if (!sockaddr_from_string(addr, si))
+		{
+			close();
+			return;
+		}
+		_shakehand_state = SCS_NORMAL;
+
+		//通知外层
+		tcp_client_handler_base::on_connected();
+
+		_filter_channel->switch_normal(si);
+		_filter_channel->on_ready();		
 	}
 	else
 	{

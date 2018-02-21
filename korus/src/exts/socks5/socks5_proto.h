@@ -14,6 +14,8 @@ enum SOCKS_METHOD_TYPE
 	SMT_USERPSW = 3,
 };
 
+//tbd 超时管理：5分钟无数据交互即kill掉连接
+
 //
 //	客户端	<--->	代理服务器	<--->	目标服务器
 //
