@@ -4,11 +4,11 @@
 
 class socks5_bindcmd_client_handler_origin;
 
-class socks5_connectcmd_embedbind_client_channel : public socks5_connectcmd_client_channel
+class socks5_bindcmd_filterconnect_client_channel : public tcp_client_handler_base
 {
 public:
-	socks5_connectcmd_embedbind_client_channel(std::shared_ptr<reactor_loop> reactor, const std::string& server_addr, const std::string& socks_user, const std::string& socks_psw);
-	virtual ~socks5_connectcmd_embedbind_client_channel();
+	socks5_bindcmd_filterconnect_client_channel(std::shared_ptr<reactor_loop> reactor);
+	virtual ~socks5_bindcmd_filterconnect_client_channel();
 
 	//override------------------
 	virtual void	on_chain_init();
@@ -26,6 +26,4 @@ public:
 
 private:
 	socks5_bindcmd_client_handler_origin* _integration;
-	
-	virtual void	on_shakehandler_result(const CHANNEL_ERROR_CODE code, const std::string& proxy_listen_target_addr);
 };

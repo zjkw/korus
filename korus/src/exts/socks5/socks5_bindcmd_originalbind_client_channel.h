@@ -13,21 +13,22 @@ public:
 	//override------------------
 	virtual void	on_chain_init();
 	virtual void	on_chain_final();
-	virtual void	chain_inref();
-	virtual void	chain_deref();
+		
 	void set_integration(socks5_bindcmd_client_handler_origin* integration) { _integration = integration; }
-
-	virtual void	on_connected();
-	virtual void	on_closed();
-	virtual CLOSE_MODE_STRATEGY	on_error(CHANNEL_ERROR_CODE code);
-
-	virtual int32_t on_recv_split(const void* buf, const size_t size);
-	virtual void	on_recv_pkg(const void* buf, const size_t size);
 
 private:
 	std::string _server_addr;
-	socks5_bindcmd_client_handler_origin* _integration;
 	
 	virtual int32_t	make_tunnel_pkg(void* buf, const uint16_t size);
 	virtual void	on_tunnel_pkg(const void* buf, const uint16_t size);
+
+	enum TunnerResState
+	{
+		TRS_NONE = 0,
+		TRS_PROXYSVR_LISTEN_ADDRESS = 1,
+		TRS_TARGETSVR_CONNECT_ADDRESS = 2
+	};
+	TunnerResState	_tunnelResState;
+
+	socks5_bindcmd_client_handler_origin* _integration;
 };

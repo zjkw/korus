@@ -112,7 +112,7 @@ void	socks5_associatecmd_client_channel::on_tunnel_pkg(const void* buf, const ui
 				return;
 			}
 
-			printf("socks5 ipv4: %s\n", addr.c_str());
+			printf("socks5 associate cmd ipv4: %s\n", addr.c_str());
 		}
 		break;
 	case 0x03:
@@ -129,7 +129,7 @@ void	socks5_associatecmd_client_channel::on_tunnel_pkg(const void* buf, const ui
 			}
 			szdomain[u8domainlen] = 0;
 
-			printf("socks5 domain: %s:%d\n", szdomain, _proxy_udp_port);
+			printf("socks5 associate cmd domain: %s:%d\n", szdomain, _proxy_udp_port);
 
 			// tbd
 			std::string ip;

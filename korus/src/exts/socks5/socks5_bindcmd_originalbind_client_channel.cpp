@@ -5,7 +5,7 @@
 #include "socks5_bindcmd_originalbind_client_channel.h"
 
 socks5_bindcmd_originalbind_client_channel::socks5_bindcmd_originalbind_client_channel(std::shared_ptr<reactor_loop> reactor, const std::string& server_addr, const std::string& socks_user, const std::string& socks_psw)
-: _server_addr(server_addr), _integration(nullptr), socks5_client_channel_base(reactor, socks_user, socks_psw)
+: _server_addr(server_addr), _tunnelResState(TRS_NONE), socks5_client_channel_base(reactor, socks_user, socks_psw)
 {
 
 }
@@ -21,71 +21,6 @@ void	socks5_bindcmd_originalbind_client_channel::on_chain_init()
 
 void	socks5_bindcmd_originalbind_client_channel::on_chain_final()
 {
-}
-
-void	socks5_bindcmd_originalbind_client_channel::chain_inref()
-{
-	_integration->chain_inref();
-}
-
-void	socks5_bindcmd_originalbind_client_channel::chain_deref()
-{
-	_integration->chain_deref();
-}
-
-void	socks5_bindcmd_originalbind_client_channel::on_connected()
-{
-	if (!_integration)
-	{
-		assert(false);
-		return;
-	}
-
-	_integration->on_data_connected();
-}
-
-void	socks5_bindcmd_originalbind_client_channel::on_closed()
-{
-	if (!_integration)
-	{
-		assert(false);
-		return;
-	}
-
-	_integration->on_data_closed();
-}
-
-CLOSE_MODE_STRATEGY	socks5_bindcmd_originalbind_client_channel::on_error(CHANNEL_ERROR_CODE code)
-{
-	if (!_integration)
-	{
-		assert(false);
-		return CMS_INNER_AUTO_CLOSE;
-	}
-
-	return _integration->on_data_error(code);
-}
-
-int32_t socks5_bindcmd_originalbind_client_channel::on_recv_split(const void* buf, const size_t size)
-{
-	if (!_integration)
-	{
-		assert(false);
-		return 0;
-	}
-
-	return _integration->on_data_recv_split(buf, size);
-}
-
-void	socks5_bindcmd_originalbind_client_channel::on_recv_pkg(const void* buf, const size_t size)
-{
-	if (!_integration)
-	{
-		assert(false);
-		return;
-	}
-
-	_integration->on_data_recv_pkg(buf, size);
 }
 
 int32_t	socks5_bindcmd_originalbind_client_channel::make_tunnel_pkg(void* buf, const uint16_t size)
@@ -159,60 +94,78 @@ void	socks5_bindcmd_originalbind_client_channel::on_tunnel_pkg(const void* buf, 
 		return;
 	}
 
+	std::string addr;
+
 	// strict check ?
 	switch (u8atyp)
 	{
 	case 0x01:
-	{
-		uint32_t	u32ip = 0;
-		decodec >> u32ip;
-		if (!decodec)
 		{
-			close();
-			return;
+			uint32_t	ip = 0;
+			uint16_t	port = 0;
+			decodec >> ip >> port;
+			if (!decodec)
+			{
+				close();
+				return;
+			}
+			if (!string_from_ipport(addr, ip, port))
+			{
+				close();
+				return;
+			}
 		}
-
-		struct in_addr si;
-		si.s_addr = u32ip;
-		char str[16];
-		if (!inet_ntop(AF_INET, &si, str, sizeof(str)))
-		{
-			close();
-			return;
-		}
-
-		printf("socks5 ipv4: %s\n", str);
-	}
-	break;
+		break;
 	case 0x03:
-	{
-		uint8_t	u8domainlen = 0;
-		decodec >> u8domainlen;
-		char    szdomain[257];
-		decodec.read(szdomain, u8domainlen);
-		if (!decodec)
+		{
+			uint8_t	u8domainlen = 0;
+			decodec >> u8domainlen;
+			char    szdomain[257];
+			decodec.read(szdomain, u8domainlen);
+			uint16_t port;
+			decodec >> port;
+			if (!decodec)
+			{
+				close();
+				return;
+			}
+			szdomain[u8domainlen] = 0;
+
+			if (!string_from_ipport(addr, szdomain, port))
+			{
+				close();
+				return;
+			}
+		}
+		break;
+	case 0x04:
 		{
 			close();
 			return;
 		}
-		szdomain[u8domainlen] = 0;
-
-		printf("socks5 domain: %s\n", szdomain);
-	}
-	break;
-	case 0x04:
-	{
-		close();
-		return;
-	}
-	break;
+		break;
 	default:
 		break;
 	}
 	//
 
-	_shakehand_state = SCS_NORMAL;
-
-	//通知外层
-	tcp_client_handler_base::on_connected();
+	switch (_tunnelResState)
+	{
+	case TRS_NONE:
+		_tunnelResState = TRS_PROXYSVR_LISTEN_ADDRESS;
+		printf("socks5 bindcmd proxy_server_listen: %s\n", addr.c_str());
+		_integration->on_data_prepare(addr);
+		break;
+	case TRS_PROXYSVR_LISTEN_ADDRESS:
+		_tunnelResState = TRS_TARGETSVR_CONNECT_ADDRESS;
+		//通知外层
+		printf("socks5 bindcmd target_server local connect: %s\n", addr.c_str());
+		_shakehand_state = SCS_NORMAL;
+		tcp_client_handler_base::on_connected();//必须tcp_client_handler_base
+		break;
+	case TRS_TARGETSVR_CONNECT_ADDRESS:
+		break;
+	default:
+		break;
+	}
 }

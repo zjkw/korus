@@ -72,15 +72,14 @@ int main(int argc, char* argv[])
 	if (argc != 4)
 	{
 		printf("Usage: %s <proxy_port> <server_port> <thread-num> \n", argv[0]);
-		printf("  e.g: %s 9099 9100 12\n", argv[0]);
+		printf("  e.g: %s 9099 12\n", argv[0]);
 		return 0;
 	}
 
 	std::string	proxy_addr = std::string("127.0.0.1:") + argv[1];
-	server_addr = std::string("127.0.0.1:") + argv[2];
 	thread_num = (uint16_t)atoi(argv[3]);
 	
-	socks5_associatecmd_client<uint16_t> client(thread_num, proxy_addr, server_addr, channel_factory, "test", "123");
+	socks5_associatecmd_client<uint16_t> client(thread_num, proxy_addr, channel_factory, "test", "123");
 	
 	client.start();
 	for (;;)

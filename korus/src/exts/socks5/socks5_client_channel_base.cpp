@@ -148,7 +148,7 @@ int32_t	socks5_client_channel_base::make_method_pkg(void* buf, const uint16_t si
 	if (_socks_user.empty())
 	{
 		codec << static_cast<uint8_t>(1);
-		codec << static_cast<uint8_t>(0x05);
+		codec << static_cast<uint8_t>(0x00);
 	}
 	else
 	{

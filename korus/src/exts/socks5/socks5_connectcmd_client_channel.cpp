@@ -94,33 +94,36 @@ void	socks5_connectcmd_client_channel::on_tunnel_pkg(const void* buf, const uint
 		return;
 	}
 
-	char proxy_listen_target_addr[128];
-// strict check ?
-	switch(u8atyp)
+	std::string addr;
+
+	// strict check ?
+	switch (u8atyp)
 	{
 	case 0x01:
 		{
-			uint32_t	u32ip = 0;
-			uint16_t	u16port = 0;
-			decodec >> u32ip >> u16port;
+			uint32_t	ip = 0;
+			uint16_t	port = 0;
+			decodec >> ip >> port;
 			if (!decodec)
 			{
 				close();
 				return;
 			}
-
-			snprintf(proxy_listen_target_addr, sizeof(proxy_listen_target_addr), "%u:%u", ntohl(u32ip), ntohs(u16port));
-			printf("socks5 ipv4 addr: %s\n", proxy_listen_target_addr);
+			if (!string_from_ipport(addr, ip, port))
+			{
+				close();
+				return;
+			}
 		}
 		break;
 	case 0x03:
 		{
 			uint8_t	u8domainlen = 0;
-			uint16_t	u16port = 0;
 			decodec >> u8domainlen;
 			char    szdomain[257];
 			decodec.read(szdomain, u8domainlen);
-			decodec >> u16port;
+			uint16_t port;
+			decodec >> port;
 			if (!decodec)
 			{
 				close();
@@ -128,8 +131,11 @@ void	socks5_connectcmd_client_channel::on_tunnel_pkg(const void* buf, const uint
 			}
 			szdomain[u8domainlen] = 0;
 
-			snprintf(proxy_listen_target_addr, sizeof(proxy_listen_target_addr), "%s:%u", szdomain, ntohs(u16port));
-			printf("socks5 domain addr: %s\n", proxy_listen_target_addr);
+			if (!string_from_ipport(addr, szdomain, port))
+			{
+				close();
+				return;
+			}
 		}
 		break;
 	case 0x04:
@@ -141,25 +147,12 @@ void	socks5_connectcmd_client_channel::on_tunnel_pkg(const void* buf, const uint
 	default:
 		break;
 	}
-//
+	//
 		
+	printf("socks5 connect cmd proxy_server_listen: %s\n", addr.c_str());
 	_shakehand_state = SCS_NORMAL;
 
 	//通知外层
-	on_shakehandler_result(CEC_NONE, proxy_listen_target_addr);
+	tcp_client_handler_base::on_connected();//必须tcp_client_handler_base
 }
 
-void	socks5_connectcmd_client_channel::on_shakehandler_result(const CHANNEL_ERROR_CODE code, const std::string& proxy_listen_target_addr)
-{
-	if (CEC_NONE == code)
-	{
-		tcp_client_handler_base::on_connected();
-	}
-	else
-	{
-		if (CMS_INNER_AUTO_CLOSE == on_error(code))
-		{
-			close();
-		}
-	}
-}

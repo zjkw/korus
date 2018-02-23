@@ -2,14 +2,15 @@
 
 #include <functional>
 #include "korus/src/util/chain_object.h"
-#include "socks5_bindcmd_originalbind_client_channel.h"
-#include "socks5_connectcmd_embedbind_client_channel.h"
+#include "socks5_bindcmd_filterconnect_client_channel.h"
+#include "socks5_bindcmd_filterbind_client_channel.h"
 
 // 逻辑时序
-// 1，socks5_connectcmd_embedbind_client_channel 向代理服务器执行connect_cmd操作，tcp连接目标服务器
-// 2，socks5_bindcmd_originalbind_client_channel 向代理服务器请求bind操作，返回代理监听（目标服务器的connect）的ip和端口 X
-// 3，socks5_connectcmd_embedbind_client_channel 发送请求，要求目标服务器连接 X
-// 4，代理服务器返回 目标服务器连接的ip和端口
+// 1，socks5_bindcmd_client_handler_terminal执行ctrl_connect，进行命令流连接
+// 2，命令流on_ctrl_connected事件到，执行data_connect，进行数据流连接（BIND CMD）
+// 3，on_data_prepare调用发生了，参数为proxy监听的tcp地址X，然后应用层需要执行ctrl_send，发送类似port命令，通知ftp服务主动连接X
+// 4，on_data_connected调用发生了,表示数据流通道建立
+// 5，on_ctrl_recv_pkg对port返回的处理
 
 class socks5_bindcmd_client_handler_base : public chain_object_linkbase<socks5_bindcmd_client_handler_base>, public obj_refbase<socks5_bindcmd_client_handler_base>
 {
@@ -30,7 +31,7 @@ public:
 	virtual TCP_CLTCONN_STATE	ctrl_state();
 	virtual void	on_ctrl_connected();
 	virtual void	on_ctrl_closed();
-	CLOSE_MODE_STRATEGY	on_ctrl_error(CHANNEL_ERROR_CODE code);				//参考CHANNEL_ERROR_CODE定义	
+	virtual CLOSE_MODE_STRATEGY	on_ctrl_error(CHANNEL_ERROR_CODE code);				//参考CHANNEL_ERROR_CODE定义	
 	virtual int32_t on_ctrl_recv_split(const void* buf, const size_t size);
 	virtual void	on_ctrl_recv_pkg(const void* buf, const size_t size);	//这是一个待处理的完整包
 
@@ -41,12 +42,12 @@ public:
 	virtual void	data_shutdown(int32_t howto);							// 参数参考全局函数 ::shutdown
 	virtual void	data_connect();
 	virtual TCP_CLTCONN_STATE	data_state();
+	virtual void	on_data_prepare(const std::string& proxy_listen_target_addr);		//代理服务器用于监听“目标服务器过来的连接”地址
 	virtual void	on_data_connected();
 	virtual void	on_data_closed();
 	virtual CLOSE_MODE_STRATEGY	on_data_error(CHANNEL_ERROR_CODE code);		//参考CHANNEL_ERROR_CODE定义
 	virtual int32_t on_data_recv_split(const void* buf, const size_t size);
 	virtual void	on_data_recv_pkg(const void* buf, const size_t size);	//这是一个待处理的完整包
-	virtual void	on_data_bindcmd_result(const CHANNEL_ERROR_CODE code, const std::string& proxy_listen_target_addr);		//代理服务器用于监听“目标服务器过来的连接”地址
 	
 private:
 	std::shared_ptr<reactor_loop>		_reactor;
@@ -73,10 +74,9 @@ public:
 	virtual void	ctrl_shutdown(int32_t howto);							// 参数参考全局函数 ::shutdown
 	virtual void	ctrl_connect();
 	virtual TCP_CLTCONN_STATE	ctrl_state();
-
 	virtual void	on_ctrl_connected();
 	virtual void	on_ctrl_closed();	
-	CLOSE_MODE_STRATEGY	on_ctrl_error(CHANNEL_ERROR_CODE code);				//参考CHANNEL_ERROR_CODE定义	
+	virtual CLOSE_MODE_STRATEGY	on_ctrl_error(CHANNEL_ERROR_CODE code);				//参考CHANNEL_ERROR_CODE定义	
 
 	//data channel--------------
 	// 下面五个函数可能运行在多线程环境下	
@@ -85,16 +85,15 @@ public:
 	virtual void	data_shutdown(int32_t howto);							// 参数参考全局函数 ::shutdown
 	virtual void	data_connect();
 	virtual TCP_CLTCONN_STATE	data_state();
-
 	virtual void	on_data_connected();
 	virtual void	on_data_closed();
 	virtual CLOSE_MODE_STRATEGY	on_data_error(CHANNEL_ERROR_CODE code);		//参考CHANNEL_ERROR_CODE定义
 
-	virtual void	on_data_bindcmd_result(const CHANNEL_ERROR_CODE code, const std::string& proxy_listen_target_addr);		//代理服务器用于监听“目标服务器过来的连接”地址
+	virtual void	on_data_prepare(const std::string& proxy_listen_target_addr);		//代理服务器用于监听“目标服务器过来的连接”地址
 
 private:		
-	socks5_connectcmd_embedbind_client_channel*	_ctrl_channel;
-	socks5_bindcmd_originalbind_client_channel*	_data_channel;
+	socks5_bindcmd_filterconnect_client_channel*	_ctrl_channel;
+	socks5_bindcmd_filterbind_client_channel*		_data_channel;
 };
 
 class socks5_bindcmd_client_handler_terminal : public socks5_bindcmd_client_handler_base, public std::enable_shared_from_this<socks5_bindcmd_client_handler_terminal>
@@ -131,7 +130,7 @@ public:
 	virtual void	on_data_closed();
 	virtual CLOSE_MODE_STRATEGY	on_data_error(CHANNEL_ERROR_CODE code);		//参考CHANNEL_ERROR_CODE定义
 
-	virtual void	on_data_bindcmd_result(const CHANNEL_ERROR_CODE code, const std::string& proxy_listen_target_addr);		//代理服务器用于监听“目标服务器过来的连接”地址
+	virtual void	on_data_prepare(const std::string& proxy_listen_target_addr);		//代理服务器用于监听“目标服务器过来的连接”地址
 	
 	//override------------------
 	virtual void	chain_inref();

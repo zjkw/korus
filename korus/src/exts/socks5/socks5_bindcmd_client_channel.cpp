@@ -1,5 +1,7 @@
 #include <assert.h>
 #include "korus/src/tcp/tcp_client_channel.h"
+#include "socks5_connectcmd_client_channel.h"
+#include "socks5_bindcmd_originalbind_client_channel.h"
 #include "socks5_bindcmd_client_channel.h"
 
 socks5_bindcmd_client_handler_base::socks5_bindcmd_client_handler_base(std::shared_ptr<reactor_loop>	reactor)
@@ -214,7 +216,7 @@ int32_t socks5_bindcmd_client_handler_base::on_data_recv_split(const void* buf, 
 		assert(false);
 		return 0;
 	}
-	return _tunnel_next->on_ctrl_recv_split(buf, size);
+	return _tunnel_next->on_data_recv_split(buf, size);
 }
 
 void	socks5_bindcmd_client_handler_base::on_data_recv_pkg(const void* buf, const size_t size)	//这是一个待处理的完整包
@@ -224,12 +226,17 @@ void	socks5_bindcmd_client_handler_base::on_data_recv_pkg(const void* buf, const
 		assert(false);
 		return;
 	}
-	_tunnel_next->on_ctrl_recv_pkg(buf, size);
+	_tunnel_next->on_data_recv_pkg(buf, size);
 }
 
-void	socks5_bindcmd_client_handler_base::on_data_bindcmd_result(const CHANNEL_ERROR_CODE code, const std::string& proxy_listen_target_addr)		//代理服务器用于监听“目标服务器过来的连接”地址
+void	socks5_bindcmd_client_handler_base::on_data_prepare(const std::string& proxy_listen_target_addr)		//代理服务器用于监听“目标服务器过来的连接”地址
 {
-//	_ctrl_channel->server_addr(proxy_listen_target_addr);
+	if (!_tunnel_next)
+	{
+		assert(false);
+		return;
+	}
+	_tunnel_next->on_data_prepare(proxy_listen_target_addr);
 }
 
 //////////////////////////////////
@@ -241,14 +248,20 @@ socks5_bindcmd_client_handler_origin::socks5_bindcmd_client_handler_origin(std::
 	: _ctrl_channel(nullptr), _data_channel(nullptr), socks5_bindcmd_client_handler_base(reactor)
 {
 	//ctrl
-	tcp_client_handler_origin*							ctrl_origin_channel = new tcp_client_handler_origin(reactor, proxy_addr, connect_timeout, connect_retry_wait, self_read_size, self_write_size, sock_read_size, sock_write_size);
-	_ctrl_channel = new socks5_connectcmd_embedbind_client_channel(reactor, server_addr, socks_user, socks_psw);
-	build_channel_chain_helper((tcp_client_handler_base*)ctrl_origin_channel, (tcp_client_handler_base*)_ctrl_channel);
+	tcp_client_handler_origin*							ctrl_origin_channel =	new tcp_client_handler_origin(reactor, proxy_addr, connect_timeout, connect_retry_wait, self_read_size, self_write_size, sock_read_size, sock_write_size);
+	socks5_connectcmd_client_channel*					ctrl_socks5			=	new socks5_connectcmd_client_channel(reactor, server_addr, socks_user, socks_psw);
+	_ctrl_channel															=	new socks5_bindcmd_filterconnect_client_channel(reactor);
+	build_channel_chain_helper((tcp_client_handler_base*)ctrl_origin_channel, (tcp_client_handler_base*)ctrl_socks5, (tcp_client_handler_base*)_ctrl_channel);
 
 	//data
-	tcp_client_handler_origin*							data_origin_channel = new tcp_client_handler_origin(reactor, proxy_addr, connect_timeout, connect_retry_wait, self_read_size, self_write_size, sock_read_size, sock_write_size);
-	_data_channel = new socks5_bindcmd_originalbind_client_channel(reactor, server_addr, socks_user, socks_psw);;
-	build_channel_chain_helper((tcp_client_handler_base*)data_origin_channel, (tcp_client_handler_base*)_data_channel);
+	tcp_client_handler_origin*							data_origin_channel =	new tcp_client_handler_origin(reactor, proxy_addr, connect_timeout, connect_retry_wait, self_read_size, self_write_size, sock_read_size, sock_write_size);
+	socks5_bindcmd_originalbind_client_channel*			data_socks5			=	new socks5_bindcmd_originalbind_client_channel(reactor, server_addr, socks_user, socks_psw);
+	_data_channel															=	new socks5_bindcmd_filterbind_client_channel(reactor);
+	build_channel_chain_helper((tcp_client_handler_base*)data_origin_channel, (tcp_client_handler_base*)data_socks5, (tcp_client_handler_base*)_data_channel);
+
+	_ctrl_channel->set_integration(this);
+	data_socks5->set_integration(this);
+	_data_channel->set_integration(this);
 }
 
 socks5_bindcmd_client_handler_origin::~socks5_bindcmd_client_handler_origin()
@@ -316,9 +329,12 @@ void	socks5_bindcmd_client_handler_origin::ctrl_shutdown(int32_t howto)							//
 
 void	socks5_bindcmd_client_handler_origin::ctrl_connect()
 {
-	//构造函数中不能使用shared_from_this，因为对象还没构造出来
-	_ctrl_channel->set_integration(this);
-	_data_channel->set_integration(this);
+	if (!_ctrl_channel)
+	{
+		assert(false);
+		return;
+	}
+	_ctrl_channel->connect();
 }
 
 TCP_CLTCONN_STATE	socks5_bindcmd_client_handler_origin::ctrl_state()
@@ -343,8 +359,7 @@ void	socks5_bindcmd_client_handler_origin::on_ctrl_closed()
 
 CLOSE_MODE_STRATEGY	socks5_bindcmd_client_handler_origin::on_ctrl_error(CHANNEL_ERROR_CODE code)		//参考CHANNEL_ERROR_CODE定义	
 {
-	return CMS_INNER_AUTO_CLOSE;
-
+	socks5_bindcmd_client_handler_base::on_ctrl_error(code);
 }
 
 //data channel--------------
@@ -411,13 +426,12 @@ void	socks5_bindcmd_client_handler_origin::on_data_closed()
 
 CLOSE_MODE_STRATEGY	socks5_bindcmd_client_handler_origin::on_data_error(CHANNEL_ERROR_CODE code)		//参考CHANNEL_ERROR_CODE定义
 {
-	return CMS_INNER_AUTO_CLOSE;
+	return socks5_bindcmd_client_handler_base::on_data_error(code);
 }
 
-void	socks5_bindcmd_client_handler_origin::on_data_bindcmd_result(const CHANNEL_ERROR_CODE code, const std::string& proxy_listen_target_addr)		//代理服务器用于监听“目标服务器过来的连接”地址
+void	socks5_bindcmd_client_handler_origin::on_data_prepare(const std::string& proxy_listen_target_addr)		//代理服务器用于监听“目标服务器过来的连接”地址
 {
-	//	_data_channel->server_addr(proxy_listen_target_addr);
-//	_data_channel->connect();
+	socks5_bindcmd_client_handler_base::on_data_prepare(proxy_listen_target_addr);
 }
 
 /////////////////////////
@@ -526,7 +540,7 @@ CLOSE_MODE_STRATEGY	socks5_bindcmd_client_handler_terminal::on_data_error(CHANNE
 	return CMS_INNER_AUTO_CLOSE;
 }
 
-void	socks5_bindcmd_client_handler_terminal::on_data_bindcmd_result(const CHANNEL_ERROR_CODE code, const std::string& proxy_listen_target_addr)		//代理服务器用于监听“目标服务器过来的连接”地址
+void	socks5_bindcmd_client_handler_terminal::on_data_prepare(const std::string& proxy_listen_target_addr)		//代理服务器用于监听“目标服务器过来的连接”地址
 {
 
 }

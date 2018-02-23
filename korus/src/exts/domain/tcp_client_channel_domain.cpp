@@ -40,7 +40,7 @@ void	tcp_client_channel_domain::connect()
 				return;
 			}
 			server_addr(addr);
-			tcp_client_channel_domain::connect();
+			tcp_client_handler_origin::connect();
 		}
 		else
 		{
@@ -55,7 +55,7 @@ void	tcp_client_channel_domain::connect()
 					return;
 				}
 				server_addr(addr);
-				tcp_client_channel_domain::connect();
+				tcp_client_handler_origin::connect();
 			}
 			else if (DRS_PENDING == state)
 			{
@@ -69,7 +69,7 @@ void	tcp_client_channel_domain::connect()
 	}
 	else if (sat == SAT_IPV4)
 	{
-		tcp_client_channel_domain::connect();
+		tcp_client_handler_origin::connect();
 	}
 	else
 	{
@@ -90,7 +90,7 @@ void	tcp_client_channel_domain::on_resolve_result(DOMAIN_RESOLVE_STATE result, c
 		}
 		printf("on_resolve_result result: %d, domain: %s, ip: %s\n", (int)result, domain.c_str(), ip.c_str());
 		server_addr(addr);
-		tcp_client_channel_domain::connect();
+		tcp_client_handler_origin::connect();
 	}
 	else
 	{

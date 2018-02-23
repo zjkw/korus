@@ -1,0 +1,59 @@
+#include <assert.h>
+#include "korus/src/util/socket_ops.h"
+#include "korus/src/util/net_serialize.h"
+#include "socks5_bindcmd_client_channel.h"
+#include "socks5_bindcmd_filterbind_client_channel.h"
+
+socks5_bindcmd_filterbind_client_channel::socks5_bindcmd_filterbind_client_channel(std::shared_ptr<reactor_loop> reactor)
+: _integration(nullptr), tcp_client_handler_base(reactor)
+{
+
+}
+
+socks5_bindcmd_filterbind_client_channel::~socks5_bindcmd_filterbind_client_channel()
+{
+}
+
+//override------------------
+void	socks5_bindcmd_filterbind_client_channel::on_chain_init()
+{
+}
+
+void	socks5_bindcmd_filterbind_client_channel::on_chain_final()
+{
+}
+
+void	socks5_bindcmd_filterbind_client_channel::chain_inref()
+{
+	_integration->chain_inref();
+}
+
+void	socks5_bindcmd_filterbind_client_channel::chain_deref()
+{
+	_integration->chain_deref();
+}
+
+void	socks5_bindcmd_filterbind_client_channel::on_connected()
+{
+	_integration->on_data_connected();
+}
+
+void	socks5_bindcmd_filterbind_client_channel::on_closed()
+{
+	_integration->on_data_closed();
+}
+
+CLOSE_MODE_STRATEGY	socks5_bindcmd_filterbind_client_channel::on_error(CHANNEL_ERROR_CODE code)
+{
+	return _integration->on_data_error(code);
+}
+
+int32_t socks5_bindcmd_filterbind_client_channel::on_recv_split(const void* buf, const size_t size)
+{
+	return _integration->on_data_recv_split(buf, size);
+}
+
+void	socks5_bindcmd_filterbind_client_channel::on_recv_pkg(const void* buf, const size_t size)
+{
+	_integration->on_data_recv_pkg(buf, size);
+}
