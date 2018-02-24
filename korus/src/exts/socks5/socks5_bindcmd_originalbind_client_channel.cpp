@@ -164,8 +164,8 @@ void	socks5_bindcmd_originalbind_client_channel::on_tunnel_pkg(const void* buf, 
 		tcp_client_handler_base::on_connected();//±ØÐëtcp_client_handler_base
 		break;
 	case TRS_TARGETSVR_CONNECT_ADDRESS:
-		break;
 	default:
+		assert(false);
 		break;
 	}
 }

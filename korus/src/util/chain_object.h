@@ -144,14 +144,9 @@ public:
 	{
 		return ++_ref_counter;
 	}
-	int32_t	decr_ref()
+	int32_t	decr_ref()	//外部处理=0情况时候的delete
 	{
-		int32_t	ref_counter = --_ref_counter;
-		if (0 == ref_counter)
-		{
-			delete this;
-		}
-		return ref_counter;
+		return	--_ref_counter;
 	}
 	int32_t	get_ref()
 	{
@@ -187,7 +182,10 @@ public:
 	{
 		if (_obj)
 		{
-			_obj->decr_ref();
+			if (!_obj->decr_ref())
+			{
+				delete _obj;
+			}
 		}
 	}
 	T* get()
@@ -214,7 +212,10 @@ protected:
 		}
 		if (_obj)
 		{
-			_obj->decr_ref();
+			if (!_obj->decr_ref())
+			{
+				delete _obj;
+			}
 		}
 		_obj = rhs ? rhs._obj : nullptr;
 	}

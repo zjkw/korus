@@ -3,7 +3,7 @@
 #include "socks5_connectcmd_tunnel_client_channel.h"
 
 socks5_connectcmd_tunnel_client_channel::socks5_connectcmd_tunnel_client_channel(std::shared_ptr<reactor_loop> reactor, std::weak_ptr<socks5_connectcmd_server_channel> server_channel)
-: _server_channel(server_channel), tcp_client_handler_base(reactor)
+: _server_channel(server_channel), tcp_client_handler_terminal(reactor)
 {
 }
 

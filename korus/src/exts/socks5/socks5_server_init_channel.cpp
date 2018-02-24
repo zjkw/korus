@@ -1,3 +1,4 @@
+#include "korus/src//util/socket_ops.h"
 #include "korus/src//util/net_serialize.h"
 #include "socks5_connectcmd_server_channel.h"
 #include "socks5_bindcmd_server_channel.h"
@@ -30,7 +31,10 @@ void	socks5_server_init_channel::on_accept()	//连接已经建立
 
 void	socks5_server_init_channel::on_closed()
 {
-	tcp_server_handler_base::on_closed();
+	if (SSS_NORMAL == _shakehand_state)
+	{
+		tcp_server_handler_base::on_closed();
+	}
 }
 
 void	socks5_server_init_channel::chain_inref()
@@ -125,33 +129,26 @@ int32_t socks5_server_init_channel::on_recv_split(const void* buf, const size_t 
 			decodec >> ver;
 			if (ver == SOCKS5_V)
 			{
-				decodec.read_skip(3);
+				decodec.read_skip(2);
 				uint8_t	u8atyp = 0;
 				decodec >> u8atyp;
 				switch (u8atyp)
 				{
 				case 0x01:
-					if (size >= 10)
-					{
-						return 10;
-					}
+					decodec.read_skip(6);
 					break;
 				case 0x03:
-					if (size >= 7)
 					{
 						uint8_t	u8domainlen = 0;
 						decodec >> u8domainlen;
-						if (size > u8domainlen + 7)
+						if (decodec)
 						{
-							return u8domainlen + 7;
+							decodec.read_skip(u8domainlen);
 						}
 					}
 					break;
 				case 0x04:
-					if (size >= 22)
-					{
-						return 22;
-					}
+					decodec.read_skip(180);
 					break;
 				default:
 					break;
@@ -227,8 +224,10 @@ static bool    decode_addr(net_serialize& decodec, std::string& addr)
 				return false;
 			}
 
-			char addr[256];
-			snprintf(addr, sizeof(addr), "%u:%u", ip, port);
+			if (!string_from_ipport(addr, ip, port))
+			{
+				return false;
+			}
 		}
 		break;
 	case 0x03:
@@ -245,8 +244,10 @@ static bool    decode_addr(net_serialize& decodec, std::string& addr)
 				return false;
 			}
 
-			char addr[256];
-			snprintf(addr, sizeof(addr), "%s:%u", domain.c_str(), port);
+			if (!string_from_ipport(addr, domain, port))
+			{
+				return false;
+			}
 		}
 		break;
 	case 0x04:
@@ -345,11 +346,12 @@ void	socks5_server_init_channel::on_recv_pkg(const void* buf, const size_t size)
 				std::string user;
 				uint8_t plen = 0;
 				std::string psw;
+
 				decodec >> ulen;
 				user.resize(ulen);
-				decodec.read((char*)psw.data(), ulen);
+				decodec.read((char*)user.data(), ulen);
 				decodec >> plen;
-				user.resize(ulen);
+				psw.resize(plen);
 				decodec.read((char*)psw.data(), plen);
 				if (!decodec)
 				{
@@ -408,7 +410,7 @@ void	socks5_server_init_channel::on_recv_pkg(const void* buf, const size_t size)
 				{
 				case 0x01:
 					{
-						std::shared_ptr<socks5_connectcmd_server_channel> term = std::dynamic_pointer_cast<socks5_connectcmd_server_channel>(reactor());
+						std::shared_ptr<socks5_connectcmd_server_channel> term = std::make_shared<socks5_connectcmd_server_channel>(reactor());
 						chain_insert(term.get());
 						_shakehand_state = SSS_NORMAL;
 						term->transfer_ref(get_ref());
@@ -417,7 +419,7 @@ void	socks5_server_init_channel::on_recv_pkg(const void* buf, const size_t size)
 					break;
 				case 0x02:
 					{
-						std::shared_ptr<socks5_bindcmd_server_channel> term = std::dynamic_pointer_cast<socks5_bindcmd_server_channel>(reactor());
+						std::shared_ptr<socks5_bindcmd_server_channel> term = std::make_shared<socks5_bindcmd_server_channel>(reactor());
 						chain_insert(term.get());
 						_shakehand_state = SSS_NORMAL;
 						term->transfer_ref(get_ref());
@@ -426,7 +428,7 @@ void	socks5_server_init_channel::on_recv_pkg(const void* buf, const size_t size)
 					break;
 				case 0x03:
 					{
-						std::shared_ptr<socks5_associatecmd_server_channel> term = std::dynamic_pointer_cast<socks5_associatecmd_server_channel>(reactor());
+						std::shared_ptr<socks5_associatecmd_server_channel> term = std::make_shared<socks5_associatecmd_server_channel>(reactor());
 						chain_insert(term.get());
 						_shakehand_state = SSS_NORMAL;
 						term->transfer_ref(get_ref());

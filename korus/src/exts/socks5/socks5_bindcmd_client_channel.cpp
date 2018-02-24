@@ -442,7 +442,6 @@ socks5_bindcmd_client_handler_terminal::socks5_bindcmd_client_handler_terminal(s
 
 socks5_bindcmd_client_handler_terminal::~socks5_bindcmd_client_handler_terminal()
 {
-	chain_final();
 }
 
 //override------------------
