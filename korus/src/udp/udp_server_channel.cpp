@@ -71,7 +71,7 @@ bool	udp_server_handler_base::start()
 	if (!_tunnel_prev)
 	{
 		assert(false);
-		return CEC_INVALID_SOCKET;
+		return false;
 	}
 	
 	return _tunnel_prev->start();

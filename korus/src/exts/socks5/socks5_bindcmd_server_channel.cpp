@@ -48,18 +48,19 @@ void	socks5_bindcmd_server_channel::init(const std::string& addr)
 	std::string listen_addr;
 	_bindcmd_server->listen_addr(listen_addr);
 
-	std::string ip;
-	std::string port;
-	if (!sockaddr_from_string(addr, ip, port))
+	struct sockaddr_in si;
+	if (!sockaddr_from_string(addr, si))
 	{
 		delete _bindcmd_server;
 		_bindcmd_server = nullptr;
 		return;
 	}
+	uint32_t ip_digit = ntohl(si.sin_addr.s_addr);
+	uint16_t port_digit = ntohs(si.sin_port);
 
 	uint8_t buf[32];
 	net_serialize	codec(buf, sizeof(buf));
-	codec << static_cast<uint8_t>(SOCKS5_V) << static_cast<uint8_t>(0x00) << static_cast<uint8_t>(0x00) << static_cast<uint8_t>(0x01) << static_cast<uint32_t>(strtoul(ip.c_str(), NULL, 10)) << static_cast<uint16_t>(strtoul(port.c_str(), NULL, 10));
+	codec << static_cast<uint8_t>(SOCKS5_V) << static_cast<uint8_t>(0x00) << static_cast<uint8_t>(0x00) << static_cast<uint8_t>(0x01) << ip_digit << port_digit;
 	send(codec.data(), codec.wpos());
 }
 
@@ -114,16 +115,17 @@ void	socks5_bindcmd_server_channel::on_tunnel_accept(std::shared_ptr<socks5_bind
 	std::string addr;
 	channel->peer_addr(addr);
 
-	std::string ip;
-	std::string port;
-	if (!sockaddr_from_string(addr, ip, port))
+	struct sockaddr_in si;
+	if (!sockaddr_from_string(addr, si))
 	{
 		return;
 	}
+	uint32_t ip_digit = ntohl(si.sin_addr.s_addr);
+	uint16_t port_digit = ntohs(si.sin_port);
 
 	uint8_t buf[32];
 	net_serialize	codec(buf, sizeof(buf));
-	codec << static_cast<uint8_t>(SOCKS5_V) << static_cast<uint8_t>(0x00) << static_cast<uint8_t>(0x00) << static_cast<uint8_t>(0x03) << static_cast<uint32_t>(strtoul(ip.c_str(), NULL, 10)) << static_cast<uint16_t>(strtoul(port.c_str(), NULL, 10));
+	codec << static_cast<uint8_t>(SOCKS5_V) << static_cast<uint8_t>(0x00) << static_cast<uint8_t>(0x00) << static_cast<uint8_t>(0x01) << ip_digit << port_digit;
 	send(codec.data(), codec.wpos());
 
 	_is_valid = true;

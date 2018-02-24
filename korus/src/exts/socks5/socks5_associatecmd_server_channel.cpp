@@ -34,22 +34,24 @@ void	socks5_associatecmd_server_channel::on_closed()
 	}
 }
 
-void	socks5_associatecmd_server_channel::init(const std::string& addr)
+void	socks5_associatecmd_server_channel::init(const std::string& client_addr, const std::string& udp_listen_ip)
 {
 	assert(!_associatecmd_server_channel);
 
-	std::string ip;
-	std::string port;
-	if (!sockaddr_from_string(addr, ip, port))
+	struct sockaddr_in si;
+	if (!sockaddr_from_string(client_addr, si))
 	{
+		assert(false);
 		return;
 	}
+	uint32_t ip_digit = ntohl(si.sin_addr.s_addr);
+	uint16_t port_digit = ntohs(si.sin_port);
 
-	udp_server_handler_origin*		origin_channel = new udp_server_handler_origin(reactor(), "0.0.0.0:0");
+	udp_server_handler_origin*		origin_channel = new udp_server_handler_origin(reactor(), udp_listen_ip + ":0");
 	std::shared_ptr<socks5_associatecmd_server_channel>	self = std::dynamic_pointer_cast<socks5_associatecmd_server_channel>(shared_from_this());
-	_associatecmd_server_channel = std::make_shared<socks5_associatecmd_tunnel_server_channel>(reactor(), self, strtoul(ip.c_str(), NULL, 10), (uint16_t)strtoul(port.c_str(), NULL, 10));
+	_associatecmd_server_channel = std::make_shared<socks5_associatecmd_tunnel_server_channel>(reactor(), self, ip_digit, port_digit);
 
-	build_channel_chain_helper((tcp_client_handler_base*)origin_channel, (tcp_client_handler_base*)_associatecmd_server_channel.get());
+	build_channel_chain_helper((udp_server_handler_base*)origin_channel, (udp_server_handler_base*)_associatecmd_server_channel.get());
 
 	_associatecmd_server_channel->start();
 }
@@ -79,15 +81,14 @@ void	socks5_associatecmd_server_channel::on_recv_pkg(const void* buf, const size
 
 void	socks5_associatecmd_server_channel::on_tunnel_ready(const std::string& addr)
 {
-	std::string ip;
-	std::string port;
-	if (!sockaddr_from_string(addr, ip, port))
+	struct sockaddr_in si;
+	if (!sockaddr_from_string(addr, si))
 	{
 		assert(false);
 		return;
 	}
-	uint32_t ip_digit = strtoul(ip.c_str(), NULL, 10);
-	uint16_t port_digit = (uint16_t)strtoul(port.c_str(), NULL, 10);
+	uint32_t ip_digit = ntohl(si.sin_addr.s_addr);
+	uint16_t port_digit = ntohs(si.sin_port);
 
 	uint8_t buf[32];
 	net_serialize	codec(buf, sizeof(buf));

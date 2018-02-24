@@ -11,7 +11,7 @@
 class socks5_associatecmd_client_channel : public socks5_client_channel_base
 {
 public:
-	socks5_associatecmd_client_channel(std::shared_ptr<reactor_loop> reactor, const std::string& socks_user, const std::string& socks_psw, const udp_server_channel_factory_t& udp_factory);
+	socks5_associatecmd_client_channel(std::shared_ptr<reactor_loop> reactor, const std::string& udp_listen_ip, const std::string& socks_user, const std::string& socks_psw, const udp_server_channel_factory_t& udp_factory);
 	virtual ~socks5_associatecmd_client_channel();
 
 	//override------------------
@@ -22,6 +22,7 @@ private:
 	socks5_associatecmd_filter_server_channel*	_filter_channel;
 	complex_ptr<udp_server_handler_base>		_terminal_channel;
 	udp_server_channel_factory_t				_udp_factory;
+	std::string									_udp_listen_ip;
 	uint16_t									_proxy_udp_port;//用于解析域名时候缓存的端口
 
 	domain_async_resolve_helper					_resolve;

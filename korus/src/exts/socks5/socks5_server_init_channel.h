@@ -17,7 +17,7 @@ public:
 class socks5_server_init_channel : public tcp_server_handler_base
 {
 public:
-	socks5_server_init_channel(std::shared_ptr<reactor_loop> reactor, std::shared_ptr<socks5_server_auth> auth);
+	socks5_server_init_channel(std::shared_ptr<reactor_loop> reactor, const std::string& udp_listen_ip, std::shared_ptr<socks5_server_auth> auth);
 	virtual ~socks5_server_init_channel();
 
 	//override------------------
@@ -37,6 +37,7 @@ public:
 	virtual void	on_recv_pkg(const void* buf, const size_t size);
 	
 private:
+	std::string							_udp_listen_ip;
 	std::shared_ptr<socks5_server_auth>	_auth;
 
 	enum SOCKS_SERVER_STATE

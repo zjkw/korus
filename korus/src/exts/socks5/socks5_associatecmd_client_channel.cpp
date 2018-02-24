@@ -3,8 +3,8 @@
 #include "korus/src/util/socket_ops.h"
 #include "socks5_associatecmd_client_channel.h"
 
-socks5_associatecmd_client_channel::socks5_associatecmd_client_channel(std::shared_ptr<reactor_loop> reactor, const std::string& socks_user, const std::string& socks_psw, const udp_server_channel_factory_t& udp_factory)
-: _proxy_udp_port(0), _filter_channel(nullptr), _udp_factory(udp_factory), _terminal_channel(nullptr), socks5_client_channel_base(reactor, socks_user, socks_psw)
+socks5_associatecmd_client_channel::socks5_associatecmd_client_channel(std::shared_ptr<reactor_loop> reactor, const std::string& udp_listen_ip, const std::string& socks_user, const std::string& socks_psw, const udp_server_channel_factory_t& udp_factory)
+: _udp_listen_ip(udp_listen_ip), _proxy_udp_port(0), _filter_channel(nullptr), _udp_factory(udp_factory), _terminal_channel(nullptr), socks5_client_channel_base(reactor, socks_user, socks_psw)
 {
 	_resolve.reactor(reactor.get());
 	_resolve.bind(std::bind(&socks5_associatecmd_client_channel::on_resolve_result, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
@@ -33,13 +33,14 @@ int32_t	socks5_associatecmd_client_channel::make_tunnel_pkg(void* buf, const uin
 	}
 	std::string local_addr;
 	_terminal_channel->local_addr(local_addr);
-	std::string host;
-	uint16_t port = 0;
-	if (!split_hostport(local_addr, host, port))
+	struct sockaddr_in si;
+	if (!sockaddr_from_string(local_addr, si))
 	{
 		return -1;
 	}
-	
+	uint32_t ip_digit = ntohl(si.sin_addr.s_addr);
+	uint16_t port_digit = ntohs(si.sin_port);
+		
 	net_serialize	codec(buf, size);
 
 	codec << static_cast<uint8_t>(SOCKS5_V);
@@ -47,8 +48,8 @@ int32_t	socks5_associatecmd_client_channel::make_tunnel_pkg(void* buf, const uin
 	codec << static_cast<uint8_t>(0x00);
 
 	codec << static_cast<uint8_t>(0x01);
-	codec << static_cast<uint32_t>(0x00);//严格说，需要与udp具体监听地址一样，但我们监听是先从"0.0.0.0:0"这里开启
-	codec << port;
+	codec << ip_digit;//严格说，需要与udp具体监听地址一样，但我们监听是先从"0.0.0.0:0"这里开启
+	codec << port_digit;
 
 	return (int32_t)codec.wpos();
 }
@@ -185,7 +186,7 @@ bool socks5_associatecmd_client_channel::create_udp_server_channel()
 	{
 		return true;
 	}
-	std::string bind_addr = std::string("0.0.0.0:0");
+	std::string bind_addr = _udp_listen_ip + ":0";
 	udp_server_handler_origin* origin_channel = new udp_server_handler_origin(reactor(), bind_addr);
 	_filter_channel = new socks5_associatecmd_filter_server_channel(reactor());
 	_terminal_channel = _udp_factory(reactor());

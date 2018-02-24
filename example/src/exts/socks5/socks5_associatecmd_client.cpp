@@ -66,20 +66,19 @@ complex_ptr<udp_server_handler_base> channel_factory(std::shared_ptr<reactor_loo
 
 int main(int argc, char* argv[])
 {
-
-	uint16_t		thread_num = 4;
-
-	if (argc != 4)
+	if (argc != 5)
 	{
-		printf("Usage: %s <proxy_port> <server_port> <thread-num> \n", argv[0]);
-		printf("  e.g: %s 9099 12\n", argv[0]);
+		printf("Usage: %s <proxy_svr_port> <target_svr_port> <udp_listen_ip> <thread-num>\n", argv[0]);
+		printf("  e.g: %s 8081 9991 127.0.0.1 1\n", argv[0]);
 		return 0;
 	}
 
 	std::string	proxy_addr = std::string("127.0.0.1:") + argv[1];
-	thread_num = (uint16_t)atoi(argv[3]);
-	
-	socks5_associatecmd_client<uint16_t> client(thread_num, proxy_addr, channel_factory, "test", "123");
+	server_addr = std::string("127.0.0.1:") + argv[2];
+	std::string	udp_listen_ip = argv[3];
+	uint16_t		thread_num = (uint16_t)atoi(argv[4]);
+		
+	socks5_associatecmd_client<uint16_t> client(thread_num, proxy_addr, udp_listen_ip, channel_factory, "test", "123");
 	
 	client.start();
 	for (;;)

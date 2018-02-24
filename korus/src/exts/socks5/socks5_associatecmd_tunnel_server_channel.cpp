@@ -4,8 +4,9 @@
 #include "socks5_associatecmd_server_channel.h"
 #include "socks5_associatecmd_tunnel_server_channel.h"
 
+
 socks5_associatecmd_tunnel_server_channel::socks5_associatecmd_tunnel_server_channel(std::shared_ptr<reactor_loop> reactor, std::weak_ptr<socks5_associatecmd_server_channel> channel, uint32_t ip_digit, uint16_t digit_port)
-: _origin_channel(channel), _client_ip(ip_digit), _client_port(digit_port), udp_server_handler_base(reactor)
+: _origin_channel(channel), _client_ip(ip_digit), _client_port(digit_port), udp_server_handler_terminal(reactor)
 {
 
 }
@@ -50,7 +51,7 @@ CLOSE_MODE_STRATEGY	socks5_associatecmd_tunnel_server_channel::on_error(CHANNEL_
 void	socks5_associatecmd_tunnel_server_channel::on_recv_pkg(const void* buf, const size_t size, const sockaddr_in& peer_addr)
 {
 	//根据协议，_client_ip可为空，所以不能作为判断依据
-	if (/*_client_ip == ntohl(peer_addr.sin_addr.s_addr) && */_client_port == ntohs(peer_addr.sin_port))
+	if (_client_ip == ntohl(peer_addr.sin_addr.s_addr) && _client_port == ntohs(peer_addr.sin_port))
 	{
 		net_serialize	decodec(buf, size);
 		uint16_t	rsv	=	0;
@@ -76,7 +77,9 @@ void	socks5_associatecmd_tunnel_server_channel::on_recv_pkg(const void* buf, con
 
 		sockaddr_in target_addr;
 		sockaddr_from_string(ip, port, target_addr);
-		send(decodec.data(), decodec.size() - decodec.rpos(), target_addr);
+
+		uint8_t* rpos = (uint8_t*)decodec.data();
+		send((void*)(rpos + decodec.rpos()), decodec.size() - decodec.rpos(), target_addr);
 	}
 	else
 	{
@@ -93,6 +96,7 @@ void	socks5_associatecmd_tunnel_server_channel::on_recv_pkg(const void* buf, con
 
 		sockaddr_in target_addr;
 		sockaddr_from_string(_client_ip, _client_port, target_addr);
+
 		send(codec.data(), codec.size(), target_addr);
 	}
 }
