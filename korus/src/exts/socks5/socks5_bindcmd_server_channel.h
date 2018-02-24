@@ -16,7 +16,7 @@ public:
 	virtual void	on_accept();
 	virtual void	on_closed();
 
-	virtual void	init(const std::string& addr);
+	virtual void	init(const std::string& addr, const std::string& listen_ip);
 
 	//²Î¿¼CHANNEL_ERROR_CODE¶¨Òå
 	virtual CLOSE_MODE_STRATEGY	on_error(CHANNEL_ERROR_CODE code);

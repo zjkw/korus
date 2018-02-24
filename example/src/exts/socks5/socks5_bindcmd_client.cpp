@@ -190,7 +190,7 @@ public:
 		codec << len;
 
 		int32_t ret = ctrl_send(codec.data(), len);
-		printf("\n	Step 2: data prepare, then Send to Ctrl  POST cmd, ret: %d\n", ret);
+		printf("\n	Step 2: data prepare, proxy_listen_target_addr: %s, then Send to Ctrl  POST cmd, ret: %d\n", proxy_listen_target_addr.c_str(), ret);
 	}
 	virtual void	on_data_connected()
 	{

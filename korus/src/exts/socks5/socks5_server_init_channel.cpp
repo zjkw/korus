@@ -5,8 +5,8 @@
 #include "socks5_associatecmd_server_channel.h"
 #include "socks5_server_init_channel.h"
 
-socks5_server_init_channel::socks5_server_init_channel(std::shared_ptr<reactor_loop> reactor, const std::string& udp_listen_ip, std::shared_ptr<socks5_server_auth> auth)
-: _shakehand_state(SSS_NONE), _udp_listen_ip(udp_listen_ip), _auth(auth),
+socks5_server_init_channel::socks5_server_init_channel(std::shared_ptr<reactor_loop> reactor, const std::string& bindcmd_tcp_listen_ip, const std::string& assocaitecmd_udp_listen_ip, std::shared_ptr<socks5_server_auth> auth)
+: _shakehand_state(SSS_NONE), _bindcmd_tcp_listen_ip(bindcmd_tcp_listen_ip), _assocaitecmd_udp_listen_ip(assocaitecmd_udp_listen_ip), _auth(auth),
 tcp_server_handler_base(reactor)
 {
 }
@@ -423,7 +423,7 @@ void	socks5_server_init_channel::on_recv_pkg(const void* buf, const size_t size)
 						chain_insert(term.get());
 						_shakehand_state = SSS_NORMAL;
 						term->transfer_ref(get_ref());
-						term->init(addr);
+						term->init(addr, _bindcmd_tcp_listen_ip);
 					}
 					break;
 				case 0x03:
@@ -432,7 +432,7 @@ void	socks5_server_init_channel::on_recv_pkg(const void* buf, const size_t size)
 						chain_insert(term.get());
 						_shakehand_state = SSS_NORMAL;
 						term->transfer_ref(get_ref());
-						term->init(addr, _udp_listen_ip);
+						term->init(addr, _assocaitecmd_udp_listen_ip);
 					}
 					break;
 				default:

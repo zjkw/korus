@@ -33,19 +33,20 @@ public:
 
 int main(int argc, char* argv[]) 
 {
-	if (argc != 4)
+	if (argc != 5)
 	{
-		printf("Usage: %s <tcp_listen_port> <udp_listen_ip> <thread-num>\n", argv[0]);
-		printf("  e.g: %s 9099 127.0.0.1 12\n", argv[0]);
+		printf("Usage: %s <tcp_listen_port> <bindcmd_tcp_listen_ip> <assocaitecmd_udp_listen_ip> <thread-num>\n", argv[0]);
+		printf("  e.g: %s 9099 127.0.0.1 127.0.0.1 12\n", argv[0]);
 		return 0;
 	}
 
 	std::string	tcp_listen_addr = std::string("127.0.0.1:") + argv[1];
-	std::string	udp_listen_ip = argv[2];
-	uint16_t		thread_num = (uint16_t)atoi(argv[3]);
+	std::string	bindcmd_tcp_listen_ip = argv[2];
+	std::string	assocaitecmd_udp_listen_ip = argv[3];
+	uint16_t		thread_num = (uint16_t)atoi(argv[4]);
 			
 	std::shared_ptr<socks5_server_auth_imp> auth = std::make_shared<socks5_server_auth_imp>();
-	socks5_server<uint16_t> server(thread_num, tcp_listen_addr, udp_listen_ip, auth);
+	socks5_server<uint16_t> server(thread_num, tcp_listen_addr, bindcmd_tcp_listen_ip, assocaitecmd_udp_listen_ip, auth);
 	server.start();
 	for (;;)
 	{

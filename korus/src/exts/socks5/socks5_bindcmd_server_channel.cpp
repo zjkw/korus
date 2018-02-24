@@ -34,7 +34,7 @@ void	socks5_bindcmd_server_channel::on_closed()
 }
 
 //tbd BIND请求包中仍然指明FTPSERVER.ADDR / FTPSERVER.PORT。SOCKS Server应该据此进行评估。
-void	socks5_bindcmd_server_channel::init(const std::string& addr)
+void	socks5_bindcmd_server_channel::init(const std::string& addr, const std::string& listen_ip)
 {
 	if(_bindcmd_server)
 	{
@@ -42,14 +42,14 @@ void	socks5_bindcmd_server_channel::init(const std::string& addr)
 		return;
 	}
 
-	_bindcmd_server = new tcp_server<reactor_loop>(reactor(), "0.0.0.0:0", std::bind(&socks5_bindcmd_server_channel::binccmd_channel_factory, this, std::placeholders::_1));
+	_bindcmd_server = new tcp_server<reactor_loop>(reactor(), listen_ip + ":0", std::bind(&socks5_bindcmd_server_channel::binccmd_channel_factory, this, std::placeholders::_1));
 	_bindcmd_server->start();
 
 	std::string listen_addr;
 	_bindcmd_server->listen_addr(listen_addr);
 
 	struct sockaddr_in si;
-	if (!sockaddr_from_string(addr, si))
+	if (!sockaddr_from_string(listen_addr, si))
 	{
 		delete _bindcmd_server;
 		_bindcmd_server = nullptr;

@@ -47,7 +47,7 @@ public:
 	//override------------------
 	virtual void	on_connected()	//连接已经建立
 	{
-		char szTest[] = "hello client, i am server!";
+		char szTest[] = "hello client, i am server1!";
 		int32_t ret = send(szTest, strlen(szTest));
 		printf("\n	client	Connected, then Send %s, ret: %d\n", szTest, ret);
 	}
@@ -98,7 +98,7 @@ public:
 	//override------------------
 	virtual void	on_accept()	//连接已经建立
 	{
-		char szTest2[] = "hello client, i am server!";
+		char szTest2[] = "hello client, i am server2!";
 		uint8_t buf[128];
 		net_serialize	codec(buf, sizeof(buf));
 		codec
@@ -161,7 +161,7 @@ public:
 		net_serialize	decodec(buf, len);
 		decodec >> u16len >> u8ver >> u32seq >> u16Cmd;
 		assert(decodec);
-		printf("\non_ctrl_recv_pkg: len: %u, u16len: %u, u8ver: %u, u32seq: %u, u16Cmd: %u\n", len, u16len, u8ver, u32seq, u16Cmd);
+		printf("\non_recv_pkg: len: %u, u16len: %u, u8ver: %u, u32seq: %u, u16Cmd: %u\n", len, u16len, u8ver, u32seq, u16Cmd);
 
 		switch (u16Cmd)
 		{
@@ -265,6 +265,8 @@ private:
 		//ctrl
 		if (!_data_channel)
 		{
+			printf("\n  create_data_channel addr: %s\n", server_addr.c_str());
+
 			tcp_client_channel_domain*		data_origin_channel = new tcp_client_channel_domain(reactor(), server_addr);
 			_data_channel = std::make_shared<tcp_bindcmd_client_handler>(reactor(), std::dynamic_pointer_cast<tcp_connectcmd_server_handler>(shared_from_this()));
 			build_channel_chain_helper((tcp_client_handler_base*)data_origin_channel, (tcp_client_handler_base*)_data_channel.get());

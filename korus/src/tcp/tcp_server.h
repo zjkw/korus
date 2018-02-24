@@ -245,6 +245,7 @@ public:
 		: _reactor(reactor), _listen_addr(listen_addr), _factory(factory), _backlog(backlog), _defer_accept(defer_accept),
 		_self_read_size(self_read_size), _self_write_size(self_write_size), _sock_read_size(sock_read_size), _sock_write_size(sock_write_size)
 	{
+		_tid = std::this_thread::get_id();
 	}
 
 	virtual ~tcp_server()

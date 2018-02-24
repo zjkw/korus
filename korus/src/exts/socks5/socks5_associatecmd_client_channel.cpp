@@ -48,7 +48,7 @@ int32_t	socks5_associatecmd_client_channel::make_tunnel_pkg(void* buf, const uin
 	codec << static_cast<uint8_t>(0x00);
 
 	codec << static_cast<uint8_t>(0x01);
-	codec << ip_digit;//严格说，需要与udp具体监听地址一样，但我们监听是先从"0.0.0.0:0"这里开启
+	codec << ip_digit;
 	codec << port_digit;
 
 	return (int32_t)codec.wpos();
