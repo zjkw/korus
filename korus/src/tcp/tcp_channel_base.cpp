@@ -1,16 +1,14 @@
-#include <assert.h>
 #include <errno.h>
 #include <string.h>
 #include <unistd.h>
-#include <mutex>
 #include "tcp_helper.h"
 #include "tcp_channel_base.h"
 
+#define DEFAULT_BUFFER_SIZE		(64)
+#define DEFAULT_ONCERECV_SIZE	(1024)
+
 tcp_channel_base::tcp_channel_base(SOCKET fd, const uint32_t self_read_size, const uint32_t self_write_size, const uint32_t sock_read_size, const uint32_t sock_write_size)
-	: _fd(INVALID_SOCKET), _recving(false),
-	_self_read_size(self_read_size), _self_write_size(self_write_size), _self_read_pos(0), _self_write_pos(0), _sock_read_size(sock_read_size), _sock_write_size(sock_write_size),
-	_self_read_buff(new uint8_t[self_read_size]),
-	_self_write_buff(new uint8_t[self_write_size])
+	: _fd(INVALID_SOCKET), _sock_read_size(sock_read_size), _sock_write_size(sock_write_size), _read_thunk(new buffer_thunk), _write_thunk(new buffer_thunk)
 {
 	set_fd(fd);
 }
@@ -18,8 +16,6 @@ tcp_channel_base::tcp_channel_base(SOCKET fd, const uint32_t self_read_size, con
 //析构需要发生在产生线程
 tcp_channel_base::~tcp_channel_base()
 {
-	delete[]_self_read_buff;
-	delete[]_self_write_buff;
 }
 
 void	tcp_channel_base::set_fd(SOCKET fd)
@@ -38,36 +34,23 @@ void	tcp_channel_base::set_fd(SOCKET fd)
 				set_socket_recvbuflen(fd, _sock_read_size);
 			}
 		}
-		std::unique_lock <std::mutex> lck(_mutex_write);
 		_fd = fd;
 	}
 }
 
 // 保证原子，考虑多线程环境下，buf最好是一个或若干完整包；可能触发错误/异常 on_error
-int32_t		tcp_channel_base::send(const void* buf, const size_t len)
+int32_t		tcp_channel_base::send_raw(const std::shared_ptr<buffer_thunk>& data)
 {
-	std::unique_lock <std::mutex> lck(_mutex_write);
 	if (INVALID_SOCKET == _fd)
 	{
 		return (int32_t)CEC_INVALID_SOCKET;
 	}
-	// 不希望有人调用缓存区数据发送，这个应该调用send_alone
-	if (_self_write_buff <= (uint8_t*)buf && _self_write_buff + _self_write_size > (uint8_t*)buf)
-	{
-		assert(false);
-		return (int32_t)CEC_WRITE_FAILED;
-	}
 	
-	//考虑到::send失败，而导致的粘包，我们要求剩余空间必须够
-	if (len + _self_write_pos >= _self_write_size)
-	{
-		return (int32_t)CEC_SENDBUF_FULL;
-	}
 	//作为一个优化，先在条件允许的情况下避免 “入本地缓存再执行send本地数据”	
 	int32_t real_write = 0;
-	if (!_self_write_pos)
+	if (!_write_thunk->used())
 	{
-		int32_t ret = do_send_inlock(buf, len);
+		int32_t ret = do_send(data);
 		if (ret < 0)
 		{
 			return ret;
@@ -78,8 +61,8 @@ int32_t		tcp_channel_base::send(const void* buf, const size_t len)
 		}
 	}
 	int32_t errno_old = errno;	
-	memcpy(_self_write_buff + _self_write_pos, (uint8_t*)buf + real_write, len - real_write);
-	_self_write_pos += len - real_write;
+
+	_write_thunk->push_back(data->ptr() + real_write, data->used() - real_write);
 	
 	if (!real_write)		//如果没调用过send，尝试一下
 	{
@@ -92,11 +75,10 @@ int32_t		tcp_channel_base::send(const void* buf, const size_t len)
 		}
 		else
 		{
-			int32_t ret = do_send_inlock((const void*)_self_write_buff, _self_write_pos);
+			int32_t ret = do_send(_write_thunk);
 			if (ret >= 0)
 			{
-				_self_write_pos -= ret;
-				memmove(_self_write_buff, _self_write_buff + ret, _self_write_pos);
+				_write_thunk->pop_front(ret);
 			}
 			else
 			{
@@ -105,15 +87,15 @@ int32_t		tcp_channel_base::send(const void* buf, const size_t len)
 		}
 	}
 
-	return len;
+	return (int32_t)data->used();
 }
 
-int32_t		tcp_channel_base::do_send_inlock(const void* buf, uint32_t	len)
+int32_t		tcp_channel_base::do_send(const std::shared_ptr<buffer_thunk>& data)
 {
 	int32_t real_write = 0;
-	while (real_write != len)
+	while (real_write != data->used())
 	{
-		int32_t ret = ::send(_fd, (const char*)buf + real_write, len - real_write, MSG_NOSIGNAL);
+		int32_t ret = ::send(_fd, data->ptr() + real_write, data->used() - real_write, MSG_NOSIGNAL);
 		if (ret < 0)
 		{
 			if (errno == EINTR)
@@ -141,16 +123,14 @@ int32_t		tcp_channel_base::do_send_inlock(const void* buf, uint32_t	len)
 
 int32_t	tcp_channel_base::send_alone()
 {
-	std::unique_lock <std::mutex> lck(_mutex_write);
 	if (INVALID_SOCKET == _fd)
 	{
 		return (int32_t)CEC_INVALID_SOCKET;
 	}
-	int32_t ret = do_send_inlock(_self_write_buff, _self_write_pos);
+	int32_t ret = do_send(_write_thunk);
 	if (ret > 0)
 	{
-		_self_write_pos -= ret;
-		memmove(_self_write_buff, _self_write_buff + ret, _self_write_pos);
+		_write_thunk->pop_front(ret);
 	}
 	return ret;
 }
@@ -158,7 +138,6 @@ int32_t	tcp_channel_base::send_alone()
 void tcp_channel_base::close()
 {
 	send_alone();
-	std::unique_lock <std::mutex> lck(_mutex_write);
 	if (INVALID_SOCKET != _fd)
 	{
 		::close(_fd);
@@ -174,28 +153,14 @@ void tcp_channel_base::shutdown(int32_t howto)
 	}
 }
 
+// 循环中可能fd会被改变，因为on_recv_buff可能触发上层执行close，但无效fd是一个特殊值，recv是能识别出来的
 int32_t	tcp_channel_base::do_recv()
 {
 	if (INVALID_SOCKET == _fd)
 	{
 		return (int32_t)CEC_INVALID_SOCKET;
 	}
-
-	//避免派生类在on_recv_buff的直接或间接调用链中调用本函数
-	if (_recving)
-	{
-		assert(false);
-		return CEC_READ_FAILED;
-	}
-	_recving = true;
-	int32_t	ret = do_recv_nolock();	
-	_recving = false;
-	return ret;
-}
-
-// 循环中可能fd会被改变，因为on_recv_buff可能触发上层执行close，但无效fd是一个特殊值，recv是能识别出来的
-int32_t	tcp_channel_base::do_recv_nolock()
-{
+	
 	int32_t total_read = 0;
 	
 	bool not_again = true;
@@ -203,9 +168,10 @@ int32_t	tcp_channel_base::do_recv_nolock()
 	while (not_again)
 	{
 		int32_t real_read = 0;
-		while (_self_read_size > _self_read_pos)
+		while (1)
 		{
-			int32_t ret = ::recv(_fd, (char*)_self_read_buff + _self_read_pos, _self_read_size - _self_read_pos, MSG_NOSIGNAL);
+			_read_thunk->prepare(DEFAULT_ONCERECV_SIZE);
+			int32_t ret = ::recv(_fd, (char*)_read_thunk->ptr(), DEFAULT_ONCERECV_SIZE, MSG_NOSIGNAL);
 			if (ret < 0)
 			{
 				if (errno == EINTR)
@@ -233,7 +199,7 @@ int32_t	tcp_channel_base::do_recv_nolock()
 			else
 			{
 				real_read += ret;
-				_self_read_pos += (uint32_t)ret;
+				_read_thunk->incr(ret);
 			}
 		}
 		if (!real_read)
@@ -242,11 +208,10 @@ int32_t	tcp_channel_base::do_recv_nolock()
 		}
 	
 		bool left_partial_pkg = false;
-		int32_t ret = on_recv_buff(_self_read_buff, _self_read_pos, left_partial_pkg);
+		int32_t ret = on_recv_buff(_read_thunk, left_partial_pkg);
 		if (ret > 0)
 		{
-			memmove(_self_read_buff, _self_read_buff + ret, _self_read_pos - ret);
-			_self_read_pos -= ret;
+			_read_thunk->pop_front(ret);
 
 			if (left_partial_pkg && not_again)	//既没有新数据，又解析不出新包，那就不再尝试
 			{
@@ -259,21 +224,15 @@ int32_t	tcp_channel_base::do_recv_nolock()
 	{
 		return CEC_CLOSE_BY_PEER;
 	}
-	if (_self_read_pos == _self_read_size)
-	{
-		return CEC_RECVBUF_FULL;
-	}
 
 	return total_read;
 }
 
 bool	tcp_channel_base::peer_addr(std::string& addr)
 {
-	std::unique_lock <std::mutex> lck(_mutex_write);
 	return peeraddr_from_fd(_fd, addr);
 }
 bool	tcp_channel_base::local_addr(std::string& addr)
 {
-	std::unique_lock <std::mutex> lck(_mutex_write);
 	return localaddr_from_fd(_fd, addr);
 }

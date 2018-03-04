@@ -28,8 +28,8 @@ public:
 	virtual void	on_connected()	//连接已经建立
 	{
 		char szTest[] = "hello server, i am client!";
-		int32_t ret = send(szTest, strlen(szTest));
-		printf("\nConnected, then Send %s, ret: %d\n", szTest, ret);
+		send(szTest, strlen(szTest));
+		printf("\nConnected, then Send %s\n", szTest);
 	}
 
 	virtual void	on_closed()

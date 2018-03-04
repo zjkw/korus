@@ -1,5 +1,4 @@
 #include "korus/src//util/socket_ops.h"
-#include "korus/src//util/net_serialize.h"
 #include "socks5_connectcmd_server_channel.h"
 #include "socks5_bindcmd_server_channel.h"
 #include "socks5_associatecmd_server_channel.h"
@@ -79,13 +78,13 @@ CLOSE_MODE_STRATEGY	socks5_server_init_channel::on_error(CHANNEL_ERROR_CODE code
 }
 
 //提取数据包：返回值 =0 表示包不完整； >0 完整的包(长)
-int32_t socks5_server_init_channel::on_recv_split(const void* buf, const size_t size)
+int32_t socks5_server_init_channel::on_recv_split(const std::shared_ptr<buffer_thunk>& data)
 {
 	switch (_shakehand_state)
 	{
 		case SSS_METHOD:
 		{
-			net_serialize	decodec(buf, size);
+			net_serialize	decodec(data->ptr(), data->used());
 			uint8_t ver = 0;
 			decodec >> ver;
 
@@ -103,7 +102,7 @@ int32_t socks5_server_init_channel::on_recv_split(const void* buf, const size_t 
 		break;
 	case SSS_AUTH:				//auth,tunnel
 		{
-			net_serialize	decodec(buf, size);
+			net_serialize	decodec(data->ptr(), data->used());
 			uint8_t ver = 0;
 			decodec >> ver;
 
@@ -124,7 +123,7 @@ int32_t socks5_server_init_channel::on_recv_split(const void* buf, const size_t 
 		break;
 	case SSS_TUNNEL:
 		{
-			net_serialize	decodec(buf, size);
+			net_serialize	decodec(data->ptr(), data->used());
 			uint8_t ver = 0;
 			decodec >> ver;
 			if (ver == SOCKS5_V)
@@ -161,7 +160,7 @@ int32_t socks5_server_init_channel::on_recv_split(const void* buf, const size_t 
 		}
 		break;
 	case SSS_NORMAL:
-		return _tunnel_next->on_recv_split(buf, size);
+		return _tunnel_next->on_recv_split(data);
 	default:
 		assert(false);
 		break;
@@ -259,13 +258,13 @@ static bool    decode_addr(net_serialize& decodec, std::string& addr)
 }
 
 //这是一个待处理的完整包
-void	socks5_server_init_channel::on_recv_pkg(const void* buf, const size_t size)
+void	socks5_server_init_channel::on_recv_pkg(const std::shared_ptr<buffer_thunk>& data)
 {
 	switch (_shakehand_state)
 	{
 		case SSS_METHOD:
 			{
-				net_serialize	decodec(buf, size);
+				net_serialize	decodec(data->ptr(), data->used());
 				uint8_t ver = 0;
 				decodec >> ver;
 
@@ -309,14 +308,14 @@ void	socks5_server_init_channel::on_recv_pkg(const void* buf, const size_t size)
 					_shakehand_state = SSS_TUNNEL;
 
 					codec << method_bin;
-					send(buf_ret, codec.wpos());
+					send(codec);
 				}
 				else if (SMT_USERPSW == method_ret)
 				{
 					_shakehand_state = SSS_AUTH;
 
 					codec << method_bin;
-					send(buf_ret, codec.wpos());
+					send(codec);
 				}
 				else
 				{
@@ -324,13 +323,13 @@ void	socks5_server_init_channel::on_recv_pkg(const void* buf, const size_t size)
 
 					// tbd 失败情况下，则加上服务器主动关闭？ delay_close或close加上参数？
 					codec << static_cast<uint8_t>(0xff);
-					send(buf_ret, codec.wpos());
+					send(codec);
 				}
 			}
 			break;
 		case SSS_AUTH:
 			{
-				net_serialize	decodec(buf, size);
+				net_serialize	decodec(data->ptr(), data->used());
 				uint8_t ver = 0;
 				decodec >> ver;
 
@@ -367,7 +366,7 @@ void	socks5_server_init_channel::on_recv_pkg(const void* buf, const size_t size)
 				if (_auth->check_userpsw(user, psw))
 				{
 					codec << static_cast<uint8_t>(0x00);
-					send(buf_ret, codec.wpos());
+					send(codec);
 
 					_shakehand_state = SSS_TUNNEL;
 				}
@@ -377,13 +376,13 @@ void	socks5_server_init_channel::on_recv_pkg(const void* buf, const size_t size)
 
 					// tbd 失败情况下，则加上服务器主动关闭？ delay_close或close加上参数？
 					codec << static_cast<uint8_t>(0x01);
-					send(buf_ret, codec.wpos());
+					send(codec);
 				}
 			}
 			break;
 		case SSS_TUNNEL:
 			{
-				net_serialize	decodec(buf, size);
+				net_serialize	decodec(data->ptr(), data->used());
 				uint8_t ver = 0;
 				decodec >> ver;
 				if (ver != SOCKS5_V)
@@ -444,10 +443,16 @@ void	socks5_server_init_channel::on_recv_pkg(const void* buf, const size_t size)
 			break;
 		case SSS_NORMAL:
 			{
-				_tunnel_next->on_recv_pkg(buf, size);
+				_tunnel_next->on_recv_pkg(data);
 			}
 		default:
 			assert(false);
 			break;
 	}
+}
+
+void socks5_server_init_channel::send(const net_serialize&	codec)
+{
+	std::shared_ptr<buffer_thunk>	thunk = std::make_shared<buffer_thunk>(codec.data(), codec.wpos());
+	tcp_server_handler_base::send(thunk);
 }

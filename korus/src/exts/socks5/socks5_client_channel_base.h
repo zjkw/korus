@@ -44,6 +44,6 @@ private:
 	std::string _socks_psw;
 
 	//不暴露接口，因为内部已做了特化处理
-	virtual int32_t on_recv_split(const void* buf, const size_t size);
-	virtual void	on_recv_pkg(const void* buf, const size_t size);
+	virtual int32_t on_recv_split(const std::shared_ptr<buffer_thunk>& data);
+	virtual void	on_recv_pkg(const std::shared_ptr<buffer_thunk>& data);
 };

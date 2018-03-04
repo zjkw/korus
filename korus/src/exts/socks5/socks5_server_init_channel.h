@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+#include "korus/src//util/net_serialize.h"
 #include "socks5_proto.h"
 #include "korus/src/tcp/tcp_server.h"
 
@@ -32,14 +33,16 @@ public:
 	//参考CHANNEL_ERROR_CODE定义
 	virtual CLOSE_MODE_STRATEGY	on_error(CHANNEL_ERROR_CODE code);
 	//提取数据包：返回值 =0 表示包不完整； >0 完整的包(长)
-	virtual int32_t on_recv_split(const void* buf, const size_t size);
+	virtual int32_t on_recv_split(const std::shared_ptr<buffer_thunk>& data);
 	//这是一个待处理的完整包
-	virtual void	on_recv_pkg(const void* buf, const size_t size);
+	virtual void	on_recv_pkg(const std::shared_ptr<buffer_thunk>& data);
 	
 private:
 	std::string							_bindcmd_tcp_listen_ip;	//bind cmd
 	std::string							_assocaitecmd_udp_listen_ip;	//associate cmd for udp
 	std::shared_ptr<socks5_server_auth>	_auth;
+
+	void send(const net_serialize&	codec);
 
 	enum SOCKS_SERVER_STATE
 	{

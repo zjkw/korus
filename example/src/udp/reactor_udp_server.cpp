@@ -46,8 +46,8 @@ public:
 		printf("\non_recv_pkg: %s, len: %u\n", szTest, len);
 
 		char szTest2[] = "hello client, i am server!";
-		int32_t ret = send(szTest2, strlen(szTest2), peer_addr);
-		printf("\necho, then Send %s, ret: %d\n", szTest2, ret);
+		send(szTest2, strlen(szTest2), peer_addr);
+		printf("\necho, then Send %s\n", szTest2);
 	}
 };
 

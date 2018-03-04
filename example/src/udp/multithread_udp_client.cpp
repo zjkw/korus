@@ -35,8 +35,8 @@ public:
 		{
 			return;
 		}
-		int32_t ret = send(szTest, strlen(szTest), si);
-		printf("\non_ready, then Send %s, ret: %d\n", szTest, ret);
+		send(szTest, strlen(szTest), si);
+		printf("\non_ready, then Send %s\n", szTest);
 	}
 
 	virtual void	on_closed()

@@ -66,9 +66,9 @@ void	tcp_listen::add_accept_handler(const newfd_handle_t handler)
 
 bool tcp_listen::listen_addr(std::string& addr)
 {
-	if (INVALID_SOCKET != _fd)
+	if (INVALID_SOCKET == _fd)
 	{
-		return true;
+		return false;
 	}
 
 	return localaddr_from_fd(_fd, addr);

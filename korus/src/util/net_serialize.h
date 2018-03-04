@@ -22,7 +22,7 @@ public:
 
 	// step
 	static uint32_t INVALID_SIZE;
-	uint32_t wpos();
+	uint32_t wpos()	const;
 	bool wpos(uint32_t pos);
 	net_serialize& write_skip(uint32_t step);
 	uint32_t rpos();

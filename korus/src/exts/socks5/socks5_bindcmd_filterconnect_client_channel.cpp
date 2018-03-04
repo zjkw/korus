@@ -46,12 +46,12 @@ CLOSE_MODE_STRATEGY	socks5_bindcmd_filterconnect_client_channel::on_error(CHANNE
 	return _integration->on_ctrl_error(code);
 }
 
-int32_t socks5_bindcmd_filterconnect_client_channel::on_recv_split(const void* buf, const size_t size)
+int32_t socks5_bindcmd_filterconnect_client_channel::on_recv_split(const std::shared_ptr<buffer_thunk>& data)
 {
-	return _integration->on_ctrl_recv_split(buf, size);
+	return _integration->on_ctrl_recv_split(data);
 }
 
-void	socks5_bindcmd_filterconnect_client_channel::on_recv_pkg(const void* buf, const size_t size)
+void	socks5_bindcmd_filterconnect_client_channel::on_recv_pkg(const std::shared_ptr<buffer_thunk>& data)
 {
-	_integration->on_ctrl_recv_pkg(buf, size);
+	_integration->on_ctrl_recv_pkg(data);
 }

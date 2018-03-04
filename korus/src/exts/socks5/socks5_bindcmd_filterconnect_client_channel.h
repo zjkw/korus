@@ -21,8 +21,8 @@ public:
 	virtual void	on_closed();
 	virtual CLOSE_MODE_STRATEGY	on_error(CHANNEL_ERROR_CODE code);
 
-	virtual int32_t on_recv_split(const void* buf, const size_t size);
-	virtual void	on_recv_pkg(const void* buf, const size_t size);
+	virtual int32_t on_recv_split(const std::shared_ptr<buffer_thunk>& data);
+	virtual void	on_recv_pkg(const std::shared_ptr<buffer_thunk>& data);
 
 private:
 	socks5_bindcmd_client_handler_origin* _integration;

@@ -56,7 +56,7 @@ CLOSE_MODE_STRATEGY	tcp_client_handler_base::on_error(CHANNEL_ERROR_CODE code)
 }
 
 //提取数据包：返回值 =0 表示包不完整； >0 完整的包(长)
-int32_t tcp_client_handler_base::on_recv_split(const void* buf, const size_t len)
+int32_t tcp_client_handler_base::on_recv_split(const std::shared_ptr<buffer_thunk>& data)
 { 
 	if (!_tunnel_next)
 	{
@@ -64,11 +64,11 @@ int32_t tcp_client_handler_base::on_recv_split(const void* buf, const size_t len
 		return CEC_SPLIT_FAILED;
 	}
 	
-	return _tunnel_next->on_recv_split(buf, len);
+	return _tunnel_next->on_recv_split(data);
 }
 
 //这是一个待处理的完整包
-void	tcp_client_handler_base::on_recv_pkg(const void* buf, const size_t len)
+void	tcp_client_handler_base::on_recv_pkg(const std::shared_ptr<buffer_thunk>& data)
 { 
 	if (!_tunnel_next)
 	{
@@ -76,18 +76,24 @@ void	tcp_client_handler_base::on_recv_pkg(const void* buf, const size_t len)
 		return;
 	}
 	
-	return _tunnel_next->on_recv_pkg(buf, len);
+	return _tunnel_next->on_recv_pkg(data);
 }
 
-int32_t	tcp_client_handler_base::send(const void* buf, const size_t len)
+void	tcp_client_handler_base::send(const std::shared_ptr<buffer_thunk>& data)
 {
 	if (!_tunnel_prev)
 	{
 		assert(false);
-		return CEC_INVALID_SOCKET;
+		return;
 	}
 
-	return _tunnel_prev->send(buf, len);
+	_tunnel_prev->send(data);
+}
+
+void	tcp_client_handler_base::send(const void* buf, const size_t len)
+{
+	std::shared_ptr<buffer_thunk>	thunk = std::make_shared<buffer_thunk>(buf, len);
+	tcp_client_handler_base::send(thunk);
 }
 
 void	tcp_client_handler_base::close()
@@ -182,20 +188,15 @@ tcp_client_handler_origin::~tcp_client_handler_origin()
 }
 
 // 保证原子，考虑多线程环境下，buf最好是一个或若干完整包；可能触发错误/异常 on_error
-int32_t	tcp_client_handler_origin::send(const void* buf, const size_t len)
+void	tcp_client_handler_origin::send(const std::shared_ptr<buffer_thunk>& data)
 {
 	if (!is_normal())
 	{
 		assert(false);
-		return CEC_INVALID_SOCKET;
+		return;
 	}
 
-	if (CNS_CONNECTED != _conn_state)
-	{
-		return (int32_t)CEC_INVALID_SOCKET;
-	}
-
-	return tcp_channel_base::send(buf, len);
+	tcp_channel_base::send_raw(data);
 }
 
 void	tcp_client_handler_origin::close()
@@ -206,12 +207,6 @@ void	tcp_client_handler_origin::close()
 	}
 	if (CNS_CLOSED == _conn_state)
 	{
-		return;
-	}
-	//线程调度
-	if (!reactor()->is_current_thread())
-	{
-		reactor()->start_async_task(std::bind(&tcp_client_handler_origin::close, this), this);
 		return;
 	}
 
@@ -246,12 +241,6 @@ void	tcp_client_handler_origin::shutdown(int32_t howto)
 	{
 		return;
 	}
-	//线程调度
-	if (!reactor()->is_current_thread())
-	{
-		reactor()->start_async_task(std::bind(&tcp_client_handler_origin::shutdown, this, howto), this);
-		return;
-	}
 
 	tcp_channel_base::shutdown(howto);
 }
@@ -260,12 +249,6 @@ void	tcp_client_handler_origin::server_addr(const std::string& server_addr)
 {
 	if (CNS_CLOSED != _conn_state)
 	{
-		return;
-	}
-	//线程调度
-	if (!reactor()->is_current_thread())
-	{
-		reactor()->start_async_task(std::bind(&tcp_client_handler_origin::server_addr, this, server_addr), this);
 		return;
 	}
 
@@ -287,13 +270,7 @@ void	tcp_client_handler_origin::connect()
 	{
 		return;
 	}
-	//线程调度
-	if (!reactor()->is_current_thread())
-	{
-		// tcp_client_handler_origin生命期一般比reactor短，所以加上引用计数
-		reactor()->start_async_task(std::bind(&tcp_client_handler_origin::connect, this), this);
-		return;
-	}
+
 	_sockio_helper_connect.reactor(reactor().get());
 	_sockio_helper.reactor(reactor().get());
 	_timer_connect_timeout.reactor(reactor().get());
@@ -485,7 +462,7 @@ void	tcp_client_handler_origin::set_release()
 	close();
 }
 
-int32_t	tcp_client_handler_origin::on_recv_buff(const void* buf, const size_t len, bool& left_partial_pkg)
+int32_t	tcp_client_handler_origin::on_recv_buff(std::shared_ptr<buffer_thunk>& data, bool& left_partial_pkg)
 {
 	if (!is_normal())
 	{
@@ -497,9 +474,9 @@ int32_t	tcp_client_handler_origin::on_recv_buff(const void* buf, const size_t le
 	}
 	left_partial_pkg = false;
 	int32_t size = 0;
-	while (len > size)
+	while (data->used())
 	{
-		int32_t ret = on_recv_split((uint8_t*)buf + size, len - size);
+		int32_t ret = on_recv_split(data);
 		if (!is_normal())
 		{
 			return CEC_INVALID_SOCKET;
@@ -515,14 +492,16 @@ int32_t	tcp_client_handler_origin::on_recv_buff(const void* buf, const size_t le
 			handle_close_strategy(cms);
 			break;
 		}
-		else if (ret + size > len)
+		else if (ret > data->used())
 		{
 			CLOSE_MODE_STRATEGY cms = on_error(CEC_RECVBUF_SHORT);
 			handle_close_strategy(cms);
 			break;
 		}
 
-		on_recv_pkg((uint8_t*)buf + size, ret);
+		data->rpos(ret);
+		on_recv_pkg(data);
+		data->pop_front(ret);
 		size += ret;
 
 		if (!is_normal())
@@ -617,23 +596,59 @@ void	tcp_client_handler_terminal::on_recv_pkg(const void* buf, const size_t len)
 
 }
 
-int32_t	tcp_client_handler_terminal::send(const void* buf, const size_t len)
+int32_t tcp_client_handler_terminal::on_recv_split(const std::shared_ptr<buffer_thunk>& data)
 {
-	return tcp_client_handler_base::send(buf, len);
+	return on_recv_split(data->ptr(), data->used());
+}
+
+void	tcp_client_handler_terminal::on_recv_pkg(const std::shared_ptr<buffer_thunk>& data)
+{							  
+	on_recv_pkg(data->ptr(), data->rpos());
+}
+
+void	tcp_client_handler_terminal::send(const void* buf, const size_t len)
+{
+	std::shared_ptr<buffer_thunk>	thunk = std::make_shared<buffer_thunk>(buf, len);
+	tcp_client_handler_terminal::send(thunk);
+}
+
+void	tcp_client_handler_terminal::send(const std::shared_ptr<buffer_thunk>& data)
+{
+	if (!reactor()->is_current_thread())
+	{
+		reactor()->start_async_task(std::bind(static_cast<void (tcp_client_handler_terminal::*)(const std::shared_ptr<buffer_thunk>&)>(&tcp_client_handler_terminal::send), this, data), this);
+		return;
+	}
+	tcp_client_handler_base::send(data);
 }
 
 void	tcp_client_handler_terminal::close()
 {
+	if (!reactor()->is_current_thread())
+	{
+		reactor()->start_async_task(std::bind(&tcp_client_handler_terminal::close, this), this);
+		return;
+	}
 	tcp_client_handler_base::close();
 }
 
 void	tcp_client_handler_terminal::shutdown(int32_t howto)
 {
+	if (!reactor()->is_current_thread())
+	{
+		reactor()->start_async_task(std::bind(&tcp_client_handler_terminal::shutdown, this, howto), this);
+		return;
+	}
 	tcp_client_handler_base::shutdown(howto);
 }
 
 void	tcp_client_handler_terminal::connect()
 {
+	if (!reactor()->is_current_thread())
+	{
+		reactor()->start_async_task(std::bind(&tcp_client_handler_terminal::connect, this), this);
+		return;
+	}
 	tcp_client_handler_base::connect();
 }
 

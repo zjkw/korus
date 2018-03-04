@@ -3,6 +3,7 @@
 #include <assert.h>
 #include "tcp_channel_base.h"
 #include "korus/src/util/chain_object.h"
+#include "korus/src/util/buffer_thunk.h"
 #include "korus/src/reactor/reactor_loop.h"
 #include "korus/src/reactor/sockio_helper.h"
 
@@ -38,12 +39,13 @@ public:
 	virtual void	on_closed();
 	//参考CHANNEL_ERROR_CODE定义
 	virtual CLOSE_MODE_STRATEGY	on_error(CHANNEL_ERROR_CODE code);
-	//提取数据包：返回值 =0 表示包不完整； >0 完整的包(长)
-	virtual int32_t on_recv_split(const void* buf, const size_t len);
-	//这是一个待处理的完整包
-	virtual void	on_recv_pkg(const void* buf, const size_t len);
 
-	virtual int32_t	send(const void* buf, const size_t len);
+	//提取数据包：返回值 =0 表示包不完整； >0 完整的包(长)
+	virtual int32_t on_recv_split(const std::shared_ptr<buffer_thunk>& data);
+	//这是一个待处理的完整包
+	virtual void	on_recv_pkg(const std::shared_ptr<buffer_thunk>& data);
+	virtual void	send(const std::shared_ptr<buffer_thunk>& data);
+
 	virtual void	close();
 	virtual void	shutdown(int32_t howto);
 	virtual bool	peer_addr(std::string& addr);
@@ -64,7 +66,7 @@ public:
 
 	virtual bool		start();
 	// 下面三个函数可能运行在多线程环境下	
-	virtual int32_t		send(const void* buf, const size_t len);// 保证原子, 认为是整包，返回值若<0参考CHANNEL_ERROR_CODE
+	virtual void		send(const std::shared_ptr<buffer_thunk>& data);// 保证原子, 认为是整包，返回值若<0参考CHANNEL_ERROR_CODE
 	virtual void		close();
 	virtual void		shutdown(int32_t howto);// 参数参考全局函数 ::shutdown
 	virtual bool		peer_addr(std::string& addr);
@@ -78,7 +80,7 @@ private:
 	virtual void on_sockio_read(sockio_helper* sockio_id);
 	virtual void on_sockio_write(sockio_helper* sockio_id);
 
-	virtual	int32_t	on_recv_buff(const void* buf, const size_t len, bool& left_partial_pkg);
+	virtual	int32_t	on_recv_buff(std::shared_ptr<buffer_thunk>& data, bool& left_partial_pkg);
 
 	void handle_close_strategy(CLOSE_MODE_STRATEGY cms);
 };
@@ -96,12 +98,13 @@ public:
 	virtual void	on_closed();
 	//参考CHANNEL_ERROR_CODE定义
 	virtual CLOSE_MODE_STRATEGY	on_error(CHANNEL_ERROR_CODE code);
+
 	//提取数据包：返回值 =0 表示包不完整； >0 完整的包(长)
 	virtual int32_t on_recv_split(const void* buf, const size_t len);
 	//这是一个待处理的完整包
 	virtual void	on_recv_pkg(const void* buf, const size_t len);
+	virtual void	send(const void* buf, const size_t len);
 
-	virtual int32_t	send(const void* buf, const size_t len);
 	virtual void	close();
 	virtual void	shutdown(int32_t howto);
 	virtual bool	peer_addr(std::string& addr);
@@ -111,6 +114,11 @@ public:
 	virtual void	chain_inref();
 	virtual void	chain_deref();
 	virtual void	transfer_ref(const int32_t& ref);
+
 protected:
+	virtual int32_t on_recv_split(const std::shared_ptr<buffer_thunk>& data);
+	virtual void	on_recv_pkg(const std::shared_ptr<buffer_thunk>& data);
+	virtual void	send(const std::shared_ptr<buffer_thunk>& data);
+
 	virtual void	on_release();
 };

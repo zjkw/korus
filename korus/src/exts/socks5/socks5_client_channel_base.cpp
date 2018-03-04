@@ -33,11 +33,7 @@ void	socks5_client_channel_base::on_connected()
 		return;
 	}
 
-	if (send(buf, size) < 0)
-	{
-		close();
-		return;
-	}
+	send(buf, size);
 
 	_shakehand_state = SCS_METHOD;
 }
@@ -50,26 +46,26 @@ void	socks5_client_channel_base::on_closed()
 }
 
 //提取数据包：返回值 =0 表示包不完整； >0 完整的包(长)
-int32_t socks5_client_channel_base::on_recv_split(const void* buf, const size_t size)
+int32_t socks5_client_channel_base::on_recv_split(const std::shared_ptr<buffer_thunk>& data)
 {
 	switch (_shakehand_state)
 	{
 	case SCS_METHOD:
-		if (size >= 2)
+		if (data->used() >= 2)
 		{
 			return 2;
 		}
 		break;
 	case SCS_AUTH:
-		if (size >= 2)
+		if (data->used() >= 2)
 		{
 			return 2;
 		}
 		break;
 	case SCS_TUNNEL:
-		if (size > 4)
+		if (data->used() > 4)
 		{
-			net_serialize	decodec((void*)buf, size);
+			net_serialize	decodec(data->ptr(), data->used());
 
 			decodec.read_skip(3);
 			uint8_t	u8atyp = 0;
@@ -77,24 +73,24 @@ int32_t socks5_client_channel_base::on_recv_split(const void* buf, const size_t 
 			switch (u8atyp)
 			{
 			case 0x01:
-				if (size >= 10)
+				if (data->used() >= 10)
 				{
 					return 10;
 				}
 				break;
 			case 0x03:
-				if (size >= 7)
+				if (data->used() >= 7)
 				{
 					uint8_t	u8domainlen = 0;
 					decodec >> u8domainlen;
-					if (size > u8domainlen + 7)
+					if (data->used() > u8domainlen + 7)
 					{
 						return u8domainlen + 7;
 					}
 				}
 				break;
 			case 0x04:
-				if (size >= 22)
+				if (data->used() >= 22)
 				{
 					return 22;
 				}
@@ -105,7 +101,7 @@ int32_t socks5_client_channel_base::on_recv_split(const void* buf, const size_t 
 		}
 		break;
 	case SCS_NORMAL:
-		return tcp_client_handler_base::on_recv_split(buf, size);
+		return tcp_client_handler_base::on_recv_split(data);
 	case SCS_NONE:
 	default:
 		assert(false);
@@ -116,21 +112,21 @@ int32_t socks5_client_channel_base::on_recv_split(const void* buf, const size_t 
 }
 
 //这是一个待处理的完整包
-void	socks5_client_channel_base::on_recv_pkg(const void* buf, const size_t size)
+void	socks5_client_channel_base::on_recv_pkg(const std::shared_ptr<buffer_thunk>& data)
 {
 	switch (_shakehand_state)
 	{
 	case SCS_METHOD:
-		on_method_pkg(buf, size);
+		on_method_pkg(data->ptr(), data->used());
 		break;
 	case SCS_AUTH:
-		on_auth_pkg(buf, size);
+		on_auth_pkg(data->ptr(), data->used());
 		break;
 	case SCS_TUNNEL:
-		on_tunnel_pkg(buf, size);
+		on_tunnel_pkg(data->ptr(), data->used());
 		break;
 	case SCS_NORMAL:
-		tcp_client_handler_base::on_recv_pkg(buf, size);
+		tcp_client_handler_base::on_recv_pkg(data);
 		break;
 	case SCS_NONE:
 	default:
@@ -191,11 +187,7 @@ void	socks5_client_channel_base::on_method_pkg(const void* buf, const uint16_t s
 				return;
 			}
 
-			if (send(send_buf, ret) < 0)
-			{
-				close();
-				return;
-			}
+			send(send_buf, ret);
 
 			_shakehand_state = SCS_TUNNEL;
 		}
@@ -211,11 +203,7 @@ void	socks5_client_channel_base::on_method_pkg(const void* buf, const uint16_t s
 				return;
 			}
 
-			if (send(send_buf, ret) < 0)
-			{
-				close();
-				return;
-			}
+			send(send_buf, ret);
 
 			_shakehand_state = SCS_AUTH;
 		}
@@ -281,11 +269,7 @@ void	socks5_client_channel_base::on_auth_pkg(const void* buf, const uint16_t siz
 		return;
 	}
 
-	if (send(send_buf, ret) < 0)
-	{
-		close();
-		return;
-	}
+	send(send_buf, ret);
 
 	_shakehand_state = SCS_TUNNEL;
 }

@@ -24,9 +24,9 @@ public:
 	//参考CHANNEL_ERROR_CODE定义
 	virtual CLOSE_MODE_STRATEGY	on_error(CHANNEL_ERROR_CODE code);
 	//提取数据包：返回值 =0 表示包不完整； >0 完整的包(长)
-	virtual int32_t on_recv_split(const void* buf, const size_t len);
+	virtual int32_t on_recv_split(const std::shared_ptr<buffer_thunk>& data);
 	//这是一个待处理的完整包
-	virtual void	on_recv_pkg(const void* buf, const size_t len);
+	virtual void	on_recv_pkg(const std::shared_ptr<buffer_thunk>& data);
 	
 private:
 	socks5_bindcmd_client_handler_origin* _integration;

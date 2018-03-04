@@ -80,7 +80,7 @@ uint32_t net_serialize::size() const
 }
 
 // step
-uint32_t net_serialize::wpos()
+uint32_t net_serialize::wpos() const
 {
 	if (!_is_valid)
 	{

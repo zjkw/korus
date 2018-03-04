@@ -27,14 +27,14 @@ void	socks5_bindcmd_client_handler_base::on_chain_final()
 
 //ctrl channel--------------
 // 下面四个函数可能运行在多线程环境下	
-int32_t	socks5_bindcmd_client_handler_base::ctrl_send(const void* buf, const size_t len)			// 保证原子, 认为是整包，返回值若<0参考CHANNEL_ERROR_CODE
+void	socks5_bindcmd_client_handler_base::ctrl_send(const std::shared_ptr<buffer_thunk>& data)			// 保证原子, 认为是整包，返回值若<0参考CHANNEL_ERROR_CODE
 {
 	if (!_tunnel_prev)
 	{
 		assert(false);
-		return 0;
+		return;
 	}
-	return _tunnel_prev->ctrl_send(buf, len);
+	_tunnel_prev->ctrl_send(data);
 }
 
 void	socks5_bindcmd_client_handler_base::ctrl_close()
@@ -107,36 +107,36 @@ CLOSE_MODE_STRATEGY	socks5_bindcmd_client_handler_base::on_ctrl_error(CHANNEL_ER
 	return _tunnel_next->on_ctrl_error(code);
 }
 
-int32_t socks5_bindcmd_client_handler_base::on_ctrl_recv_split(const void* buf, const size_t size)
+int32_t socks5_bindcmd_client_handler_base::on_ctrl_recv_split(const std::shared_ptr<buffer_thunk>& data)
 {
 	if (!_tunnel_next)
 	{
 		assert(false);
 		return 0;
 	}
-	return _tunnel_next->on_ctrl_recv_split(buf, size);
+	return _tunnel_next->on_ctrl_recv_split(data);
 }
 
-void	socks5_bindcmd_client_handler_base::on_ctrl_recv_pkg(const void* buf, const size_t size)	//这是一个待处理的完整包
+void	socks5_bindcmd_client_handler_base::on_ctrl_recv_pkg(const std::shared_ptr<buffer_thunk>& data)	//这是一个待处理的完整包
 {
 	if (!_tunnel_next)
 	{
 		assert(false);
 		return;
 	}
-	_tunnel_next->on_ctrl_recv_pkg(buf, size);
+	_tunnel_next->on_ctrl_recv_pkg(data);
 }
 
 //data channel--------------
 // 下面四个函数可能运行在多线程环境下	
-int32_t	socks5_bindcmd_client_handler_base::data_send(const void* buf, const size_t len)			// 保证原子, 认为是整包，返回值若<0参考CHANNEL_ERROR_CODE
+void	socks5_bindcmd_client_handler_base::data_send(const std::shared_ptr<buffer_thunk>& data)			// 保证原子, 认为是整包，返回值若<0参考CHANNEL_ERROR_CODE
 {
 	if (!_tunnel_prev)
 	{
 		assert(false);
-		return 0;
+		return;
 	}
-	return _tunnel_prev->data_send(buf, len);
+	_tunnel_prev->data_send(data);
 }
 
 void	socks5_bindcmd_client_handler_base::data_close()
@@ -209,24 +209,24 @@ CLOSE_MODE_STRATEGY	socks5_bindcmd_client_handler_base::on_data_error(CHANNEL_ER
 	return _tunnel_next->on_data_error(code);
 }
 
-int32_t socks5_bindcmd_client_handler_base::on_data_recv_split(const void* buf, const size_t size)
+int32_t socks5_bindcmd_client_handler_base::on_data_recv_split(const std::shared_ptr<buffer_thunk>& data)
 {
 	if (!_tunnel_next)
 	{
 		assert(false);
 		return 0;
 	}
-	return _tunnel_next->on_data_recv_split(buf, size);
+	return _tunnel_next->on_data_recv_split(data);
 }
 
-void	socks5_bindcmd_client_handler_base::on_data_recv_pkg(const void* buf, const size_t size)	//这是一个待处理的完整包
+void	socks5_bindcmd_client_handler_base::on_data_recv_pkg(const std::shared_ptr<buffer_thunk>& data)	//这是一个待处理的完整包
 {
 	if (!_tunnel_next)
 	{
 		assert(false);
 		return;
 	}
-	_tunnel_next->on_data_recv_pkg(buf, size);
+	_tunnel_next->on_data_recv_pkg(data);
 }
 
 void	socks5_bindcmd_client_handler_base::on_data_prepare(const std::string& proxy_listen_target_addr)		//代理服务器用于监听“目标服务器过来的连接”地址
@@ -297,14 +297,14 @@ void	socks5_bindcmd_client_handler_origin::chain_final()
 
 //ctrl channel--------------
 // 下面四个函数可能运行在多线程环境下	
-int32_t	socks5_bindcmd_client_handler_origin::ctrl_send(const void* buf, const size_t len)			// 保证原子, 认为是整包，返回值若<0参考CHANNEL_ERROR_CODE
+void	socks5_bindcmd_client_handler_origin::ctrl_send(const std::shared_ptr<buffer_thunk>& data)			// 保证原子, 认为是整包，返回值若<0参考CHANNEL_ERROR_CODE
 {
 	if (!_ctrl_channel)
 	{
 		assert(false);
-		return 0;
+		return;
 	}
-	return _ctrl_channel->send(buf, len);
+	return _ctrl_channel->send(data);
 }
 
 void	socks5_bindcmd_client_handler_origin::ctrl_close()
@@ -364,14 +364,14 @@ CLOSE_MODE_STRATEGY	socks5_bindcmd_client_handler_origin::on_ctrl_error(CHANNEL_
 
 //data channel--------------
 // 下面四个函数可能运行在多线程环境下	
-int32_t	socks5_bindcmd_client_handler_origin::data_send(const void* buf, const size_t len)			// 保证原子, 认为是整包，返回值若<0参考CHANNEL_ERROR_CODE
+void	socks5_bindcmd_client_handler_origin::data_send(const std::shared_ptr<buffer_thunk>& data)			// 保证原子, 认为是整包，返回值若<0参考CHANNEL_ERROR_CODE
 {
 	if (!_data_channel)
 	{
 		assert(false);
-		return 0;
+		return;
 	}
-	return _data_channel->send(buf, len);
+	return _data_channel->send(data);
 }
 
 void	socks5_bindcmd_client_handler_origin::data_close()
@@ -457,9 +457,15 @@ void	socks5_bindcmd_client_handler_terminal::on_chain_final()
 
 //ctrl channel--------------
 // 下面五个函数可能运行在多线程环境下	
-int32_t	socks5_bindcmd_client_handler_terminal::ctrl_send(const void* buf, const size_t len)			// 保证原子, 认为是整包，返回值若<0参考CHANNEL_ERROR_CODE
+void	socks5_bindcmd_client_handler_terminal::ctrl_send(const void* buf, const size_t len)			// 保证原子, 认为是整包，返回值若<0参考CHANNEL_ERROR_CODE
 {
-	return socks5_bindcmd_client_handler_base::ctrl_send(buf, len);
+	std::shared_ptr<buffer_thunk>	thunk = std::make_shared<buffer_thunk>(buf, len);
+	socks5_bindcmd_client_handler_terminal::ctrl_send(thunk);
+}
+
+void	socks5_bindcmd_client_handler_terminal::ctrl_send(const std::shared_ptr<buffer_thunk>& data)			// 保证原子, 认为是整包，返回值若<0参考CHANNEL_ERROR_CODE
+{
+	socks5_bindcmd_client_handler_base::ctrl_send(data);
 }
 
 void	socks5_bindcmd_client_handler_terminal::ctrl_close()
@@ -497,11 +503,37 @@ CLOSE_MODE_STRATEGY	socks5_bindcmd_client_handler_terminal::on_ctrl_error(CHANNE
 	return CMS_INNER_AUTO_CLOSE;
 }
 
+int32_t socks5_bindcmd_client_handler_terminal::on_ctrl_recv_split(const void* buf, const size_t size)
+{
+	return 0;
+}
+
+void	socks5_bindcmd_client_handler_terminal::on_ctrl_recv_pkg(const void* buf, const size_t size)	//这是一个待处理的完整包
+{
+
+}
+
+int32_t socks5_bindcmd_client_handler_terminal::on_ctrl_recv_split(const std::shared_ptr<buffer_thunk>& data)
+{
+	return on_ctrl_recv_split(data->ptr(), data->used());
+}
+
+void	socks5_bindcmd_client_handler_terminal::on_ctrl_recv_pkg(const std::shared_ptr<buffer_thunk>& data)	//这是一个待处理的完整包
+{
+	on_ctrl_recv_pkg(data->ptr(), data->used());
+}
+
 //data channel--------------
 // 下面五个函数可能运行在多线程环境下	
-int32_t	socks5_bindcmd_client_handler_terminal::data_send(const void* buf, const size_t len)			// 保证原子, 认为是整包，返回值若<0参考CHANNEL_ERROR_CODE
+void	socks5_bindcmd_client_handler_terminal::data_send(const void* buf, const size_t len)			// 保证原子, 认为是整包，返回值若<0参考CHANNEL_ERROR_CODE
 {
-	return socks5_bindcmd_client_handler_base::data_send(buf, len);
+	std::shared_ptr<buffer_thunk>	thunk = std::make_shared<buffer_thunk>(buf, len);
+	socks5_bindcmd_client_handler_terminal::data_send(thunk);
+}
+
+void	socks5_bindcmd_client_handler_terminal::data_send(const std::shared_ptr<buffer_thunk>& data)			// 保证原子, 认为是整包，返回值若<0参考CHANNEL_ERROR_CODE
+{
+	socks5_bindcmd_client_handler_base::data_send(data);
 }
 
 void	socks5_bindcmd_client_handler_terminal::data_close()
@@ -537,6 +569,26 @@ void	socks5_bindcmd_client_handler_terminal::on_data_closed()
 CLOSE_MODE_STRATEGY	socks5_bindcmd_client_handler_terminal::on_data_error(CHANNEL_ERROR_CODE code)		//参考CHANNEL_ERROR_CODE定义
 {
 	return CMS_INNER_AUTO_CLOSE;
+}
+
+int32_t socks5_bindcmd_client_handler_terminal::on_data_recv_split(const void* buf, const size_t size)
+{
+	return 0;
+}
+
+void	socks5_bindcmd_client_handler_terminal::on_data_recv_pkg(const void* buf, const size_t size)	//这是一个待处理的完整包
+{
+
+}
+
+int32_t socks5_bindcmd_client_handler_terminal::on_data_recv_split(const std::shared_ptr<buffer_thunk>& data)
+{
+	return on_data_recv_split(data->ptr(), data->used());
+}
+
+void	socks5_bindcmd_client_handler_terminal::on_data_recv_pkg(const std::shared_ptr<buffer_thunk>& data)	//这是一个待处理的完整包
+{
+	on_data_recv_pkg(data->ptr(), data->used());
 }
 
 void	socks5_bindcmd_client_handler_terminal::on_data_prepare(const std::string& proxy_listen_target_addr)		//代理服务器用于监听“目标服务器过来的连接”地址

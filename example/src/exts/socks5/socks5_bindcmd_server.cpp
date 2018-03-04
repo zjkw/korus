@@ -48,8 +48,8 @@ public:
 	virtual void	on_connected()	//连接已经建立
 	{
 		char szTest[] = "hello client, i am server1!";
-		int32_t ret = send(szTest, strlen(szTest));
-		printf("\n	client	Connected, then Send %s, ret: %d\n", szTest, ret);
+		send(szTest, strlen(szTest));
+		printf("\n	client	Connected, then Send %s\n", szTest);
 	}
 
 	virtual void	on_closed()
@@ -114,8 +114,8 @@ public:
 		codec.wpos(0);
 		codec << len;
 		
-		int32_t ret = send(codec.data(), len);
-		printf("\n	server Connected/accepted, then Send %s, ret: %d\n", szTest2, ret);
+		send(codec.data(), len);
+		printf("\n	server Connected/accepted, then Send %s\n", szTest2);
 	}
 
 	virtual void	on_closed()
