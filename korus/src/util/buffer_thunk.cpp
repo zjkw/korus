@@ -1,4 +1,5 @@
 #include <string.h>
+#include <assert.h>
 #include "buffer_thunk.h"
 
 //预估size
@@ -61,9 +62,22 @@ buffer_thunk::~buffer_thunk()
 	_buf = nullptr;
 }
 
+void	buffer_thunk::push_front(const size_t size)
+{
+	adjust_size_by_head(size);
+
+	if (_begin)
+	{
+		assert(_begin >= size);
+		_begin -= size;
+	}
+
+	_used += size;
+}
+
 void	buffer_thunk::push_back(const void* data, const size_t size)
 {
-	adjust_size(size);
+	adjust_size_by_tail(size);
 
 	memcpy(_buf + _begin + _used, data, size);
 	_used += size;
@@ -91,7 +105,8 @@ size_t	buffer_thunk::pop_front(const size_t size)
 	}
 	else
 	{
-		memmove(_buf + _begin, _buf + _begin + size, _used - size);
+	//	memmove(_buf + _begin, _buf + _begin + size, _used - size);
+		_begin += size;
 		_used -= size;
 		return size;
 	}
@@ -99,7 +114,7 @@ size_t	buffer_thunk::pop_front(const size_t size)
 
 bool	buffer_thunk::prepare(const size_t new_size)
 {
-	return adjust_size(new_size);
+	return adjust_size_by_tail(new_size);
 }
 
 void	buffer_thunk::append_move(buffer_thunk* rhs)
@@ -114,7 +129,38 @@ void	buffer_thunk::reset()
 	_used = 0;
 }
 
-bool	buffer_thunk::adjust_size(const size_t append_size)
+bool	buffer_thunk::adjust_size_by_head(const size_t append_size)
+{
+	//1，整体空间是否足够容纳新数据
+	if (_size >= _used + append_size)
+	{
+		//2，基于已有begin位置开始算是否足够容纳新数据
+		if (_begin < append_size)
+		{
+			memmove(_buf + append_size, _buf + _begin, _used);
+			_begin = append_size;
+		}
+	}
+	else
+	{
+		size_t new_size = smart_size(_size + append_size);
+		uint8_t* new_buf = new uint8_t[new_size];
+
+		if (_buf)
+		{
+			memcpy(new_buf + append_size, _buf + _begin, _used);
+			delete[]_buf;
+		}
+
+		_buf = new_buf;
+		_begin = append_size;
+		_size = new_size;
+	}
+
+	return true;
+}
+
+bool	buffer_thunk::adjust_size_by_tail(const size_t append_size)
 {
 	//1，整体空间是否足够容纳新数据
 	if (_size >= _used + append_size)

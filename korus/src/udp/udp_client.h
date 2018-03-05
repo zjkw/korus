@@ -31,7 +31,7 @@ public:
 	// 在使用reuseport情况下，注意服务器是否也开启了这个选项，因为5元组才能确定一条"连接"
 #ifndef REUSEPORT_OPTION
 	udp_client(const udp_client_channel_factory_t& factory, const std::string& bind_addr = "", const uint32_t self_read_size = DEFAULT_READ_BUFSIZE, const uint32_t self_write_size = DEFAULT_WRITE_BUFSIZE, const uint32_t sock_read_size = 0, const uint32_t sock_write_size = 0)
-		: _bind_addr(bind_addr), _self_read_size(self_read_size), _self_write_size(self_write_size), _sock_read_size(sock_read_size), _sock_write_size(sock_write_size)
+		: _factory(factory), _bind_addr(bind_addr), _self_read_size(self_read_size), _self_write_size(self_write_size), _sock_read_size(sock_read_size), _sock_write_size(sock_write_size)
 #else
 	udp_client(uint16_t thread_num, const udp_client_channel_factory_t& factory, const std::string& bind_addr = "", const uint32_t self_read_size = DEFAULT_READ_BUFSIZE, const uint32_t self_write_size = DEFAULT_WRITE_BUFSIZE, const uint32_t sock_read_size = 0, const uint32_t sock_write_size = 0)
 		: _thread_num(thread_num), _factory(factory), _bind_addr(bind_addr), _self_read_size(self_read_size), _self_write_size(self_write_size), _sock_read_size(sock_read_size), _sock_write_size(sock_write_size)
@@ -137,7 +137,7 @@ public:
 	// addr格式ip:port
 	udp_client(std::shared_ptr<reactor_loop> reactor, const udp_client_channel_factory_t& factory, const std::string& bind_addr = "", const uint32_t self_read_size = DEFAULT_READ_BUFSIZE, const uint32_t self_write_size = DEFAULT_WRITE_BUFSIZE,
 		const uint32_t sock_read_size = 0, const uint32_t sock_write_size = 0)
-		: _reactor(reactor), _bind_addr(bind_addr), _self_read_size(self_read_size), _self_write_size(self_write_size), _sock_read_size(sock_read_size), _sock_write_size(sock_write_size)
+		: _reactor(reactor), _factory(factory), _bind_addr(bind_addr), _self_read_size(self_read_size), _self_write_size(self_write_size), _sock_read_size(sock_read_size), _sock_write_size(sock_write_size)
 	{
 		_tid = std::this_thread::get_id();
 

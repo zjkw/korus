@@ -90,12 +90,6 @@ void	tcp_client_handler_base::send(const std::shared_ptr<buffer_thunk>& data)
 	_tunnel_prev->send(data);
 }
 
-void	tcp_client_handler_base::send(const void* buf, const size_t len)
-{
-	std::shared_ptr<buffer_thunk>	thunk = std::make_shared<buffer_thunk>(buf, len);
-	tcp_client_handler_base::send(thunk);
-}
-
 void	tcp_client_handler_base::close()
 {
 	if (!_tunnel_prev)

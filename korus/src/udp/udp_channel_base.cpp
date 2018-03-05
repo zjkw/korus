@@ -6,10 +6,11 @@
 #include "udp_helper.h"
 #include "udp_channel_base.h"
 
+#define DEFAULT_ONCERECV_SIZE	(1024)
+
 // 目前为用到self_write_size
 udp_channel_base::udp_channel_base(const std::string& local_addr, const uint32_t self_read_size, const uint32_t self_write_size, const uint32_t sock_read_size, const uint32_t sock_write_size)
-	: _fd(INVALID_SOCKET), _local_addr(local_addr), _self_read_size(self_read_size), _sock_read_size(sock_read_size), _sock_write_size(sock_write_size),
-	_self_read_buff(new uint8_t[self_read_size])
+	: _fd(INVALID_SOCKET), _local_addr(local_addr), _sock_read_size(sock_read_size), _sock_write_size(sock_write_size), _read_thunk(new buffer_thunk)
 {
 
 }
@@ -17,7 +18,6 @@ udp_channel_base::udp_channel_base(const std::string& local_addr, const uint32_t
 //析构需要发生在产生线程
 udp_channel_base::~udp_channel_base()
 {
-	delete[]_self_read_buff;
 }
 
 bool	udp_channel_base::init_socket()
@@ -79,26 +79,23 @@ void	udp_channel_base::set_fd(SOCKET fd)
 				set_socket_recvbuflen(fd, _sock_read_size);
 			}
 		}
-		std::unique_lock <std::mutex> lck(_mutex_write);
 		_fd = fd;
 	}
 }
 
 // 保证原子，考虑多线程环境下，buf最好是一个或若干完整包；可能触发错误/异常 on_error
-int32_t		udp_channel_base::send(const void* buf, const size_t len, const sockaddr_in& peer_addr)
+void		udp_channel_base::send_raw(const std::shared_ptr<buffer_thunk>& data, const sockaddr_in& peer_addr)
 {
-	std::unique_lock <std::mutex> lck(_mutex_write);
 	if (INVALID_SOCKET == _fd)
 	{
-		return (int32_t)CEC_INVALID_SOCKET;
+		return;
 	}
 
-	return do_send_inlock(buf, len, peer_addr);
+	do_send(data, peer_addr);
 }
 
 int32_t		udp_channel_base::connect(const sockaddr_in& server_addr)
 {
-	std::unique_lock <std::mutex> lck(_mutex_write);
 	if (INVALID_SOCKET == _fd)
 	{
 		return (int32_t)CEC_INVALID_SOCKET;
@@ -115,22 +112,21 @@ int32_t		udp_channel_base::connect(const sockaddr_in& server_addr)
 	}
 }
 
-int32_t		udp_channel_base::send(const void* buf, const size_t len)
+void		udp_channel_base::send_raw(const std::shared_ptr<buffer_thunk>& data)
 {
-	std::unique_lock <std::mutex> lck(_mutex_write);
 	if (INVALID_SOCKET == _fd)
 	{
-		return (int32_t)CEC_INVALID_SOCKET;
+		return;
 	}
 
-	return do_send_inlock(buf, len);
+	return do_send(data);
 }
 
-int32_t		udp_channel_base::do_send_inlock(const void* buf, uint32_t	len, const sockaddr_in& peer_addr)
+void		udp_channel_base::do_send(const std::shared_ptr<buffer_thunk>& data, const sockaddr_in& peer_addr)
 {
 	while (1)
 	{
-		int32_t ret = ::sendto(_fd, (const char*)buf, len, 0, (struct sockaddr *)&peer_addr, sizeof(peer_addr));
+		int32_t ret = ::sendto(_fd, data->ptr(), data->used(), 0, (struct sockaddr *)&peer_addr, sizeof(peer_addr));
 		if (ret < 0)
 		{
 			if (errno == EINTR)
@@ -147,22 +143,21 @@ int32_t		udp_channel_base::do_send_inlock(const void* buf, uint32_t	len, const s
 				break;
 			}
 #endif
-			return (int32_t)CEC_WRITE_FAILED;
+			return;
 		}
 		else
 		{
 			break;
 		}
 	}
-	return len;
 }
 
 // tbd check udp_bind mode
-int32_t		udp_channel_base::do_send_inlock(const void* buf, uint32_t	len)
+void		udp_channel_base::do_send(const std::shared_ptr<buffer_thunk>& data)
 {
 	while (1)
 	{
-		int32_t ret = ::send(_fd, (const char*)buf, len, MSG_NOSIGNAL);
+		int32_t ret = ::send(_fd, data->ptr(), data->used(), MSG_NOSIGNAL);
 		if (ret < 0)
 		{
 			if (errno == EINTR)
@@ -179,30 +174,17 @@ int32_t		udp_channel_base::do_send_inlock(const void* buf, uint32_t	len)
 				break;
 			}
 #endif
-			return (int32_t)CEC_WRITE_FAILED;
+			return;
 		}
 		else
 		{
 			break;
 		}
 	}
-	return len;
-}
-
-int32_t	udp_channel_base::send_alone()
-{
-	std::unique_lock <std::mutex> lck(_mutex_write);
-	if (INVALID_SOCKET == _fd)
-	{
-		return (int32_t)CEC_INVALID_SOCKET;
-	}
-	return 0;
 }
 
 void udp_channel_base::close()
 {
-	send_alone();
-	std::unique_lock <std::mutex> lck(_mutex_write);
 	if (INVALID_SOCKET != _fd)
 	{
 		::close(_fd);
@@ -210,6 +192,7 @@ void udp_channel_base::close()
 	}
 }
 
+// 循环中可能fd会被改变，因为on_recv_buff可能触发上层执行close，但无效fd是一个特殊值，recv是能识别出来的
 int32_t	udp_channel_base::do_recv()
 {
 	if (INVALID_SOCKET == _fd)
@@ -217,19 +200,14 @@ int32_t	udp_channel_base::do_recv()
 		return (int32_t)CEC_INVALID_SOCKET;
 	}
 
-	return do_recv_nolock();	
-}
-
-// 循环中可能fd会被改变，因为on_recv_buff可能触发上层执行close，但无效fd是一个特殊值，recv是能识别出来的
-int32_t	udp_channel_base::do_recv_nolock()
-{
 	int32_t total_read = 0;
 	
 	struct sockaddr_in addr;
 	socklen_t addr_len = sizeof(struct sockaddr_in);
 	while (true)
 	{
-		int32_t ret = ::recvfrom(_fd, (char*)_self_read_buff, _self_read_size, 0, (struct sockaddr*)&addr, &addr_len);
+		_read_thunk->prepare(DEFAULT_ONCERECV_SIZE);
+		int32_t ret = ::recvfrom(_fd, (char*)_read_thunk->ptr(), DEFAULT_ONCERECV_SIZE, 0, (struct sockaddr*)&addr, &addr_len);
 		if (ret < 0)
 		{
 			if (errno == EINTR)
@@ -254,9 +232,10 @@ int32_t	udp_channel_base::do_recv_nolock()
 		else
 		{
 			total_read += ret;
+			_read_thunk->incr(ret);
 		}
 
-		on_recv_buff(_self_read_buff, ret, addr);
+		on_recv_buff(_read_thunk, addr);
 	}
 
 	return total_read;
@@ -264,11 +243,9 @@ int32_t	udp_channel_base::do_recv_nolock()
 
 bool	udp_channel_base::peer_addr(std::string& addr)
 {
-	std::unique_lock <std::mutex> lck(_mutex_write);
 	return peeraddr_from_fd(_fd, addr);
 }
 bool	udp_channel_base::local_addr(std::string& addr)
 {
-	std::unique_lock <std::mutex> lck(_mutex_write);
 	return localaddr_from_fd(_fd, addr);
 }

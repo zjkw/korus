@@ -1,7 +1,6 @@
 #include <assert.h>
 #include "socks5_bindcmd_client_channel.h"
 #include "korus/src/util/socket_ops.h"
-#include "korus/src/util/net_serialize.h"
 #include "socks5_bindcmd_originalbind_client_channel.h"
 
 socks5_bindcmd_originalbind_client_channel::socks5_bindcmd_originalbind_client_channel(std::shared_ptr<reactor_loop> reactor, const std::string& server_addr, const std::string& socks_user, const std::string& socks_psw)
@@ -23,10 +22,8 @@ void	socks5_bindcmd_originalbind_client_channel::on_chain_final()
 {
 }
 
-int32_t	socks5_bindcmd_originalbind_client_channel::make_tunnel_pkg(void* buf, const uint16_t size)
+bool	socks5_bindcmd_originalbind_client_channel::make_tunnel_pkg(net_serialize&	codec)
 {
-	net_serialize	codec(buf, size);
-
 	codec << static_cast<uint8_t>(SOCKS5_V);
 	codec << static_cast<uint8_t>(0x02);
 	codec << static_cast<uint8_t>(0x00);
@@ -35,7 +32,7 @@ int32_t	socks5_bindcmd_originalbind_client_channel::make_tunnel_pkg(void* buf, c
 	if (!sockaddr_from_string(_server_addr, host, port))
 	{
 		assert(false);
-		return -1;
+		return false;
 	}
 	SOCK_ADDR_TYPE	sat = addrtype_from_string(_server_addr);
 	if (sat == SAT_DOMAIN)
@@ -56,16 +53,14 @@ int32_t	socks5_bindcmd_originalbind_client_channel::make_tunnel_pkg(void* buf, c
 	else
 	{
 		assert(false);
-		return -1;
+		return false;
 	}
 
-	return (int32_t)codec.wpos();
+	return codec;
 }
 
-void	socks5_bindcmd_originalbind_client_channel::on_tunnel_pkg(const void* buf, const uint16_t size)
+void	socks5_bindcmd_originalbind_client_channel::on_tunnel_pkg(net_serialize&	decodec)
 {
-	net_serialize	decodec(buf, size);
-
 	uint8_t	u8ver = 0;
 	uint8_t	u8rep = 0;
 	uint8_t	u8rsv = 0;

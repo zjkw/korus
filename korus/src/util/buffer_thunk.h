@@ -13,6 +13,7 @@ public:
 	buffer_thunk(buffer_thunk* rhs);
 	virtual ~buffer_thunk();
 	
+	void	push_front(const size_t size);
 	void	push_back(const void* data, const size_t size);
 	void	push_back(buffer_thunk* rhs);
 	size_t	pop_front(const size_t size);
@@ -34,7 +35,8 @@ protected:
 	size_t		_used;	//有效长度
 	size_t		_rpos;	//临时read位置
 
-	bool		adjust_size(const size_t append_size);
+	bool		adjust_size_by_head(const size_t append_size);
+	bool		adjust_size_by_tail(const size_t append_size);
 };
 
 

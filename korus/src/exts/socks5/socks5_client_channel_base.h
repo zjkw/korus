@@ -1,5 +1,6 @@
 #pragma once
 
+#include "korus/src//util/net_serialize.h"
 #include "socks5_proto.h"
 #include "korus/src/tcp/tcp_client_channel.h"
 #include "korus/src/udp/udp_client_channel.h"
@@ -28,14 +29,14 @@ protected:
 	};
 	SOCKS_CLIENT_STATE	_shakehand_state;
 	
-	int32_t			make_method_pkg(void* buf, const uint16_t size);
-	void			on_method_pkg(const void* buf, const uint16_t size);
+	bool			make_method_pkg(net_serialize&	codec);
+	void			on_method_pkg(net_serialize&	decodec);
 
-	int32_t			make_auth_pkg(void* buf, const uint16_t size);
-	void			on_auth_pkg(const void* buf, const uint16_t size);
+	bool			make_auth_pkg(net_serialize&	codec);
+	void			on_auth_pkg(net_serialize&	decodec);
 
-	virtual int32_t	make_tunnel_pkg(void* buf, const uint16_t size) = 0;
-	virtual void	on_tunnel_pkg(const void* buf, const uint16_t size) = 0;
+	virtual bool	make_tunnel_pkg(net_serialize&	codec) = 0;
+	virtual void	on_tunnel_pkg(net_serialize&	decodec) = 0;
 
 	CHANNEL_ERROR_CODE convert_error_code(uint8_t u8rep);
 
@@ -46,4 +47,6 @@ private:
 	//不暴露接口，因为内部已做了特化处理
 	virtual int32_t on_recv_split(const std::shared_ptr<buffer_thunk>& data);
 	virtual void	on_recv_pkg(const std::shared_ptr<buffer_thunk>& data);
+
+	bool		send(const net_serialize&	codec);
 };

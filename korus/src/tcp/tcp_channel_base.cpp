@@ -168,7 +168,7 @@ int32_t	tcp_channel_base::do_recv()
 	while (not_again)
 	{
 		int32_t real_read = 0;
-		while (1)
+		while (true)
 		{
 			_read_thunk->prepare(DEFAULT_ONCERECV_SIZE);
 			int32_t ret = ::recv(_fd, (char*)_read_thunk->ptr(), DEFAULT_ONCERECV_SIZE, MSG_NOSIGNAL);

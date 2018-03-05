@@ -55,7 +55,7 @@ CLOSE_MODE_STRATEGY	udp_client_handler_base::on_error(CHANNEL_ERROR_CODE code)
 }
 
 //这是一个待处理的完整包
-void	udp_client_handler_base::on_recv_pkg(const void* buf, const size_t len, const sockaddr_in& peer_addr)
+void	udp_client_handler_base::on_recv_pkg(const std::shared_ptr<buffer_thunk>& data, const sockaddr_in& peer_addr)
 {
 	if (!_tunnel_next)
 	{
@@ -63,7 +63,7 @@ void	udp_client_handler_base::on_recv_pkg(const void* buf, const size_t len, con
 		return;
 	}
 
-	_tunnel_next->on_recv_pkg(buf, len, peer_addr); 
+	_tunnel_next->on_recv_pkg(data, peer_addr); 
 }
 
 bool	udp_client_handler_base::start()
@@ -77,15 +77,15 @@ bool	udp_client_handler_base::start()
 	return _tunnel_prev->start();
 }
 
-int32_t	udp_client_handler_base::send(const void* buf, const size_t len, const sockaddr_in& peer_addr)
+void	udp_client_handler_base::send(const std::shared_ptr<buffer_thunk>& data, const sockaddr_in& peer_addr)
 {
 	if (!_tunnel_prev)
 	{
 		assert(false);
-		return 0;
+		return;
 	}
 
-	return _tunnel_prev->send(buf, len, peer_addr);
+	_tunnel_prev->send(data, peer_addr);
 }
 
 int32_t	udp_client_handler_base::connect(const sockaddr_in& server_addr)
@@ -99,15 +99,15 @@ int32_t	udp_client_handler_base::connect(const sockaddr_in& server_addr)
 	return _tunnel_prev->connect(server_addr);
 }
 
-int32_t	udp_client_handler_base::send(const void* buf, const size_t len)
+void	udp_client_handler_base::send(const std::shared_ptr<buffer_thunk>& data)
 {
 	if (!_tunnel_prev)
 	{
 		assert(false);
-		return 0;
+		return;
 	}
 
-	return _tunnel_prev->send(buf, len);
+	return _tunnel_prev->send(data);
 }
 
 void	udp_client_handler_base::close()
@@ -175,16 +175,15 @@ bool	udp_client_handler_origin::start()
 }
 
 // 保证原子，考虑多线程环境下，buf最好是一个或若干完整包；可能触发错误/异常 on_error
-int32_t	udp_client_handler_origin::send(const void* buf, const size_t len, const sockaddr_in& peer_addr)
+void	udp_client_handler_origin::send(const std::shared_ptr<buffer_thunk>& data, const sockaddr_in& peer_addr)
 {
 	if (!is_normal())
 	{
 		assert(false);
-		return CEC_INVALID_SOCKET;
+		return;
 	}
 
-	int32_t ret = udp_channel_base::send(buf, len, peer_addr);
-	return ret;
+	udp_channel_base::send_raw(data, peer_addr);	
 }
 
 int32_t	udp_client_handler_origin::connect(const sockaddr_in& server_addr)								// 保证原子, 返回值若<0参考CHANNEL_ERROR_CODE
@@ -199,16 +198,15 @@ int32_t	udp_client_handler_origin::connect(const sockaddr_in& server_addr)						
 	return ret;
 }
 
-int32_t	udp_client_handler_origin::send(const void* buf, const size_t len)								// 保证原子, 认为是整包，返回值若<0参考CHANNEL_ERROR_CODE
+void	udp_client_handler_origin::send(const std::shared_ptr<buffer_thunk>& data)								// 保证原子, 认为是整包，返回值若<0参考CHANNEL_ERROR_CODE
 {
 	if (!is_normal())
 	{
 		assert(false);
-		return CEC_INVALID_SOCKET;
+		return;
 	}
 
-	int32_t ret = udp_channel_base::send(buf, len);
-	return ret;
+	udp_channel_base::send_raw(data);	
 }
 
 void	udp_client_handler_origin::close()
@@ -264,17 +262,15 @@ void	udp_client_handler_origin::set_release()
 	on_closed();
 }
 
-int32_t	udp_client_handler_origin::on_recv_buff(const void* buf, const size_t len, const sockaddr_in& peer_addr)
+void	udp_client_handler_origin::on_recv_buff(const std::shared_ptr<buffer_thunk>& data, const sockaddr_in& peer_addr)
 {
 	if (!is_normal())
 	{
 		assert(false);
-		return CEC_INVALID_SOCKET;
+		return;
 	}
 
-	on_recv_pkg((uint8_t*)buf, len, peer_addr);
-
-	return len;
+	on_recv_pkg(data, peer_addr);
 }
 
 void udp_client_handler_origin::handle_close_strategy(CLOSE_MODE_STRATEGY cms)
@@ -323,20 +319,21 @@ CLOSE_MODE_STRATEGY	udp_client_handler_terminal::on_error(CHANNEL_ERROR_CODE cod
 	return CMS_INNER_AUTO_CLOSE;
 }
 
+bool	udp_client_handler_terminal::start()
+{
+
+}
+
 //这是一个待处理的完整包
 void	udp_client_handler_terminal::on_recv_pkg(const void* buf, const size_t len, const sockaddr_in& peer_addr)
 {
 
 }
 
-bool	udp_client_handler_terminal::start()
+void	udp_client_handler_terminal::send(const void* buf, const size_t len, const sockaddr_in& peer_addr)
 {
-
-}
-
-int32_t	udp_client_handler_terminal::send(const void* buf, const size_t len, const sockaddr_in& peer_addr)
-{
-	return udp_client_handler_base::send(buf, len, peer_addr);
+	std::shared_ptr<buffer_thunk>	thunk = std::make_shared<buffer_thunk>(buf, len);
+	udp_client_handler_terminal::send(thunk, peer_addr);
 }
 
 int32_t	udp_client_handler_terminal::connect(const sockaddr_in& server_addr)								// 保证原子, 返回值若<0参考CHANNEL_ERROR_CODE
@@ -344,13 +341,44 @@ int32_t	udp_client_handler_terminal::connect(const sockaddr_in& server_addr)				
 	return udp_client_handler_base::connect(server_addr);
 }
 
-int32_t	udp_client_handler_terminal::send(const void* buf, const size_t len)
+void	udp_client_handler_terminal::send(const void* buf, const size_t len)
 {
-	return udp_client_handler_base::send(buf, len);
+	std::shared_ptr<buffer_thunk>	thunk = std::make_shared<buffer_thunk>(buf, len);
+	udp_client_handler_terminal::send(thunk);
+}
+
+void	udp_client_handler_terminal::on_recv_pkg(const std::shared_ptr<buffer_thunk>& data, const sockaddr_in& peer_addr)
+{
+	on_recv_pkg(data->ptr(), data->used(), peer_addr);
+}
+
+void	udp_client_handler_terminal::send(const std::shared_ptr<buffer_thunk>& data, const sockaddr_in& peer_addr)
+{
+	if (!reactor()->is_current_thread())
+	{
+		reactor()->start_async_task(std::bind(static_cast<void (udp_client_handler_terminal::*)(const std::shared_ptr<buffer_thunk>&, const sockaddr_in&)>(&udp_client_handler_terminal::send), this, data, peer_addr), this);
+		return;
+	}
+	udp_client_handler_base::send(data, peer_addr);
+}
+
+void	udp_client_handler_terminal::send(const std::shared_ptr<buffer_thunk>& data)
+{
+	if (!reactor()->is_current_thread())
+	{
+		reactor()->start_async_task(std::bind(static_cast<void (udp_client_handler_terminal::*)(const std::shared_ptr<buffer_thunk>&)>(&udp_client_handler_terminal::send), this, data), this);
+		return;
+	}
+	udp_client_handler_base::send(data);
 }
 
 void	udp_client_handler_terminal::close()
 {
+	if (!reactor()->is_current_thread())
+	{
+		reactor()->start_async_task(std::bind(&udp_client_handler_terminal::close, this), this);
+		return;
+	}
 	udp_client_handler_base::close();
 }
 

@@ -16,6 +16,6 @@ public:
 private:
 	std::string _server_addr;
 
-	virtual int32_t	make_tunnel_pkg(void* buf, const uint16_t size);
-	virtual void	on_tunnel_pkg(const void* buf, const uint16_t size);
+	virtual bool	make_tunnel_pkg(net_serialize&	codec);
+	virtual void	on_tunnel_pkg(net_serialize&	decodec);
 };

@@ -1,5 +1,4 @@
 #include <assert.h>
-#include "korus/src/util/net_serialize.h"
 #include "korus/src/util/socket_ops.h"
 #include "socks5_associatecmd_client_channel.h"
 
@@ -24,7 +23,7 @@ void	socks5_associatecmd_client_channel::on_chain_final()
 {
 }
 
-int32_t	socks5_associatecmd_client_channel::make_tunnel_pkg(void* buf, const uint16_t size)
+bool	socks5_associatecmd_client_channel::make_tunnel_pkg(net_serialize&	codec)
 {
 	//´´½¨udp
 	if (!create_udp_server_channel())
@@ -41,8 +40,6 @@ int32_t	socks5_associatecmd_client_channel::make_tunnel_pkg(void* buf, const uin
 	uint32_t ip_digit = ntohl(si.sin_addr.s_addr);
 	uint16_t port_digit = ntohs(si.sin_port);
 		
-	net_serialize	codec(buf, size);
-
 	codec << static_cast<uint8_t>(SOCKS5_V);
 	codec << static_cast<uint8_t>(0x03);
 	codec << static_cast<uint8_t>(0x00);
@@ -51,13 +48,11 @@ int32_t	socks5_associatecmd_client_channel::make_tunnel_pkg(void* buf, const uin
 	codec << ip_digit;
 	codec << port_digit;
 
-	return (int32_t)codec.wpos();
+	return codec;
 }
 
-void	socks5_associatecmd_client_channel::on_tunnel_pkg(const void* buf, const uint16_t size)
+void	socks5_associatecmd_client_channel::on_tunnel_pkg(net_serialize&	decodec)
 {
-	net_serialize	decodec(buf, size);
-
 	uint8_t	u8ver = 0;
 	uint8_t	u8rep = 0;
 	uint8_t	u8rsv = 0;

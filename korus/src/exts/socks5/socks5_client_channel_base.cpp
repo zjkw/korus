@@ -1,7 +1,6 @@
 #include <assert.h>
 #include <string.h>
 #include "socks5_proto.h"
-#include "korus/src//util/net_serialize.h"
 #include "socks5_client_channel_base.h"
 
 socks5_client_channel_base::socks5_client_channel_base(std::shared_ptr<reactor_loop> reactor, const std::string& socks_user, const std::string& socks_psw)
@@ -26,14 +25,15 @@ void	socks5_client_channel_base::on_chain_final()
 void	socks5_client_channel_base::on_connected()
 {
 	uint8_t	buf[2048];
-	int32_t	size = make_method_pkg(buf, sizeof(buf));
-	if (size <= 0)
+	net_serialize	codec(buf, sizeof(buf));
+
+	bool	suc = make_method_pkg(codec);
+	if (!suc)
 	{
 		close();
 		return;
 	}
-
-	send(buf, size);
+	send(codec);
 
 	_shakehand_state = SCS_METHOD;
 }
@@ -114,16 +114,17 @@ int32_t socks5_client_channel_base::on_recv_split(const std::shared_ptr<buffer_t
 //这是一个待处理的完整包
 void	socks5_client_channel_base::on_recv_pkg(const std::shared_ptr<buffer_thunk>& data)
 {
+	net_serialize	decodec(data->ptr(), data->used());
 	switch (_shakehand_state)
 	{
 	case SCS_METHOD:
-		on_method_pkg(data->ptr(), data->used());
+		on_method_pkg(decodec);
 		break;
 	case SCS_AUTH:
-		on_auth_pkg(data->ptr(), data->used());
+		on_auth_pkg(decodec);
 		break;
 	case SCS_TUNNEL:
-		on_tunnel_pkg(data->ptr(), data->used());
+		on_tunnel_pkg(decodec);
 		break;
 	case SCS_NORMAL:
 		tcp_client_handler_base::on_recv_pkg(data);
@@ -136,10 +137,8 @@ void	socks5_client_channel_base::on_recv_pkg(const std::shared_ptr<buffer_thunk>
 }
 
 //////////////////////////
-int32_t	socks5_client_channel_base::make_method_pkg(void* buf, const uint16_t size)
+bool	socks5_client_channel_base::make_method_pkg(net_serialize&	codec)
 {
-	net_serialize	codec(buf, size);
-
 	codec << static_cast<uint8_t>(SOCKS5_V);
 	if (_socks_user.empty())
 	{
@@ -152,12 +151,11 @@ int32_t	socks5_client_channel_base::make_method_pkg(void* buf, const uint16_t si
 		codec << static_cast<uint8_t>(0x00);
 		codec << static_cast<uint8_t>(0x02);
 	}
-	return (int32_t)codec.wpos();
+	return codec;
 }
 
-void	socks5_client_channel_base::on_method_pkg(const void* buf, const uint16_t size)
+void	socks5_client_channel_base::on_method_pkg(net_serialize&	decodec)
 {
-	net_serialize	decodec(buf, size);
 	uint8_t	u8ver = 0;
 	uint8_t	u8method = 0;
 	decodec >> u8ver >> u8method;
@@ -180,14 +178,15 @@ void	socks5_client_channel_base::on_method_pkg(const void* buf, const uint16_t s
 		{
 			// send
 			uint8_t	send_buf[2048];
-			int32_t	ret = make_tunnel_pkg(send_buf, sizeof(send_buf));
-			if (ret <= 0)
+			net_serialize	codec(send_buf, sizeof(send_buf));
+			bool	suc = make_tunnel_pkg(codec);
+			if (!suc)
 			{
 				close();
 				return;
 			}
 
-			send(send_buf, ret);
+			send(codec);
 
 			_shakehand_state = SCS_TUNNEL;
 		}
@@ -196,14 +195,15 @@ void	socks5_client_channel_base::on_method_pkg(const void* buf, const uint16_t s
 		{
 			// send
 			uint8_t	send_buf[2048];
-			int32_t	ret = make_auth_pkg(send_buf, sizeof(send_buf));
-			if (ret <= 0)
+			net_serialize	codec(send_buf, sizeof(send_buf));
+			bool	suc = make_auth_pkg(codec);
+			if (!suc)
 			{
 				close();
 				return;
 			}
 
-			send(send_buf, ret);
+			send(codec);
 
 			_shakehand_state = SCS_AUTH;
 		}
@@ -218,10 +218,8 @@ void	socks5_client_channel_base::on_method_pkg(const void* buf, const uint16_t s
 	}
 }
 
-int32_t	socks5_client_channel_base::make_auth_pkg(void* buf, const uint16_t size)
+bool	socks5_client_channel_base::make_auth_pkg(net_serialize&	codec)
 {
-	net_serialize	codec(buf, size);
-
 	codec << static_cast<uint8_t>(0x01);
 
 	codec << static_cast<uint8_t>(_socks_user.size());
@@ -229,12 +227,11 @@ int32_t	socks5_client_channel_base::make_auth_pkg(void* buf, const uint16_t size
 	codec << static_cast<uint8_t>(_socks_psw.size());
 	codec.write(_socks_psw.data(), _socks_psw.size());
 
-	return (int32_t)codec.wpos();
+	return codec;
 }
 
-void	socks5_client_channel_base::on_auth_pkg(const void* buf, const uint16_t size)
+void	socks5_client_channel_base::on_auth_pkg(net_serialize&	decodec)
 {
-	net_serialize	decodec(buf, size);
 	uint8_t	u8ver = 0;
 	uint8_t	u8status = 0;
 	decodec >> u8ver >> u8status;
@@ -262,14 +259,15 @@ void	socks5_client_channel_base::on_auth_pkg(const void* buf, const uint16_t siz
 
 	// send
 	uint8_t	send_buf[2048];
-	int32_t	ret = make_tunnel_pkg(send_buf, sizeof(send_buf));
-	if (ret <= 0)
+	net_serialize	codec(send_buf, sizeof(send_buf));
+	bool suc = make_tunnel_pkg(codec);
+	if (!suc)
 	{
 		close();
 		return;
 	}
 
-	send(send_buf, ret);
+	send(codec);
 
 	_shakehand_state = SCS_TUNNEL;
 }
@@ -299,4 +297,15 @@ CHANNEL_ERROR_CODE socks5_client_channel_base::convert_error_code(uint8_t u8rep)
 	default:
 		return CEC_SOCKS5_UNKNOWN;
 	}
+}
+
+bool	socks5_client_channel_base::send(const net_serialize&	codec)
+{
+	if (!codec)
+	{
+		return false;
+	}
+	std::shared_ptr<buffer_thunk>	thunk = std::make_shared<buffer_thunk>(codec.data(), codec.wpos());
+	tcp_client_handler_base::send(thunk);
+	return true;
 }

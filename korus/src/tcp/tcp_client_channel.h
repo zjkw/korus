@@ -55,7 +55,6 @@ public:
 	//这是一个待处理的完整包
 	virtual void	on_recv_pkg(const std::shared_ptr<buffer_thunk>& data);
 	virtual void	send(const std::shared_ptr<buffer_thunk>& data);
-	virtual void	send(const void* buf, const size_t len);
 
 	virtual void	close();
 	virtual void	shutdown(int32_t howto);

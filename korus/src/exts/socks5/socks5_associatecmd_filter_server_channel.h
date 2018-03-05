@@ -14,10 +14,9 @@ public:
 	virtual void	on_chain_final();
 	virtual void	on_ready();
 
-	virtual void	on_recv_pkg(const void* buf, const size_t size, const sockaddr_in& peer_addr);
+	virtual void	on_recv_pkg(const std::shared_ptr<buffer_thunk>& data, const sockaddr_in& peer_addr);
 
-	virtual int32_t	send(const void* buf, const size_t size, const sockaddr_in& peer_addr);
-	virtual int32_t	send(const void* buf, const size_t size);
+	virtual void	send(const std::shared_ptr<buffer_thunk>& data, const sockaddr_in& peer_addr);
 
 	void			switch_normal(const struct sockaddr_in& si);
 

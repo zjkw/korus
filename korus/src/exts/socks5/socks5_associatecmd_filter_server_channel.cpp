@@ -39,7 +39,7 @@ void	socks5_associatecmd_filter_server_channel::switch_normal(const struct socka
 }
 
 //这是一个待处理的完整包
-void	socks5_associatecmd_filter_server_channel::on_recv_pkg(const void* buf, const size_t size, const sockaddr_in& peer_addr)
+void	socks5_associatecmd_filter_server_channel::on_recv_pkg(const std::shared_ptr<buffer_thunk>& data, const sockaddr_in& peer_addr)
 {
 	if (!_normal_state)
 	{
@@ -47,7 +47,7 @@ void	socks5_associatecmd_filter_server_channel::on_recv_pkg(const void* buf, con
 		return;
 	}
 
-	net_serialize	decodec(buf, size);
+	net_serialize	decodec(data->ptr(), data->used());
 	uint16_t	rsv = 0;
 	uint8_t		flag = 0;
 	uint8_t		atyp = 0;
@@ -75,16 +75,16 @@ void	socks5_associatecmd_filter_server_channel::on_recv_pkg(const void* buf, con
 		return;
 	}
 
-	uint8_t* rpos = (uint8_t*)decodec.data();
-	udp_server_handler_base::on_recv_pkg((void*)(rpos + decodec.rpos()), decodec.size() - decodec.rpos(), target_addr);
+	data->pop_front(decodec.rpos());
+	udp_server_handler_base::on_recv_pkg(data, target_addr);
 }
 
-int32_t	socks5_associatecmd_filter_server_channel::send(const void* buf, const size_t size, const sockaddr_in& peer_addr)
+void	socks5_associatecmd_filter_server_channel::send(const std::shared_ptr<buffer_thunk>& data, const sockaddr_in& peer_addr)
 {
 	if (!_normal_state)
 	{
 		assert(false);
-		return - 1;
+		return ;
 	}
 
 	std::string local_ad;
@@ -95,25 +95,16 @@ int32_t	socks5_associatecmd_filter_server_channel::send(const void* buf, const s
 	string_from_sockaddr(peer_ad, peer_addr);
 	printf("\nlocal: %s, proxy: %s, target: %s\n", local_ad.c_str(), proxy_ad.c_str(), peer_ad.c_str());
 	
-	std::string temp_buf;
-	temp_buf.resize(size + 10);
-	net_serialize	codec(temp_buf.data(), temp_buf.size());
+	data->push_front(10);
+	net_serialize	codec(data->ptr(), data->used());
 
 	codec << static_cast<uint16_t>(0x0000) << static_cast<uint8_t>(0x00) << static_cast<uint8_t>(0x01) << static_cast<uint32_t>(ntohl(peer_addr.sin_addr.s_addr)) << static_cast<uint16_t>(ntohs(peer_addr.sin_port));
-	codec.write(buf, size);
 	if (!codec)
 	{
 		assert(false);
-		return -1;
+		return;
 	}
 
 	//如果使用connnect了，则直接send，否则带上地址
-	return udp_server_handler_base::send(codec.data(), codec.size()/*, _si*/);
-}
-
-int32_t	socks5_associatecmd_filter_server_channel::send(const void* buf, const size_t size)
-{
-	//无目标，不建议这么做
-	assert(false);
-	return -1;
+	udp_server_handler_base::send(data);
 }
