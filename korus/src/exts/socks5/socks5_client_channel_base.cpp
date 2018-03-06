@@ -33,7 +33,11 @@ void	socks5_client_channel_base::on_connected()
 		close();
 		return;
 	}
-	send(codec);
+	if(!send(codec))
+	{
+		close();
+		return;
+	}	
 
 	_shakehand_state = SCS_METHOD;
 }
@@ -186,7 +190,12 @@ void	socks5_client_channel_base::on_method_pkg(net_serialize&	decodec)
 				return;
 			}
 
-			send(codec);
+			if(!send(codec))
+			{
+				close();
+				return;
+			}
+
 
 			_shakehand_state = SCS_TUNNEL;
 		}
@@ -203,7 +212,11 @@ void	socks5_client_channel_base::on_method_pkg(net_serialize&	decodec)
 				return;
 			}
 
-			send(codec);
+			if(!send(codec))
+			{
+				close();
+				return;
+			}
 
 			_shakehand_state = SCS_AUTH;
 		}
@@ -267,7 +280,11 @@ void	socks5_client_channel_base::on_auth_pkg(net_serialize&	decodec)
 		return;
 	}
 
-	send(codec);
+	if(!send(codec))
+	{
+		close();
+		return;
+	}
 
 	_shakehand_state = SCS_TUNNEL;
 }
@@ -306,6 +323,6 @@ bool	socks5_client_channel_base::send(const net_serialize&	codec)
 		return false;
 	}
 	std::shared_ptr<buffer_thunk>	thunk = std::make_shared<buffer_thunk>(codec.data(), codec.wpos());
-	tcp_client_handler_base::send(thunk);
-	return true;
+	int32_t ret = tcp_client_handler_base::send(thunk);
+	return ret > 0 ? true : false;
 }

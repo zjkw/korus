@@ -84,14 +84,14 @@ void	udp_channel_base::set_fd(SOCKET fd)
 }
 
 // 保证原子，考虑多线程环境下，buf最好是一个或若干完整包；可能触发错误/异常 on_error
-void		udp_channel_base::send_raw(const std::shared_ptr<buffer_thunk>& data, const sockaddr_in& peer_addr)
+int32_t		udp_channel_base::send_raw(const std::shared_ptr<buffer_thunk>& data, const sockaddr_in& peer_addr)
 {
 	if (INVALID_SOCKET == _fd)
 	{
-		return;
+		return (int32_t)CEC_INVALID_SOCKET;
 	}
 
-	do_send(data, peer_addr);
+	return do_send(data, peer_addr);
 }
 
 int32_t		udp_channel_base::connect(const sockaddr_in& server_addr)
@@ -112,17 +112,17 @@ int32_t		udp_channel_base::connect(const sockaddr_in& server_addr)
 	}
 }
 
-void		udp_channel_base::send_raw(const std::shared_ptr<buffer_thunk>& data)
+int32_t		udp_channel_base::send_raw(const std::shared_ptr<buffer_thunk>& data)
 {
 	if (INVALID_SOCKET == _fd)
 	{
-		return;
+		return (int32_t)CEC_INVALID_SOCKET;
 	}
 
 	return do_send(data);
 }
 
-void		udp_channel_base::do_send(const std::shared_ptr<buffer_thunk>& data, const sockaddr_in& peer_addr)
+int32_t		udp_channel_base::do_send(const std::shared_ptr<buffer_thunk>& data, const sockaddr_in& peer_addr)
 {
 	while (1)
 	{
@@ -143,17 +143,18 @@ void		udp_channel_base::do_send(const std::shared_ptr<buffer_thunk>& data, const
 				break;
 			}
 #endif
-			return;
+			return (int32_t)CEC_WRITE_FAILED;
 		}
 		else
 		{
 			break;
 		}
 	}
+	return data->used();
 }
 
 // tbd check udp_bind mode
-void		udp_channel_base::do_send(const std::shared_ptr<buffer_thunk>& data)
+int32_t		udp_channel_base::do_send(const std::shared_ptr<buffer_thunk>& data)
 {
 	while (1)
 	{
@@ -174,13 +175,14 @@ void		udp_channel_base::do_send(const std::shared_ptr<buffer_thunk>& data)
 				break;
 			}
 #endif
-			return;
+			return (int32_t)CEC_WRITE_FAILED;
 		}
 		else
 		{
 			break;
 		}
 	}
+	return data->used();
 }
 
 void udp_channel_base::close()
@@ -235,7 +237,11 @@ int32_t	udp_channel_base::do_recv()
 			_read_thunk->incr(ret);
 		}
 
-		on_recv_buff(_read_thunk, addr);
+		ret = on_recv_buff(_read_thunk, addr);
+		if(ret < 0)
+		{
+			return ret;
+		}
 	}
 
 	return total_read;

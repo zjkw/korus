@@ -54,7 +54,7 @@ public:
 	virtual int32_t on_recv_split(const std::shared_ptr<buffer_thunk>& data);
 	//这是一个待处理的完整包
 	virtual void	on_recv_pkg(const std::shared_ptr<buffer_thunk>& data);
-	virtual void	send(const std::shared_ptr<buffer_thunk>& data);
+	virtual int32_t	send(const std::shared_ptr<buffer_thunk>& data);
 
 	virtual void	close();
 	virtual void	shutdown(int32_t howto);
@@ -81,7 +81,7 @@ public:
 	virtual ~tcp_client_handler_origin();
 
 	// 下面四个函数可能运行在多线程环境下	
-	virtual void		send(const std::shared_ptr<buffer_thunk>& data);// 保证原子, 认为是整包，返回值若<0参考CHANNEL_ERROR_CODE
+	virtual int32_t		send(const std::shared_ptr<buffer_thunk>& data);// 保证原子, 认为是整包，返回值若<0参考CHANNEL_ERROR_CODE
 	virtual void		close();
 	virtual void		shutdown(int32_t howto);// 参数参考全局函数 ::shutdown
 	virtual void		connect();
@@ -135,7 +135,7 @@ public:
 	virtual int32_t on_recv_split(const void* buf, const size_t len);
 	//这是一个待处理的完整包
 	virtual void	on_recv_pkg(const void* buf, const size_t len);
-	virtual void	send(const void* buf, const size_t len);
+	virtual int32_t	send(const void* buf, const size_t len);
 
 	virtual void	close();
 	virtual void	shutdown(int32_t howto);
@@ -155,5 +155,6 @@ protected:
 private:
 	virtual int32_t on_recv_split(const std::shared_ptr<buffer_thunk>& data);
 	virtual void	on_recv_pkg(const std::shared_ptr<buffer_thunk>& data);
-	virtual void	send(const std::shared_ptr<buffer_thunk>& data);
+	virtual int32_t	send(const std::shared_ptr<buffer_thunk>& data);
+	virtual void	send_async(const std::shared_ptr<buffer_thunk>& data);
 };

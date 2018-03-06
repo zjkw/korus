@@ -27,14 +27,14 @@ void	socks5_bindcmd_client_handler_base::on_chain_final()
 
 //ctrl channel--------------
 // 下面四个函数可能运行在多线程环境下	
-void	socks5_bindcmd_client_handler_base::ctrl_send(const std::shared_ptr<buffer_thunk>& data)			// 保证原子, 认为是整包，返回值若<0参考CHANNEL_ERROR_CODE
+int32_t	socks5_bindcmd_client_handler_base::ctrl_send(const std::shared_ptr<buffer_thunk>& data)			// 保证原子, 认为是整包，返回值若<0参考CHANNEL_ERROR_CODE
 {
 	if (!_tunnel_prev)
 	{
 		assert(false);
-		return;
+		return -1;
 	}
-	_tunnel_prev->ctrl_send(data);
+	return _tunnel_prev->ctrl_send(data);
 }
 
 void	socks5_bindcmd_client_handler_base::ctrl_close()
@@ -129,14 +129,14 @@ void	socks5_bindcmd_client_handler_base::on_ctrl_recv_pkg(const std::shared_ptr<
 
 //data channel--------------
 // 下面四个函数可能运行在多线程环境下	
-void	socks5_bindcmd_client_handler_base::data_send(const std::shared_ptr<buffer_thunk>& data)			// 保证原子, 认为是整包，返回值若<0参考CHANNEL_ERROR_CODE
+int32_t	socks5_bindcmd_client_handler_base::data_send(const std::shared_ptr<buffer_thunk>& data)			// 保证原子, 认为是整包，返回值若<0参考CHANNEL_ERROR_CODE
 {
 	if (!_tunnel_prev)
 	{
 		assert(false);
-		return;
+		return -1;
 	}
-	_tunnel_prev->data_send(data);
+	return _tunnel_prev->data_send(data);
 }
 
 void	socks5_bindcmd_client_handler_base::data_close()
@@ -214,7 +214,7 @@ int32_t socks5_bindcmd_client_handler_base::on_data_recv_split(const std::shared
 	if (!_tunnel_next)
 	{
 		assert(false);
-		return 0;
+		return -1;
 	}
 	return _tunnel_next->on_data_recv_split(data);
 }
@@ -297,12 +297,12 @@ void	socks5_bindcmd_client_handler_origin::chain_final()
 
 //ctrl channel--------------
 // 下面四个函数可能运行在多线程环境下	
-void	socks5_bindcmd_client_handler_origin::ctrl_send(const std::shared_ptr<buffer_thunk>& data)			// 保证原子, 认为是整包，返回值若<0参考CHANNEL_ERROR_CODE
+int32_t	socks5_bindcmd_client_handler_origin::ctrl_send(const std::shared_ptr<buffer_thunk>& data)			// 保证原子, 认为是整包，返回值若<0参考CHANNEL_ERROR_CODE
 {
 	if (!_ctrl_channel)
 	{
 		assert(false);
-		return;
+		return -1;
 	}
 	return _ctrl_channel->send(data);
 }
@@ -364,12 +364,12 @@ CLOSE_MODE_STRATEGY	socks5_bindcmd_client_handler_origin::on_ctrl_error(CHANNEL_
 
 //data channel--------------
 // 下面四个函数可能运行在多线程环境下	
-void	socks5_bindcmd_client_handler_origin::data_send(const std::shared_ptr<buffer_thunk>& data)			// 保证原子, 认为是整包，返回值若<0参考CHANNEL_ERROR_CODE
+int32_t	socks5_bindcmd_client_handler_origin::data_send(const std::shared_ptr<buffer_thunk>& data)			// 保证原子, 认为是整包，返回值若<0参考CHANNEL_ERROR_CODE
 {
 	if (!_data_channel)
 	{
 		assert(false);
-		return;
+		return -1;
 	}
 	return _data_channel->send(data);
 }
@@ -457,15 +457,15 @@ void	socks5_bindcmd_client_handler_terminal::on_chain_final()
 
 //ctrl channel--------------
 // 下面五个函数可能运行在多线程环境下	
-void	socks5_bindcmd_client_handler_terminal::ctrl_send(const void* buf, const size_t len)			// 保证原子, 认为是整包，返回值若<0参考CHANNEL_ERROR_CODE
+int32_t	socks5_bindcmd_client_handler_terminal::ctrl_send(const void* buf, const size_t len)			// 保证原子, 认为是整包，返回值若<0参考CHANNEL_ERROR_CODE
 {
 	std::shared_ptr<buffer_thunk>	thunk = std::make_shared<buffer_thunk>(buf, len);
-	socks5_bindcmd_client_handler_terminal::ctrl_send(thunk);
+	return socks5_bindcmd_client_handler_terminal::ctrl_send(thunk);
 }
 
-void	socks5_bindcmd_client_handler_terminal::ctrl_send(const std::shared_ptr<buffer_thunk>& data)			// 保证原子, 认为是整包，返回值若<0参考CHANNEL_ERROR_CODE
+int32_t	socks5_bindcmd_client_handler_terminal::ctrl_send(const std::shared_ptr<buffer_thunk>& data)			// 保证原子, 认为是整包，返回值若<0参考CHANNEL_ERROR_CODE
 {
-	socks5_bindcmd_client_handler_base::ctrl_send(data);
+	return socks5_bindcmd_client_handler_base::ctrl_send(data);
 }
 
 void	socks5_bindcmd_client_handler_terminal::ctrl_close()
@@ -525,15 +525,15 @@ void	socks5_bindcmd_client_handler_terminal::on_ctrl_recv_pkg(const std::shared_
 
 //data channel--------------
 // 下面五个函数可能运行在多线程环境下	
-void	socks5_bindcmd_client_handler_terminal::data_send(const void* buf, const size_t len)			// 保证原子, 认为是整包，返回值若<0参考CHANNEL_ERROR_CODE
+int32_t	socks5_bindcmd_client_handler_terminal::data_send(const void* buf, const size_t len)			// 保证原子, 认为是整包，返回值若<0参考CHANNEL_ERROR_CODE
 {
 	std::shared_ptr<buffer_thunk>	thunk = std::make_shared<buffer_thunk>(buf, len);
-	socks5_bindcmd_client_handler_terminal::data_send(thunk);
+	return socks5_bindcmd_client_handler_terminal::data_send(thunk);
 }
 
-void	socks5_bindcmd_client_handler_terminal::data_send(const std::shared_ptr<buffer_thunk>& data)			// 保证原子, 认为是整包，返回值若<0参考CHANNEL_ERROR_CODE
+int32_t	socks5_bindcmd_client_handler_terminal::data_send(const std::shared_ptr<buffer_thunk>& data)			// 保证原子, 认为是整包，返回值若<0参考CHANNEL_ERROR_CODE
 {
-	socks5_bindcmd_client_handler_base::data_send(data);
+	return socks5_bindcmd_client_handler_base::data_send(data);
 }
 
 void	socks5_bindcmd_client_handler_terminal::data_close()

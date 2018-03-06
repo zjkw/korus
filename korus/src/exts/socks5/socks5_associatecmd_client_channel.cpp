@@ -28,14 +28,14 @@ bool	socks5_associatecmd_client_channel::make_tunnel_pkg(net_serialize&	codec)
 	//´´½¨udp
 	if (!create_udp_server_channel())
 	{
-		return -1;
+		return false;
 	}
 	std::string local_addr;
 	_terminal_channel->local_addr(local_addr);
 	struct sockaddr_in si;
 	if (!sockaddr_from_string(local_addr, si))
 	{
-		return -1;
+		return false;
 	}
 	uint32_t ip_digit = ntohl(si.sin_addr.s_addr);
 	uint16_t port_digit = ntohs(si.sin_port);

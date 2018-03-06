@@ -57,8 +57,8 @@ public:
 	{
 		//Step 1
 		//char szTest[] = "hello server, i am ctrl client!";
-		//ctrl_send(szTest, strlen(szTest));
-		//printf("\nCtrl Connected, then Send %s, ret: %d\n", szTest);
+		//int32_t ret = ctrl_send(szTest, strlen(szTest));
+		//printf("\nCtrl Connected, then Send %s, ret: %d\n", szTest, ret);
 //		printf("\n	Step 1: Ctrl Connected, then data_connect\n");
 
 		char szTest2[] = "hello server, i am test from ctrl client!";
@@ -77,8 +77,8 @@ public:
 		codec.wpos(0);
 		codec << len;
 
-		ctrl_send(codec.data(), len);
-		printf("\n	Step 1: Ctrl Connected, then Send to Ctrl, text:  %s, and do data_connect\n", szTest2);
+		int32_t ret = ctrl_send(codec.data(), len);
+		printf("\n	Step 1: Ctrl Connected, then Send to Ctrl, text:  %s, ret: %d, and do data_connect\n", szTest2, ret);
 
 		data_connect();
 	}
@@ -189,8 +189,8 @@ public:
 		codec.wpos(0);
 		codec << len;
 
-		ctrl_send(codec.data(), len);
-		printf("\n	Step 2: data prepare, proxy_listen_target_addr: %s, then Send to Ctrl  POST cmd\n", proxy_listen_target_addr.c_str());
+		int32_t ret = ctrl_send(codec.data(), len);
+		printf("\n	Step 2: data prepare, proxy_listen_target_addr: %s, then Send to Ctrl  POST cmd, ret: %d\n", proxy_listen_target_addr.c_str(), ret);
 	}
 	virtual void	on_data_connected()
 	{
@@ -209,13 +209,13 @@ public:
 		uint16_t	len = (uint16_t)codec.wpos();
 		codec.wpos(0);
 		codec << len;
-		ctrl_send(codec.data(), len);
+		int32_t ret1 = ctrl_send(codec.data(), len);
 
 		//to data
 		char szTest2[] = "hello server, i am from data client!";
-		data_send(szTest2, strlen(szTest2));
+		int32_t ret2 = data_send(szTest2, strlen(szTest2));
 
-		printf("\n	Step 3: data Connected, first Send to Ctrl %s, second Send to Data %s\n", szTest1, szTest2);
+		printf("\n	Step 3: data Connected, first Send to Ctrl %s, ret: %d; second Send to Data %s, ret: %d\n", szTest1, ret1, szTest2, ret2);
 	}
 	virtual void	on_data_closed()
 	{

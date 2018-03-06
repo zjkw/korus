@@ -79,15 +79,15 @@ void	tcp_client_handler_base::on_recv_pkg(const std::shared_ptr<buffer_thunk>& d
 	return _tunnel_next->on_recv_pkg(data);
 }
 
-void	tcp_client_handler_base::send(const std::shared_ptr<buffer_thunk>& data)
+int32_t	tcp_client_handler_base::send(const std::shared_ptr<buffer_thunk>& data)
 {
 	if (!_tunnel_prev)
 	{
 		assert(false);
-		return;
+		return CEC_INVALID_SOCKET;
 	}
 
-	_tunnel_prev->send(data);
+	return _tunnel_prev->send(data);
 }
 
 void	tcp_client_handler_base::close()
@@ -182,15 +182,20 @@ tcp_client_handler_origin::~tcp_client_handler_origin()
 }
 
 // 保证原子，考虑多线程环境下，buf最好是一个或若干完整包；可能触发错误/异常 on_error
-void	tcp_client_handler_origin::send(const std::shared_ptr<buffer_thunk>& data)
+int32_t	tcp_client_handler_origin::send(const std::shared_ptr<buffer_thunk>& data)
 {
 	if (!is_normal())
 	{
 		assert(false);
-		return;
+		return CEC_INVALID_SOCKET;
 	}
 
-	tcp_channel_base::send_raw(data);
+	if (CNS_CONNECTED != _conn_state)
+	{
+		return (int32_t)CEC_INVALID_SOCKET;
+	}
+
+	return tcp_channel_base::send_raw(data);
 }
 
 void	tcp_client_handler_origin::close()
@@ -600,20 +605,29 @@ void	tcp_client_handler_terminal::on_recv_pkg(const std::shared_ptr<buffer_thunk
 	on_recv_pkg(data->ptr(), data->rpos());
 }
 
-void	tcp_client_handler_terminal::send(const void* buf, const size_t len)
+int32_t	tcp_client_handler_terminal::send(const void* buf, const size_t len)
 {
 	std::shared_ptr<buffer_thunk>	thunk = std::make_shared<buffer_thunk>(buf, len);
-	tcp_client_handler_terminal::send(thunk);
+	return tcp_client_handler_terminal::send(thunk);
 }
 
-void	tcp_client_handler_terminal::send(const std::shared_ptr<buffer_thunk>& data)
+int32_t	tcp_client_handler_terminal::send(const std::shared_ptr<buffer_thunk>& data)
 {
 	if (!reactor()->is_current_thread())
 	{
-		reactor()->start_async_task(std::bind(static_cast<void (tcp_client_handler_terminal::*)(const std::shared_ptr<buffer_thunk>&)>(&tcp_client_handler_terminal::send), this, data), this);
-		return;
+		reactor()->start_async_task(std::bind(&tcp_client_handler_terminal::send_async, this, data), this);
+		return data->used();
 	}
-	tcp_client_handler_base::send(data);
+	return tcp_client_handler_base::send(data);
+}
+
+void	tcp_client_handler_terminal::send_async(const std::shared_ptr<buffer_thunk>& data)
+{
+	int32_t ret = tcp_client_handler_base::send(data);
+	if (ret < 0)
+	{
+		tcp_client_handler_base::close();
+	}
 }
 
 void	tcp_client_handler_terminal::close()

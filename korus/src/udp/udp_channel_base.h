@@ -12,11 +12,11 @@ public:
 	virtual ~udp_channel_base();
 
 	// 下面两个函数可能运行在多线程环境下	
-	virtual	void		send_raw(const std::shared_ptr<buffer_thunk>& data, const sockaddr_in& peer_addr);	// 外部数据发送
+	virtual	int32_t		send_raw(const std::shared_ptr<buffer_thunk>& data, const sockaddr_in& peer_addr);	// 外部数据发送
 	virtual int32_t		connect(const sockaddr_in& server_addr);								
-	virtual void		send_raw(const std::shared_ptr<buffer_thunk>& data);								// 外部数据发送
+	virtual int32_t		send_raw(const std::shared_ptr<buffer_thunk>& data);								// 外部数据发送
 	virtual	void		close();
-	virtual	void		on_recv_buff(const std::shared_ptr<buffer_thunk>& data, const sockaddr_in& peer_addr) = 0;
+	virtual	int32_t		on_recv_buff(const std::shared_ptr<buffer_thunk>& data, const sockaddr_in& peer_addr) = 0;
 	virtual bool		peer_addr(std::string& addr);
 	virtual bool		local_addr(std::string& addr);
 
@@ -34,6 +34,6 @@ private:
 	uint32_t			_sock_read_size;
 	uint32_t			_sock_write_size;
 
-	void				do_send(const std::shared_ptr<buffer_thunk>& data, const sockaddr_in& peer_addr);
-	void				do_send(const std::shared_ptr<buffer_thunk>& data);	
+	int32_t				do_send(const std::shared_ptr<buffer_thunk>& data, const sockaddr_in& peer_addr);
+	int32_t				do_send(const std::shared_ptr<buffer_thunk>& data);	
 };

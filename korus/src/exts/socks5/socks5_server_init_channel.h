@@ -42,7 +42,7 @@ private:
 	std::string							_assocaitecmd_udp_listen_ip;	//associate cmd for udp
 	std::shared_ptr<socks5_server_auth>	_auth;
 
-	void send(const net_serialize&	codec);
+	bool send(const net_serialize&	codec);
 
 	enum SOCKS_SERVER_STATE
 	{

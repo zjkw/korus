@@ -24,7 +24,7 @@ public:
 
 	//ctrl channel--------------
 	// 下面五个函数可能运行在多线程环境下	
-	virtual void	ctrl_send(const std::shared_ptr<buffer_thunk>& data);			// 保证原子, 认为是整包，返回值若<0参考CHANNEL_ERROR_CODE
+	virtual int32_t	ctrl_send(const std::shared_ptr<buffer_thunk>& data);			// 保证原子, 认为是整包，返回值若<0参考CHANNEL_ERROR_CODE
 	virtual void	ctrl_close();
 	virtual void	ctrl_shutdown(int32_t howto);							// 参数参考全局函数 ::shutdown
 	virtual void	ctrl_connect();
@@ -37,7 +37,7 @@ public:
 
 	//data channel--------------
 	// 下面五个函数可能运行在多线程环境下	
-	virtual void	data_send(const std::shared_ptr<buffer_thunk>& data);			// 保证原子, 认为是整包，返回值若<0参考CHANNEL_ERROR_CODE
+	virtual int32_t	data_send(const std::shared_ptr<buffer_thunk>& data);			// 保证原子, 认为是整包，返回值若<0参考CHANNEL_ERROR_CODE
 	virtual void	data_close();
 	virtual void	data_shutdown(int32_t howto);							// 参数参考全局函数 ::shutdown
 	virtual void	data_connect();
@@ -69,7 +69,7 @@ public:
 
 	//ctrl channel--------------
 	// 下面五个函数可能运行在多线程环境下	
-	virtual void	ctrl_send(const std::shared_ptr<buffer_thunk>& data);			// 保证原子, 认为是整包，返回值若<0参考CHANNEL_ERROR_CODE
+	virtual int32_t	ctrl_send(const std::shared_ptr<buffer_thunk>& data);			// 保证原子, 认为是整包，返回值若<0参考CHANNEL_ERROR_CODE
 	virtual void	ctrl_close();
 	virtual void	ctrl_shutdown(int32_t howto);							// 参数参考全局函数 ::shutdown
 	virtual void	ctrl_connect();
@@ -80,7 +80,7 @@ public:
 
 	//data channel--------------
 	// 下面五个函数可能运行在多线程环境下	
-	virtual void	data_send(const std::shared_ptr<buffer_thunk>& data);			// 保证原子, 认为是整包，返回值若<0参考CHANNEL_ERROR_CODE
+	virtual int32_t	data_send(const std::shared_ptr<buffer_thunk>& data);			// 保证原子, 认为是整包，返回值若<0参考CHANNEL_ERROR_CODE
 	virtual void	data_close();
 	virtual void	data_shutdown(int32_t howto);							// 参数参考全局函数 ::shutdown
 	virtual void	data_connect();
@@ -108,7 +108,7 @@ public:
 
 	//ctrl channel--------------
 	// 下面五个函数可能运行在多线程环境下	
-	virtual void	ctrl_send(const void* buf, const size_t len);			// 保证原子, 认为是整包，返回值若<0参考CHANNEL_ERROR_CODE
+	virtual int32_t	ctrl_send(const void* buf, const size_t len);			// 保证原子, 认为是整包，返回值若<0参考CHANNEL_ERROR_CODE
 	virtual void	ctrl_close();
 	virtual void	ctrl_shutdown(int32_t howto);							// 参数参考全局函数 ::shutdown
 	virtual void	ctrl_connect();
@@ -122,7 +122,7 @@ public:
 
 	//data channel--------------
 	// 下面五个函数可能运行在多线程环境下	
-	virtual void	data_send(const void* buf, const size_t len);			// 保证原子, 认为是整包，返回值若<0参考CHANNEL_ERROR_CODE
+	virtual int32_t	data_send(const void* buf, const size_t len);			// 保证原子, 认为是整包，返回值若<0参考CHANNEL_ERROR_CODE
 	virtual void	data_close();
 	virtual void	data_shutdown(int32_t howto);							// 参数参考全局函数 ::shutdown
 	virtual void	data_connect();
@@ -143,10 +143,10 @@ public:
 protected:
 	virtual void	on_release();
 
-	virtual void	data_send(const std::shared_ptr<buffer_thunk>& data);			// 保证原子, 认为是整包，返回值若<0参考CHANNEL_ERROR_CODE
+	virtual int32_t	data_send(const std::shared_ptr<buffer_thunk>& data);			// 保证原子, 认为是整包，返回值若<0参考CHANNEL_ERROR_CODE
 	virtual int32_t on_ctrl_recv_split(const std::shared_ptr<buffer_thunk>& data);
 	virtual void	on_ctrl_recv_pkg(const std::shared_ptr<buffer_thunk>& data);	//这是一个待处理的完整包
-	virtual void	ctrl_send(const std::shared_ptr<buffer_thunk>& data);			// 保证原子, 认为是整包，返回值若<0参考CHANNEL_ERROR_CODE
+	virtual int32_t	ctrl_send(const std::shared_ptr<buffer_thunk>& data);			// 保证原子, 认为是整包，返回值若<0参考CHANNEL_ERROR_CODE
 	virtual int32_t on_data_recv_split(const std::shared_ptr<buffer_thunk>& data);
 	virtual void	on_data_recv_pkg(const std::shared_ptr<buffer_thunk>& data);	//这是一个待处理的完整包
 };

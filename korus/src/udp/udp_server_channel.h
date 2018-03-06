@@ -41,9 +41,9 @@ public:
 	virtual void	on_recv_pkg(const std::shared_ptr<buffer_thunk>& data, const sockaddr_in& peer_addr);
 
 	virtual bool	start();
-	virtual void	send(const std::shared_ptr<buffer_thunk>& data, const sockaddr_in& peer_addr);
+	virtual int32_t	send(const std::shared_ptr<buffer_thunk>& data, const sockaddr_in& peer_addr);
 	virtual int32_t	connect(const sockaddr_in& server_addr);
-	virtual void	send(const std::shared_ptr<buffer_thunk>& data);								// 外部数据发送
+	virtual int32_t	send(const std::shared_ptr<buffer_thunk>& data);								// 外部数据发送
 	virtual void	close();
 	virtual bool	local_addr(std::string& addr);
 
@@ -61,9 +61,9 @@ public:
 
 	// 下面四个函数可能运行在多线程环境下	
 	virtual bool	start();
-	virtual void	send(const std::shared_ptr<buffer_thunk>& data, const sockaddr_in& peer_addr);// 保证原子, 认为是整包，返回值若<0参考CHANNEL_ERROR_CODE
+	virtual int32_t	send(const std::shared_ptr<buffer_thunk>& data, const sockaddr_in& peer_addr);// 保证原子, 认为是整包，返回值若<0参考CHANNEL_ERROR_CODE
 	virtual int32_t	connect(const sockaddr_in& server_addr);
-	virtual void	send(const std::shared_ptr<buffer_thunk>& data);								// 外部数据发送
+	virtual int32_t	send(const std::shared_ptr<buffer_thunk>& data);								// 外部数据发送
 	virtual void	close();
 	virtual bool	local_addr(std::string& addr);
 
@@ -74,7 +74,7 @@ private:
 	sockio_helper	_sockio_helper;
 	virtual void on_sockio_read(sockio_helper* sockio_id);
 
-	virtual	void	on_recv_buff(const std::shared_ptr<buffer_thunk>& data, const sockaddr_in& peer_addr);
+	virtual	int32_t	on_recv_buff(const std::shared_ptr<buffer_thunk>& data, const sockaddr_in& peer_addr);
 
 	void handle_close_strategy(CLOSE_MODE_STRATEGY cms);
 };
@@ -111,6 +111,9 @@ protected:
 	virtual void	on_release();
 
 	virtual void	on_recv_pkg(const std::shared_ptr<buffer_thunk>& data, const sockaddr_in& peer_addr);
-	virtual void	send(const std::shared_ptr<buffer_thunk>& data, const sockaddr_in& peer_addr);
-	virtual	void	send(const std::shared_ptr<buffer_thunk>& data);
+	virtual int32_t	send(const std::shared_ptr<buffer_thunk>& data, const sockaddr_in& peer_addr);
+	virtual	int32_t	send(const std::shared_ptr<buffer_thunk>& data);
+
+	virtual void	send_async(const std::shared_ptr<buffer_thunk>& data, const sockaddr_in& peer_addr);
+	virtual	void	send_async(const std::shared_ptr<buffer_thunk>& data);
 };

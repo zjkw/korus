@@ -28,8 +28,8 @@ public:
 	virtual void	on_accept()	//连接已经建立
 	{
 		char szTest[] = "hello client, i am server!";
-		send(szTest, strlen(szTest));
-		printf("\nConnected/accepted, then Send %s\n", szTest);
+		int32_t ret = send(szTest, strlen(szTest));
+		printf("\nConnected/accepted, then Send %s, ret: %d\n", szTest, ret);
 	}
 
 	virtual void	on_closed()

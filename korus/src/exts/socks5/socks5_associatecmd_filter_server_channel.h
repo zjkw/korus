@@ -16,7 +16,7 @@ public:
 
 	virtual void	on_recv_pkg(const std::shared_ptr<buffer_thunk>& data, const sockaddr_in& peer_addr);
 
-	virtual void	send(const std::shared_ptr<buffer_thunk>& data, const sockaddr_in& peer_addr);
+	virtual int32_t	send(const std::shared_ptr<buffer_thunk>& data, const sockaddr_in& peer_addr);
 
 	void			switch_normal(const struct sockaddr_in& si);
 

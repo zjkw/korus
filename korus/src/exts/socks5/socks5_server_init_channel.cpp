@@ -308,14 +308,22 @@ void	socks5_server_init_channel::on_recv_pkg(const std::shared_ptr<buffer_thunk>
 					_shakehand_state = SSS_TUNNEL;
 
 					codec << method_bin;
-					send(codec);
+					if(!send(codec))
+					{
+						close();
+						return;
+					}
 				}
 				else if (SMT_USERPSW == method_ret)
 				{
 					_shakehand_state = SSS_AUTH;
 
 					codec << method_bin;
-					send(codec);
+					if(!send(codec))
+					{
+						close();
+						return;
+					}
 				}
 				else
 				{
@@ -323,7 +331,11 @@ void	socks5_server_init_channel::on_recv_pkg(const std::shared_ptr<buffer_thunk>
 
 					// tbd 失败情况下，则加上服务器主动关闭？ delay_close或close加上参数？
 					codec << static_cast<uint8_t>(0xff);
-					send(codec);
+					if(!send(codec))
+					{
+						close();
+						return;
+					}
 				}
 			}
 			break;
@@ -366,7 +378,11 @@ void	socks5_server_init_channel::on_recv_pkg(const std::shared_ptr<buffer_thunk>
 				if (_auth->check_userpsw(user, psw))
 				{
 					codec << static_cast<uint8_t>(0x00);
-					send(codec);
+					if(!send(codec))
+					{
+						close();
+						return;
+					}
 
 					_shakehand_state = SSS_TUNNEL;
 				}
@@ -376,7 +392,11 @@ void	socks5_server_init_channel::on_recv_pkg(const std::shared_ptr<buffer_thunk>
 
 					// tbd 失败情况下，则加上服务器主动关闭？ delay_close或close加上参数？
 					codec << static_cast<uint8_t>(0x01);
-					send(codec);
+					if(!send(codec))
+					{
+						close();
+						return;
+					}
 				}
 			}
 			break;
@@ -451,8 +471,9 @@ void	socks5_server_init_channel::on_recv_pkg(const std::shared_ptr<buffer_thunk>
 	}
 }
 
-void socks5_server_init_channel::send(const net_serialize&	codec)
+bool socks5_server_init_channel::send(const net_serialize&	codec)
 {
 	std::shared_ptr<buffer_thunk>	thunk = std::make_shared<buffer_thunk>(codec.data(), codec.wpos());
-	tcp_server_handler_base::send(thunk);
+	int32_t ret = tcp_server_handler_base::send(thunk);
+	return ret > 0 ? true : false;
 }

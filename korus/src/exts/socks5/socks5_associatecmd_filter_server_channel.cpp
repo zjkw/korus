@@ -79,12 +79,12 @@ void	socks5_associatecmd_filter_server_channel::on_recv_pkg(const std::shared_pt
 	udp_server_handler_base::on_recv_pkg(data, target_addr);
 }
 
-void	socks5_associatecmd_filter_server_channel::send(const std::shared_ptr<buffer_thunk>& data, const sockaddr_in& peer_addr)
+int32_t	socks5_associatecmd_filter_server_channel::send(const std::shared_ptr<buffer_thunk>& data, const sockaddr_in& peer_addr)
 {
 	if (!_normal_state)
 	{
 		assert(false);
-		return ;
+		return - 1;
 	}
 
 	std::string local_ad;
@@ -102,9 +102,9 @@ void	socks5_associatecmd_filter_server_channel::send(const std::shared_ptr<buffe
 	if (!codec)
 	{
 		assert(false);
-		return;
+		return -1;
 	}
 
 	//如果使用connnect了，则直接send，否则带上地址
-	udp_server_handler_base::send(data);
+	return udp_server_handler_base::send(data);
 }
