@@ -18,7 +18,7 @@
 ##  now feb 2018, only demo, without strength test yet
 
 ####  development plan：      
-#####    feb 2018 support quic，websocket, async mysql/redis client.      
-#####    mar 2018 support http(s) client/server, http-proxy.          
-#####    apr 2018 support log, report api and falcon, yaml conf.      
-#####    may 2018 support multi-paxos, load-balance client/server.      
+#####    mar 2018 support quic，websocket, async mysql/redis client.      
+#####    apr 2018 support http(s) client/server, http-proxy.          
+#####    may 2018 support log, report api and falcon, yaml conf.       
+#####    jun 2018 support multi-paxos, load-balance client/server.      
